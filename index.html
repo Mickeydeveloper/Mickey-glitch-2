@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HASEEB MINI :: TERMINAL</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=JetBrains+Mono:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#030603;
+    --bg-panel:rgba(6,16,8,0.85);
+    --bg-panel-2:rgba(4,10,5,0.9);
+    --grid:rgba(57,255,20,0.05);
+    --green:#39ff14;
+    --green-dim:#12a52a;
+    --green-deep:#064d16;
+    --green-glass:rgba(57,255,20,0.08);
+    --border:rgba(57,255,20,0.25);
+    --text:#d4ffd4;
+    --muted:#5f9d6a;
+    --amber:#ffd23f;
+    --danger:#ff4d4d;
+    --radius:14px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'JetBrains Mono',monospace;
+    min-height:100vh;
+    line-height:1.6;
+    position:relative;
+    overflow-x:hidden;
+  }
+
+  /* ---------- Ambient terminal backdrop ---------- */
+  .grid-bg{
+    position:fixed;inset:0;z-index:-3;
+    background-image:
+      linear-gradient(var(--grid) 1px,transparent 1px),
+      linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:38px 38px;
+    mask-image:radial-gradient(ellipse 80% 70% at 50% 20%,#000 40%,transparent 100%);
+  }
+  .glow-orb{
+    position:fixed;top:-10%;left:50%;transform:translateX(-50%);
+    width:60vw;height:60vw;max-width:900px;max-height:900px;
+    background:radial-gradient(circle,rgba(57,255,20,0.10) 0%,transparent 65%);
+    filter:blur(40px);z-index:-2;pointer-events:none;
+    animation:orbPulse 8s ease-in-out infinite alternate;
+  }
+  @keyframes orbPulse{0%{opacity:.5;}100%{opacity:1;}}
+  .scanlines{
+    position:fixed;inset:0;z-index:50;pointer-events:none;
+    background:repeating-linear-gradient(0deg,rgba(0,0,0,0.15) 0px,rgba(0,0,0,0.15) 1px,transparent 2px,transparent 3px);
+    opacity:.35;
+  }
+  .particles{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none;}
+  .particle{position:absolute;background:var(--green);border-radius:50%;opacity:0;animation:drift linear infinite;box-shadow:0 0 6px var(--green);}
+  @keyframes drift{0%{transform:translateY(100vh);opacity:0;}10%{opacity:.7;}90%{opacity:.4;}100%{transform:translateY(-10vh);opacity:0;}}
+
+  /* ---------- Boot sequence overlay ---------- */
+  #boot{
+    position:fixed;inset:0;z-index:999;background:#010301;
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Share Tech Mono',monospace;
+  }
+  #boot pre{color:var(--green);font-size:.85rem;white-space:pre-wrap;max-width:600px;padding:20px;text-shadow:0 0 8px rgba(57,255,20,.5);}
+  #boot .cursor{display:inline-block;width:8px;height:16px;background:var(--green);animation:blink 1s step-end infinite;vertical-align:middle;}
+  @keyframes blink{50%{opacity:0;}}
+  #boot.hide{animation:bootOut .5s ease forwards;}
+  @keyframes bootOut{to{opacity:0;visibility:hidden;}}
+
+  /* ---------- Modal ---------- */
+  .modal{
+    position:fixed;inset:0;background:rgba(1,4,1,.85);backdrop-filter:blur(8px);
+    display:flex;align-items:center;justify-content:center;z-index:800;
+    opacity:0;visibility:hidden;transition:.35s ease;
+  }
+  .modal.active{opacity:1;visibility:visible;}
+  .modal-content{
+    width:90%;max-width:460px;background:var(--bg-panel-2);
+    border:1px solid var(--border);border-radius:var(--radius);
+    transform:translateY(-30px);transition:transform .35s ease;
+    box-shadow:0 0 60px rgba(57,255,20,.08),0 25px 50px rgba(0,0,0,.6);
+  }
+  .modal.active .modal-content{transform:translateY(0);}
+  .modal-head{
+    padding:20px 22px;border-bottom:1px solid var(--border);
+    display:flex;justify-content:space-between;align-items:center;
+  }
+  .modal-head h2{font-size:1rem;letter-spacing:1px;color:var(--green);font-weight:600;}
+  .modal-head h2::before{content:"root@haseeb:~$ ";color:var(--muted);}
+  .modal-close{background:none;border:none;color:var(--muted);font-size:1.4rem;cursor:pointer;line-height:1;}
+  .modal-close:hover{color:var(--green);}
+  .modal-body{padding:22px;}
+  .modal-body p{color:var(--muted);font-size:.85rem;margin-bottom:16px;}
+  .channel-list{display:flex;flex-direction:column;gap:8px;margin-bottom:18px;}
+  .channel-item{
+    display:flex;align-items:center;gap:10px;padding:12px 14px;
+    background:rgba(57,255,20,.04);border:1px solid var(--border);border-radius:8px;
+    text-decoration:none;color:var(--text);font-size:.82rem;transition:.25s;
+  }
+  .channel-item:hover{background:var(--green-glass);border-color:var(--green);transform:translateX(4px);}
+  .channel-item i{color:var(--green);width:18px;}
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:8px;
+    background:var(--green);color:#01120a;font-weight:700;font-size:.82rem;
+    letter-spacing:.5px;padding:13px 22px;border:none;border-radius:8px;
+    cursor:pointer;text-decoration:none;width:100%;text-transform:uppercase;
+    transition:.25s;position:relative;overflow:hidden;
+  }
+  .btn:hover{box-shadow:0 0 25px rgba(57,255,20,.45);transform:translateY(-2px);}
+  .btn:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none;}
+  .btn-outline{background:transparent;color:var(--green);border:1px solid var(--border);}
+  .btn-outline:hover{background:var(--green-glass);}
+
+  /* ---------- Nav ---------- */
+  nav{
+    position:fixed;top:0;left:0;right:0;height:74px;z-index:200;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:0 32px;background:rgba(2,6,3,.85);backdrop-filter:blur(16px);
+    border-bottom:1px solid var(--border);
+  }
+  .brand{display:flex;align-items:center;gap:12px;}
+  .brand .mark{
+    width:40px;height:40px;border-radius:8px;border:1px solid var(--border);
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Share Tech Mono',monospace;font-size:1.2rem;color:var(--green);
+    background:var(--green-glass);text-shadow:0 0 10px var(--green);
+  }
+  .brand .name{font-weight:700;font-size:1rem;letter-spacing:.5px;}
+  .brand .tag{font-size:.68rem;color:var(--muted);letter-spacing:2px;text-transform:uppercase;}
+  .nav-links{display:flex;gap:28px;align-items:center;}
+  .nav-links a{color:var(--muted);text-decoration:none;font-size:.82rem;letter-spacing:.5px;transition:.25s;}
+  .nav-links a:hover{color:var(--green);}
+  .nav-toggle{display:none;background:none;border:none;color:var(--green);font-size:1.3rem;cursor:pointer;}
+
+  /* ---------- Header ---------- */
+  header{padding:150px 20px 70px;text-align:center;position:relative;}
+  .eyebrow{
+    display:inline-flex;align-items:center;gap:8px;font-size:.72rem;letter-spacing:3px;
+    color:var(--muted);text-transform:uppercase;margin-bottom:22px;
+    border:1px solid var(--border);padding:6px 14px;border-radius:30px;background:var(--green-glass);
+  }
+  .eyebrow .pulse{width:6px;height:6px;background:var(--green);border-radius:50%;box-shadow:0 0 8px var(--green);animation:blink 1.4s infinite;}
+  header h1{
+    font-family:'Share Tech Mono',monospace;
+    font-size:clamp(2.2rem,6vw,4.2rem);letter-spacing:2px;
+    color:var(--green);text-shadow:0 0 18px rgba(57,255,20,.35);
+    margin-bottom:18px;position:relative;display:inline-block;
+  }
+  header h1 .glitch-wrap{position:relative;display:inline-block;}
+  header h1 .glitch-wrap::before,header h1 .glitch-wrap::after{
+    content:attr(data-text);position:absolute;top:0;left:0;width:100%;
+    overflow:hidden;color:var(--green);
+  }
+  header h1 .glitch-wrap::before{left:2px;text-shadow:-2px 0 var(--danger);animation:glitchTop 5s infinite linear alternate-reverse;clip-path:inset(0 0 55% 0);}
+  header h1 .glitch-wrap::after{left:-2px;text-shadow:2px 0 var(--amber);animation:glitchBot 6s infinite linear alternate-reverse;clip-path:inset(55% 0 0 0);}
+  @keyframes glitchTop{0%,90%,100%{transform:translate(0,0);}92%{transform:translate(-3px,-1px);}94%{transform:translate(3px,1px);}96%{transform:translate(-2px,0);}}
+  @keyframes glitchBot{0%,90%,100%{transform:translate(0,0);}91%{transform:translate(2px,1px);}95%{transform:translate(-3px,-1px);}97%{transform:translate(2px,0);}}
+  header p.sub{color:var(--muted);max-width:560px;margin:0 auto;font-size:.95rem;}
+  header p.sub strong{color:var(--green);}
+
+  .stats-row{display:flex;justify-content:center;gap:20px;margin-top:44px;flex-wrap:wrap;}
+  .stat-card{
+    display:flex;align-items:center;gap:14px;background:var(--bg-panel);
+    border:1px solid var(--border);border-radius:var(--radius);padding:18px 26px;
+    min-width:190px;backdrop-filter:blur(10px);
+  }
+  .stat-card i{font-size:1.5rem;color:var(--green);}
+  .stat-value{font-size:1.6rem;font-weight:700;color:var(--green);font-family:'Share Tech Mono',monospace;}
+  .stat-label{font-size:.72rem;color:var(--muted);letter-spacing:1px;text-transform:uppercase;}
+
+  /* ---------- Main sections ---------- */
+  main{max-width:1080px;margin:0 auto;padding:20px 20px 40px;}
+  section.panel{
+    margin:26px 0;padding:34px;background:var(--bg-panel);
+    border:1px solid var(--border);border-radius:var(--radius);
+    backdrop-filter:blur(14px);position:relative;
+  }
+  section.panel::before{
+    content:attr(data-label);position:absolute;top:-11px;left:24px;
+    background:var(--bg);padding:0 10px;font-size:.68rem;color:var(--muted);
+    letter-spacing:2px;text-transform:uppercase;
+  }
+  section.panel h2{
+    display:flex;align-items:center;gap:12px;color:var(--green);font-size:1.3rem;
+    margin-bottom:24px;font-family:'Share Tech Mono',monospace;letter-spacing:1px;
+  }
+
+  .feature-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px;}
+  .feature-item{
+    padding:24px;border:1px solid var(--border);border-radius:10px;
+    background:rgba(57,255,20,.03);transition:.3s;
+  }
+  .feature-item:hover{background:var(--green-glass);transform:translateY(-4px);border-color:var(--green);}
+  .feature-item i{font-size:1.6rem;color:var(--green);margin-bottom:14px;display:block;}
+  .feature-item h3{font-size:.95rem;margin-bottom:8px;letter-spacing:.5px;}
+  .feature-item p{color:var(--muted);font-size:.82rem;}
+
+  .instructions{background:rgba(57,255,20,.03);border-left:3px solid var(--green);border-radius:8px;padding:20px 22px;margin-bottom:26px;}
+  .instructions h3{color:var(--green);font-size:.9rem;margin-bottom:12px;letter-spacing:.5px;}
+  .instructions ol{padding-left:20px;color:var(--muted);font-size:.85rem;}
+  .instructions li{margin-bottom:10px;}
+  .instructions li::marker{color:var(--green);}
+
+  .input-box{display:flex;flex-direction:column;gap:16px;max-width:440px;}
+  .input-group{position:relative;}
+  .input-group i{position:absolute;left:18px;top:50%;transform:translateY(-50%);color:var(--muted);}
+  .input-group input{
+    width:100%;padding:15px 16px 15px 46px;border-radius:8px;
+    border:1px solid var(--border);background:rgba(0,0,0,.4);color:var(--text);
+    font-family:'JetBrains Mono',monospace;font-size:.9rem;transition:.25s;
+  }
+  .input-group input:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 3px rgba(57,255,20,.12);}
+  .input-group input::placeholder{color:#3d5c42;}
+
+  #status{margin-top:20px;padding:16px 18px;border-radius:8px;background:rgba(0,0,0,.3);border-left:3px solid var(--muted);font-size:.85rem;display:none;}
+  #status.show{display:block;}
+  #status.success{border-left-color:var(--green);background:rgba(57,255,20,.08);color:var(--green);}
+  #status.error{border-left-color:var(--danger);background:rgba(255,77,77,.08);color:#ff9a9a;}
+  #status.warning{border-left-color:var(--amber);background:rgba(255,210,63,.08);color:var(--amber);}
+
+  .code-wrap{display:none;margin-top:26px;animation:riseIn .5s ease;}
+  @keyframes riseIn{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
+  .code-box{
+    font-family:'Share Tech Mono',monospace;font-size:2rem;letter-spacing:8px;
+    text-align:center;padding:22px;border:1px dashed var(--green);border-radius:10px;
+    background:rgba(0,0,0,.45);color:var(--green);text-shadow:0 0 12px rgba(57,255,20,.5);
+    cursor:pointer;transition:.25s;
+  }
+  .code-box:hover{background:var(--green-glass);}
+  .copy-hint{text-align:center;font-size:.72rem;color:var(--muted);margin-top:10px;letter-spacing:.5px;}
+  .waiting{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:18px;font-size:.78rem;color:var(--muted);}
+  .waiting .dot{width:7px;height:7px;background:var(--green);border-radius:50%;box-shadow:0 0 8px var(--green);animation:blink 1.3s infinite;}
+
+  .link-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;}
+
+  footer{text-align:center;padding:50px 20px;color:var(--muted);font-size:.8rem;border-top:1px solid var(--border);margin-top:40px;}
+  footer span{color:var(--green);}
+
+  #toast{
+    position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(100px);
+    background:var(--green);color:#01120a;padding:12px 24px;border-radius:30px;
+    font-size:.8rem;font-weight:700;transition:.4s cubic-bezier(.175,.885,.32,1.275);z-index:900;
+  }
+  #toast.show{transform:translateX(-50%) translateY(0);}
+
+  @media(max-width:768px){
+    nav{padding:0 18px;}
+    .nav-links{
+      position:fixed;top:74px;left:0;right:0;background:rgba(2,6,3,.97);
+      flex-direction:column;padding:16px;gap:0;border-bottom:1px solid var(--border);
+      transform:translateY(-110%);opacity:0;visibility:hidden;transition:.3s;
+    }
+    .nav-links.active{transform:translateY(0);opacity:1;visibility:visible;}
+    .nav-links a{padding:14px;width:100%;text-align:center;border-bottom:1px solid rgba(57,255,20,.08);}
+    .nav-toggle{display:block;}
+    header{padding:120px 16px 50px;}
+    section.panel{padding:24px 18px;}
+    .code-box{font-size:1.4rem;letter-spacing:5px;}
+  }
+</style>
+</head>
+<body>
+
+<div id="boot"><pre id="bootText"></pre></div>
+<div class="scanlines"></div>
+<div class="grid-bg"></div>
+<div class="glow-orb"></div>
+<div class="particles" id="particles"></div>
+
+<!-- Channel modal -->
+<div id="channelModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-head">
+      <h2>required_channels.sh</h2>
+      <button class="modal-close" id="modalClose">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p>// Follow the official channels below to unlock pairing access and receive live updates.</p>
+      <div class="channel-list">
+        <a href="https://whatsapp.com/channel/0029VaGiJKfIiRoybPBMTy38" target="_blank" class="channel-item"><i class="fab fa-whatsapp"></i><span>WhatsApp Channel — Updates</span></a>
+        <a href="https://whatsapp.com/channel/0029Vb7SDZ31iUxhzG0W4t1M" target="_blank" class="channel-item"><i class="fab fa-whatsapp"></i><span>WhatsApp Channel — Support</span></a>
+        <a href="https://www.youtube.com/@Teamsyedhaker" target="_blank" class="channel-item"><i class="fab fa-youtube"></i><span>YouTube Channel</span></a>
+        <a href="https://whatsapp.com/channel/0029VbCkaqb5fM5VgpvRJc2Y" target="_blank" class="channel-item"><i class="fab fa-whatsapp"></i><span>WhatsApp Channel — Announcements</span></a>
+      </div>
+      <button class="btn" id="confirmFollow"><i class="fas fa-check"></i> I've followed all channels</button>
+    </div>
+  </div>
+</div>
+
+<nav>
+  <div class="brand">
+    <div class="mark">$_</div>
+    <div>
+      <div class="name">HASEEB MINI MD</div>
+      <div class="tag">whatsapp automation</div>
+    </div>
+  </div>
+  <div class="nav-links" id="navLinks">
+    <a href="#features">features</a>
+    <a href="#connect">connect</a>
+    <a href="#links">links</a>
+  </div>
+  <button class="nav-toggle" id="navToggle"><i class="fas fa-bars"></i></button>
+</nav>
+
+<header>
+  <div class="eyebrow"><span class="pulse"></span> SESSION READY // NODE ONLINE</div>
+  <h1><span class="glitch-wrap" data-text="HASEEB MINI MD">HASEEB MINI MD</span></h1>
+  <p class="sub">A fast, minimal WhatsApp automation core — built &amp; maintained by <strong>HASEEB TECH</strong>.</p>
+
+  <div class="stats-row">
+    <div class="stat-card"><i class="fas fa-signal"></i><div><div class="stat-value" id="activeSockets">0</div><div class="stat-label">Active Sockets</div></div></div>
+    <div class="stat-card"><i class="fas fa-users"></i><div><div class="stat-value" id="totalUsers">0</div><div class="stat-label">Total Users</div></div></div>
+  </div>
+</header>
+
+<main>
+  <section id="features" class="panel" data-label="./features">
+    <h2><i class="fas fa-star"></i> Features</h2>
+    <div class="feature-grid">
+      <div class="feature-item"><i class="fas fa-reply"></i><h3>Auto Replies</h3><p>Smart automated responses based on customizable triggers.</p></div>
+      <div class="feature-item"><i class="fas fa-image"></i><h3>Media Tools</h3><p>Download, convert, and manage media files with ease.</p></div>
+      <div class="feature-item"><i class="fas fa-puzzle-piece"></i><h3>Commands System</h3><p>Extend functionality with custom commands and scripts.</p></div>
+      <div class="feature-item"><i class="fas fa-shield-alt"></i><h3>Security</h3><p>Built-in safeguards to protect your privacy and session data.</p></div>
+    </div>
+  </section>
+
+  <section id="connect" class="panel" data-label="./connect">
+    <h2><i class="fas fa-link"></i> Connect to WhatsApp</h2>
+    <div class="instructions">
+      <h3>How to connect</h3>
+      <ol>
+        <li>Enter your WhatsApp number with country code (no "+", no spaces, no brackets)</li>
+        <li>Click "Request Pairing Code"</li>
+        <li>Copy the 8-digit code</li>
+        <li>Open WhatsApp → Settings → Linked Devices → Link a Device</li>
+        <li>Paste the code when prompted</li>
+      </ol>
+    </div>
+
+    <div class="input-box">
+      <div class="input-group">
+        <i class="fas fa-phone"></i>
+        <input type="tel" id="phone" placeholder="e.g. 923300000000 (with country code)">
+      </div>
+      <button class="btn" id="requestPairing"><i class="fas fa-key"></i> Request Pairing Code</button>
+    </div>
+
+    <div id="status"></div>
+
+    <div class="code-wrap" id="codeWrap">
+      <div class="code-box" id="pairingCode" onclick="copyCode()">0000 0000</div>
+      <div class="copy-hint">Tap the code to copy</div>
+      <div class="waiting"><span class="dot"></span> Waiting for device to link...</div>
+    </div>
+  </section>
+
+  <section id="links" class="panel" data-label="./links">
+    <h2><i class="fas fa-external-link-alt"></i> Links</h2>
+    <div class="link-grid">
+      <a class="btn btn-outline" href="https://whatsapp.com/channel/0029VaGiJKfIiRoybPBMTy38" target="_blank"><i class="fab fa-whatsapp"></i> WhatsApp Channel</a>
+      <a class="btn btn-outline" href="https://whatsapp.com/channel/0029Vb7SDZ31iUxhzG0W4t1M" target="_blank"><i class="fab fa-whatsapp"></i> WhatsApp Channel</a>
+      <a class="btn btn-outline" href="https://www.youtube.com/@Teamsyedhaker" target="_blank"><i class="fab fa-youtube"></i> YouTube Channel</a>
+      <a class="btn btn-outline" href="https://whatsapp.com/channel/0029VbCkaqb5fM5VgpvRJc2Y" target="_blank"><i class="fab fa-whatsapp"></i> WhatsApp Channel</a>
+    </div>
+  </section>
+</main>
+
+<footer>&copy; <span id="year"></span> <span>HASEEB TECH</span> — All rights reserved.</footer>
+
+<div id="toast">CODE COPIED!</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+/* ---------------- Boot sequence ---------------- */
+const bootLines = [
+  "booting haseeb-mini-md kernel...",
+  "loading whatsapp bridge module... OK",
+  "initializing socket layer... OK",
+  "verifying session store... OK",
+  "welcome, operator."
+];
+const bootEl = document.getElementById('bootText');
+let li = 0, ci = 0;
+function typeBoot(){
+  if(li >= bootLines.length){
+    setTimeout(()=>document.getElementById('boot').classList.add('hide'), 400);
+    return;
+  }
+  const line = bootLines[li];
+  if(ci <= line.length){
+    bootEl.innerText = bootLines.slice(0,li).join('\n') + (li>0?'\n':'') + line.slice(0,ci) + ' ';
+    bootEl.innerHTML = bootEl.innerText.replace(/\n/g,'<br>') + '<span class="cursor"></span>';
+    ci++;
+    setTimeout(typeBoot, 18);
+  } else {
+    li++; ci = 0;
+    setTimeout(typeBoot, 120);
+  }
+}
+typeBoot();
+
+/* ---------------- Particles ---------------- */
+const pWrap = document.getElementById('particles');
+for(let i=0;i<40;i++){
+  const p = document.createElement('div');
+  p.className = 'particle';
+  const size = Math.random()*3+1;
+  p.style.width = size+'px';
+  p.style.height = size+'px';
+  p.style.left = Math.random()*100+'%';
+  p.style.animationDuration = (12+Math.random()*14)+'s';
+  p.style.animationDelay = (Math.random()*14)+'s';
+  pWrap.appendChild(p);
+}
+
+/* ---------------- Nav toggle ---------------- */
+const navToggle = document.getElementById('navToggle');
+const navLinks = document.getElementById('navLinks');
+navToggle.addEventListener('click', ()=> navLinks.classList.toggle('active'));
+navLinks.querySelectorAll('a').forEach(a=>a.addEventListener('click', ()=>navLinks.classList.remove('active')));
+
+/* ---------------- Channel modal ---------------- */
+const channelModal = document.getElementById('channelModal');
+const modalClose = document.getElementById('modalClose');
+const confirmFollow = document.getElementById('confirmFollow');
+window.addEventListener('load', ()=>{
+  if(!localStorage.getItem('haseeb_followed_channels')){
+    setTimeout(()=>channelModal.classList.add('active'), 1200);
+  }
+});
+modalClose.addEventListener('click', ()=>channelModal.classList.remove('active'));
+confirmFollow.addEventListener('click', ()=>{
+  localStorage.setItem('haseeb_followed_channels','1');
+  channelModal.classList.remove('active');
+});
+
+/* ---------------- Toast ---------------- */
+const toast = document.getElementById('toast');
+function showToast(msg){
+  toast.innerText = msg;
+  toast.classList.add('show');
+  setTimeout(()=>toast.classList.remove('show'), 2000);
+}
+
+/* ---------------- Status helper ---------------- */
+const statusEl = document.getElementById('status');
+function setStatus(msg, type){
+  statusEl.innerText = msg;
+  statusEl.className = 'show ' + (type || '');
+}
+
+/* ---------------- Pairing logic ---------------- */
+const socket = io();
+const phoneInput = document.getElementById('phone');
+const requestBtn = document.getElementById('requestPairing');
+const codeWrap = document.getElementById('codeWrap');
+const pairingCode = document.getElementById('pairingCode');
+
+function copyCode(){
+  const code = pairingCode.innerText;
+  if(code === '0000 0000') return;
+  navigator.clipboard.writeText(code.replace(/\s/g,'')).then(()=>showToast('CODE COPIED TO CLIPBOARD!'));
+}
+
+requestBtn.addEventListener('click', ()=>{
+  const number = phoneInput.value.replace(/\D/g,'');
+  if(!number || number.length < 10){
+    setStatus('Enter a valid phone number with country code.', 'error');
+    phoneInput.focus();
+    return;
+  }
+  requestBtn.disabled = true;
+  requestBtn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Requesting...';
+  setStatus('Sending pairing request to server...', 'warning');
+
+  const userId = 'user_' + Math.random().toString(36).substr(2,9);
+  socket.emit('set-user', userId);
+  socket.emit('pair-request', { userId, number });
+});
+
+socket.on('pairing-code', (code)=>{
+  requestBtn.disabled = false;
+  requestBtn.innerHTML = '<i class="fas fa-key"></i> Request Pairing Code';
+  setStatus('Pairing code generated. Link it in WhatsApp within 60 seconds.', 'success');
+  codeWrap.style.display = 'block';
+  pairingCode.innerText = code;
+});
+
+socket.on('pair-error', (msg)=>{
+  requestBtn.disabled = false;
+  requestBtn.innerHTML = '<i class="fas fa-key"></i> Request Pairing Code';
+  setStatus(msg || 'Failed to generate pairing code. Try again.', 'error');
+});
+
+socket.on('connection-status', (status)=>{
+  if(status && status.connected){
+    pairingCode.innerText = 'LINKED';
+    pairingCode.style.color = '#39ff14';
+    pairingCode.style.borderColor = '#39ff14';
+    setStatus('Device linked successfully!', 'success');
+    showToast('CONNECTED SUCCESSFULLY!');
+    setTimeout(()=>location.reload(), 3000);
+  }
+});
+
+socket.on('stats', (data)=>{
+  if(data){
+    if(typeof data.activeSockets !== 'undefined') document.getElementById('activeSockets').innerText = data.activeSockets;
+    if(typeof data.totalUsers !== 'undefined') document.getElementById('totalUsers').innerText = data.totalUsers;
+  }
+});
+
+document.getElementById('year').innerText = new Date().getFullYear();
+</script>
+</body>
+</html>
