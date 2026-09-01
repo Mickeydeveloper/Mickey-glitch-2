@@ -16,13 +16,12 @@ async function downloadToBuffer(message, mediaType) {
 }
 
 // Ensure tmp dir exists
-if (!fs.existsSync(TEMP_MEDIA_DIR)) {
-    fs.mkdirSync(TEMP_MEDIA_DIR, { recursive: true });
-}
+fs.ensureDirSync(TEMP_MEDIA_DIR);
 
 // Function to get folder size in MB
 const getFolderSizeInMB = (folderPath) => {
     try {
+        if (!fs.existsSync(folderPath)) return 0;
         const files = fs.readdirSync(folderPath);
         let totalSize = 0;
 
@@ -80,6 +79,16 @@ function saveAntideleteConfig(config) {
 }
 
 const isOwnerOrSudo = require('../lib/isOwner');
+
+async function handleSnipe(message) {
+    try {
+        if (!message || !message.key || !message.key.id) return false;
+        return true;
+    } catch (err) {
+        console.error('handleSnipe error:', err);
+        return false;
+    }
+}
 
 // Command Handler
 async function handleAntideleteCommand(sock, chatId, message, match) {
@@ -345,5 +354,6 @@ async function handleMessageRevocation(sock, revocationMessage) {
 module.exports = {
     handleAntideleteCommand,
     handleMessageRevocation,
+    handleSnipe,
     storeMessage
 };
