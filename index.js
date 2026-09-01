@@ -1487,10 +1487,13 @@ io.on('connection', (socket) => {
 });
 
 // Start server
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, async () => {
-    console.log(`\u{1F311} HASEEB MINI BOT v${settings.version} Server running on port ${PORT}`);
+const HOST = process.env.HOST || '0.0.0.0';
+const PORT = Number(process.env.PORT || 25569);
+
+server.listen(PORT, HOST, async () => {
+    const displayHost = HOST === '0.0.0.0' ? 'localhost' : HOST;
+    console.log(`\u{1F311} HASEEB MINI BOT v${settings.version} Server running on ${HOST}:${PORT}`);
     console.log(`\u{1F4E1} Total commands loaded: 120+`);
-    console.log(`\u{1F310} Web Dashboard: http://localhost:${PORT}`);
+    console.log(`\u{1F310} Web Dashboard: http://${displayHost}:${PORT}`);
     await loadExistingSessions();
 });
