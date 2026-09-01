@@ -34,14 +34,24 @@ function loadCommandRegistry() {
         try {
             const mod = require(fullPath);
             const exportedFunctions = Object.entries(mod || {}).filter(([, value]) => typeof value === 'function');
-            const preferred = exportedFunctions.find(([key]) => {
-                const lowerKey = key.toLowerCase();
-                return lowerKey.includes(commandName.toLowerCase()) || lowerKey.includes('command') || lowerKey.includes('handler');
-            });
 
-            const handler = preferred
-                ? preferred[1]
-                : (typeof mod === 'function' ? mod : (exportedFunctions[0] ? exportedFunctions[0][1] : null));
+            let handler = null;
+
+            if (typeof mod === 'function') {
+                const modName = (mod.name || '').toLowerCase();
+                if (modName.includes(commandName.toLowerCase()) || modName.includes('command') || modName.includes('handler')) {
+                    handler = mod;
+                }
+            }
+
+            if (!handler) {
+                const preferred = exportedFunctions.find(([key]) => {
+                    const lowerKey = key.toLowerCase();
+                    return lowerKey.includes(commandName.toLowerCase()) || lowerKey.includes('command') || lowerKey.includes('handler');
+                });
+
+                handler = preferred ? preferred[1] : (exportedFunctions[0] ? exportedFunctions[0][1] : null);
+            }
 
             if (handler) {
                 registry[commandName] = handler;

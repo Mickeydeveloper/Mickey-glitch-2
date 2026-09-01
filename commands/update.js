@@ -6,6 +6,10 @@ const axios = require('axios');
 const AdmZip = require('adm-zip');
 const chalk = require('chalk');
 
+const REPO_OWNER = 'Mickeydeveloper';
+const REPO_NAME = 'Mickey-Glitch-2';
+const REPO_URL = `https://github.com/${REPO_OWNER}/${REPO_NAME}`;
+
 /**
  * @project: MICKEY GLITCH
  * @command: UPDATE (Fixed Edition - With Fallback Extraction)
@@ -150,6 +154,30 @@ function syncExtractedRepo(sourceRoot, targetRoot, ignoreSet) {
     return deletedFiles;
 }
 
+function restartBot(delayMs = 2500) {
+    console.log(chalk.yellow(`[Restart] Restarting bot in ${delayMs}ms...`));
+
+    if (typeof process.send === 'function') {
+        try {
+            process.send('restart');
+        } catch (e) {}
+    }
+
+    if (process.env.pm2 || process.env.npm_lifecycle_event === 'start') {
+        exec('pm2 restart ecosystem.config.js --env production', (err) => {
+            if (err) {
+                console.error(chalk.red('PM2 restart failed:'), err.message);
+                setTimeout(() => process.exit(1), delayMs);
+            }
+        });
+        return;
+    }
+
+    setTimeout(() => {
+        process.exit(1);
+    }, delayMs);
+}
+
 async function updateCommand(sock, chatId, message, zipUrl) {
     try {
         const isOwner = message.key.fromMe;
@@ -157,19 +185,16 @@ async function updateCommand(sock, chatId, message, zipUrl) {
 
         await sock.sendMessage(chatId, { react: { text: '⏳', key: message.key } });
 
-        // --- 🛡️ FIXED URL LOGIC ---
-        const repoUrl = "https://github.com/Mickeydeveloper/Mickey-Glitch-2";
-
         const rawZipUrl = typeof zipUrl === 'string'
             ? zipUrl
             : (zipUrl && typeof zipUrl === 'object' && typeof zipUrl.url === 'string'
                 ? zipUrl.url
                 : '');
 
-        const normalizedZipUrl = rawZipUrl.trim();
+        const normalizedZipUrl = String(rawZipUrl || '').trim();
         let updateZipUrl = normalizedZipUrl && normalizedZipUrl.startsWith('http')
             ? normalizedZipUrl
-            : `${repoUrl}/archive/refs/heads/main.zip`;
+            : `${REPO_URL}/archive/refs/heads/main.zip`;
 
         console.log(chalk.blue(`[Update] Link inayotumika: ${updateZipUrl}`));
 
@@ -222,7 +247,19 @@ async function updateCommand(sock, chatId, message, zipUrl) {
                     }))
                     : rootFolder;
 
-            const ignore = new Set(['node_modules', 'session', 'auth_info_baileys', '.git', 'settings.js', 'config.js', '.env', 'index.js', 'main.js', 'temp_update']);
+            const ignore = new Set([
+                'node_modules',
+                'session',
+                'auth_info',
+                'auth_info_baileys',
+                '.git',
+                'settings.js',
+                'config.js',
+                '.env',
+                'index.js',
+                'main.js',
+                'temp_update'
+            ]);
 
             const deletedFiles = syncExtractedRepo(repoRoot, process.cwd(), ignore);
 
@@ -237,16 +274,19 @@ async function updateCommand(sock, chatId, message, zipUrl) {
 
             fs.removeSync(tmpDir);
 
-            const deletedSummary = deletedFiles.length > 0
-                ? `\n\n🗑️ *Files zilizofutwa:*\n${deletedFiles.slice(0, 10).map(f => `• ${f}`).join('\n')}${deletedFiles.length > 10 ? '\n... na zaidi' : ''}`
+            const filteredDeleted = deletedFiles.filter(file => {
+                const normalized = String(file).replace(/\\/g, '/').toLowerCase();
+                return !normalized.includes('/auth_info/') && !normalized.startsWith('auth_info/') && !normalized.includes('/auth_info') && !normalized.startsWith('auth_info') && !normalized.includes('auth_info');
+            });
+
+            const deletedSummary = filteredDeleted.length > 0
+                ? `\n\n🗑️ *Files zilizofutwa:*\n${filteredDeleted.slice(0, 10).map(f => `• ${f}`).join('\n')}${filteredDeleted.length > 10 ? '\n... na zaidi' : ''}`
                 : '';
 
             await sock.sendMessage(chatId, { text: `✅ *Update Imekamilika kwa mafanikio!*\n\nBot inajizima na kuwaka upya.${deletedSummary}` });
             console.log(chalk.green.bold('📢 UPDATE SUCCESSFUL!'));
 
-            setTimeout(() => {
-                process.exit(1); 
-            }, 3000);
+            restartBot(3000);
         } catch (extractErr) {
             console.error(chalk.red('Extraction Error:'), extractErr.message);
             fs.removeSync(tmpDir);
