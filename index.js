@@ -14,6 +14,11 @@ const os = require('os');
 function loadCommandRegistry() {
     const registry = {};
     const commandsDir = path.join(__dirname, 'commands');
+    const ignoredFiles = new Set([
+        'a2uitest', 'antibadword', 'antisticker', 'buy', 'coin', 'donate',
+        'emojimix', 'getpp', 'imagine', 'instagram', 'pair', 'status',
+        'telebot', 'unpair', 'uploadstatus', 'url', 'sudo'
+    ]);
 
     if (!fs.existsSync(commandsDir)) return registry;
 
@@ -22,9 +27,11 @@ function loadCommandRegistry() {
         const fullPath = path.join(commandsDir, entry);
         if (!fs.statSync(fullPath).isFile() || !entry.endsWith('.js')) continue;
 
+        const commandName = path.basename(entry, '.js');
+        if (ignoredFiles.has(commandName)) continue;
+
         try {
             const mod = require(fullPath);
-            const commandName = path.basename(entry, '.js');
             const exportedFunctions = Object.entries(mod || {}).filter(([, value]) => typeof value === 'function');
             const preferred = exportedFunctions.find(([key]) => {
                 const lowerKey = key.toLowerCase();
@@ -47,7 +54,11 @@ function loadCommandRegistry() {
                 }
             }
         } catch (error) {
-            console.warn(`[Command Loader] Failed to load ${entry}:`, error.message);
+            const message = error && error.message ? error.message : String(error);
+            const isLegacyMissingModule = /Cannot find module|Invalid or unexpected token|require is not defined in ES module scope|is not a function|Unexpected token/i.test(message);
+            if (!isLegacyMissingModule) {
+                console.warn(`[Command Loader] Failed to load ${entry}:`, message);
+            }
         }
     }
 
