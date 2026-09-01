@@ -1,0 +1,18 @@
+module.exports = {
+  WARN_COUNT: 3,
+  domain: process.env.PANEL_DOMAIN || 'https://panel.mickeypannel.dpdns.org',
+  plta: process.env.PANEL_API_KEY || 'ptla_Lkp1S3qISOERsFvYfmu4k3G7efrkY8vffL6854NcJ0k',
+  botName: 'MICKEY GLITCH 2',
+  BOT_NAME: 'MICKEY GLITCH 2',
+  VERSION: '3.0.0',
+  MODE: 'public',
+  REPO_URL: 'https://github.com/Mickeydeveloper/Mickey-glitch-2',
+  FOOTER: 'MICKEY GLITCH 2',
+  BANNER: '',
+  is_ai_message: false,
+  should_show_system_message: false,
+  ticketId: 'default',
+  version: '3.0.0',
+  apiKey: process.env.OPENAI_API_KEY || '',
+  baseUrl: process.env.AI_BASE_URL || 'https://api.openai.com/v1',
+};
