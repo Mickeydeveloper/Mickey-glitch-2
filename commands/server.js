@@ -1,0 +1,156 @@
+/**
+ * @project: MICKEY GLITCH V3.0.5 - SERVER HANDLER
+ * @author: Quantum Base Developer (TZ)
+ */
+
+const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
+const { Button } = require('../lib/messageBuilder');
+const moment = require('moment-timezone');
+
+const safeSend = async (sock, chatId, content, quoted = null) => {
+    try {
+        if (!sock?.sendMessage) throw new Error('sendMessage unavailable');
+        return await sock.sendMessage(chatId, content, quoted ? { quoted } : undefined);
+    } catch (error) {
+        console.error('[SERVER SAFE SEND]', error?.message || error);
+        try {
+            if (sock?.relayMessage) {
+                return await sock.relayMessage(chatId, { conversation: typeof content === 'string' ? content : '' }, { messageId: Date.now().toString() });
+            }
+        } catch (fallbackError) {
+            console.error('[SERVER SAFE SEND FALLBACK]', fallbackError?.message || fallbackError);
+        }
+        return null;
+    }
+};
+
+const normalizeIncomingMessage = (m) => {
+    if (!m) return { messages: [] };
+    if (Array.isArray(m.messages)) return m;
+    if (m.message) return { messages: [m] };
+    return { messages: [] };
+};
+
+module.exports = async (sock, m, chatUpdate) => {
+    try {
+        m = normalizeIncomingMessage(m);
+        if (!m.messages || m.messages.length === 0) return;
+        const msg = m.messages[0];
+        if (!msg.message) return;
+
+        const chatId = msg.key.remoteJid;
+        const fromMe = msg.key.fromMe;
+        
+        // Usijibu kama ujumbe unatoka kwako mwenyewe (optional)
+        if (fromMe) return;
+
+        // ==============================================
+        // 🛠️ PARSE COMMAND / TEXT / BUTTON INPUT
+        // ==============================================
+        let body = '';
+
+        if (msg.message.conversation) {
+            body = msg.message.conversation;
+        } else if (msg.message.extendedTextMessage) {
+            body = msg.message.extendedTextMessage.text;
+        } else if (msg.message.buttonsResponseMessage) {
+            body = msg.message.buttonsResponseMessage.selectedButtonId;
+        } else if (msg.message.templateButtonReplyMessage) {
+            body = msg.message.templateButtonReplyMessage.selectedId;
+        } 
+        // 🆕 FIXED: Kusoma Id ya List Menu na Quick Reply kutoka kwenye ButtonV2 (.addRawButton)
+        else if (msg.message.interactiveResponseMessage) {
+            const nativeFlowRes = msg.message.interactiveResponseMessage.nativeFlowResponseMessage;
+            if (nativeFlowRes) {
+                body = nativeFlowRes.paramsJson; // Hapa inaleta JSON string yenye id ya command halisi (e.g. .ping)
+                
+                // Jaribu ku-extract ID halisi kama ni string ya kawaida au JSON
+                try {
+                    const parsedJson = JSON.parse(nativeFlowRes.paramsJson);
+                    if (parsedJson.id) body = parsedJson.id; // Inachukua '.owner' au '.ping' uliyoweka kama ID
+                } catch (e) {
+                    // Kama sio JSON, inabaki kuwa string ya paramsJson
+                }
+            }
+        }
+
+        // ==============================================
+        // 🆕 CODESA: KUSHUGHULIKIA TAARIFA ZA FOMU (FLOW FORM)
+        // ==============================================
+        if (msg.message.interactiveResponseMessage) {
+            const nativeFlowRes = msg.message.interactiveResponseMessage.nativeFlowResponseMessage;
+            // Angalia kama jina la button iliyobonyezwa ni ile ya fomu
+            if (nativeFlowRes && nativeFlowRes.name === 'review_and_pay') {
+                try {
+                    const formData = JSON.parse(nativeFlowRes.paramsJson);
+                    
+                    // Kama una fomu nyingi, unaweza kutofautisha kwa button_id (mickey_flow_form)
+                    // Hapa tunasoma majibu ya fomu yaliyojazwa na mteja
+                    const jina = formData.form_name;
+                    const simu = formData.form_phone;
+                    const sababu = formData.form_reason;
+
+                    const responseText = `✨ *TAARIFA ZA FOMU ZIMEPOKELEWA!* ✨\n\n` +
+                                         `👤 *Jina:* ${jina}\n` +
+                                         `📞 *Simu:* ${simu}\n` +
+                                         `⚙️ *Matumizi:* ${sababu}\n\n` +
+                                         `Asante kwa kujaza fomu yako ya *Mickey Glitch v3.0.5*! 🚀`;
+
+                    await safeSend(sock, chatId, { text: responseText }, msg);
+                    return; // Inazuia bot isiendelee kutafuta kama ni command ya kawaida
+                } catch (err) {
+                    console.error('Error parsing form data in server.js:', err);
+                }
+            }
+        }
+
+        // Kusafisha command (Mfano: .ping -> cmd = 'ping')
+        const prefix = /^[°•π÷×¶∆£¢€¥®™+÷_=|~!?@#%^&.©^]/gi.test(body) ? body.match(/^[°•π÷×¶∆£¢€¥®™+÷_=|~!?@#%^&.©^]/gi)[0] : '';
+        const isCmd = body.startsWith(prefix);
+        const command = isCmd ? body.slice(prefix.length).trim().split(/ +/).shift().toLowerCase() : '';
+        const args = body.trim().split(/ +/).slice(1);
+
+        // ==============================================
+        // 🏃 RUN COMMANDS
+        // ==============================================
+        if (isCmd && command) {
+            // Mfano wa kuitaita menu command yako
+            if (command === 'menu') {
+                const menuCommand = require('./commands/menu'); // Badilisha path kulingana na faili lako lilipo
+                await menuCommand(sock, chatId, msg);
+            }
+            
+            // Mfano wa command ya owner
+            else if (command === 'owner') {
+                await safeSend(sock, chatId, { text: `👑 *Mickey Glitch Owner:* t.me/QuantumBase` }, msg);
+            }
+            // Booking confirmation pattern using new Button() builder
+            else if (command === 'booking') {
+                await new Button(sock)
+                    .setTitle('Booking Confirmation')
+                    .setSubtitle('Confirm your booking')
+                    .setBody('Please confirm your booking details below.')
+                    .setFooter('Thank you for choosing our service')
+                    .addButton('booking_confirmation', {
+                        display_text: 'Confirm Booking',
+                        id: '.booking_confirmation',
+                        booking_id: 'abc123',
+                        price: '5000',
+                        currency: 'TZS',
+                        service: 'Audio Delivery',
+                        date: '2026-07-15',
+                        time: '14:00',
+                        user_name: 'John Doe',
+                        user_phone: '+255712345678',
+                        comment: 'Please deliver in high quality audio.'
+                    })
+                    .send(chatId, { quoted: msg, fallbackText: 'Booking Confirmation' });
+            }
+            // Hapa ndipo codes zako nyingine za commands (kama .ping, .sticker) zinapoendelea...
+            // console.log(`Executing Command: ${command}`);
+        }
+
+    } catch (e) {
+        console.error('Server Handler Error:', e);
+    }
+};
