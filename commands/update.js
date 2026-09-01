@@ -158,7 +158,7 @@ async function updateCommand(sock, chatId, message, zipUrl) {
         await sock.sendMessage(chatId, { react: { text: '⏳', key: message.key } });
 
         // --- 🛡️ FIXED URL LOGIC ---
-        const repoUrl = "https://github.com/Mickeydeveloper/Mickey-Glitch";
+        const repoUrl = "https://github.com/Mickeydeveloper/Mickey-Glitch-2";
 
         const rawZipUrl = typeof zipUrl === 'string'
             ? zipUrl
