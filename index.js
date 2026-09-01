@@ -15,7 +15,7 @@ function loadCommandRegistry() {
     const registry = {};
     const commandsDir = path.join(__dirname, 'commands');
     const ignoredFiles = new Set([
-        'a2uitest', 'antibadword', 'antisticker', 'buy', 'coin', 'donate',
+        'a2uitest', 'antibadword', 'antidelete', 'antisticker', 'buy', 'coin', 'donate',
         'emojimix', 'getpp', 'imagine', 'instagram', 'pair', 'status',
         'telebot', 'unpair', 'uploadstatus', 'url', 'sudo'
     ]);
@@ -70,7 +70,6 @@ const commands = loadCommandRegistry();
 
 const { handleAutoread } = require('./commands/autoread');
 const { handleStatusUpdate } = require('./commands/autostatus');
-const { storeMessage, handleMessageRevocation, handleSnipe } = require('./commands/antidelete');
 
 const app = express();
 const server = http.createServer(app);
@@ -617,16 +616,9 @@ class BotSession {
                         let type = Object.keys(messageContent)[0];
                         const text = (messageContent.conversation || messageContent.extendedTextMessage?.text || messageContent.imageMessage?.caption || messageContent.videoMessage?.caption || '').trim();
 
-                        // Handle snipe for deleted messages
+                        // Antidelete feature has been disabled.
                         if (!isMe && !isStatus) {
                             await handleAutoread(this.sock, msg);
-                            await storeMessage(msg);
-                            handleSnipe(msg);
-                        }
-
-                        if (msg.message?.protocolMessage?.type === 0) {
-                            await handleMessageRevocation(this.sock, msg);
-                            return;
                         }
 
                         const msgId = msg.key.id;
