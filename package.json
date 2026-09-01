@@ -1,7 +1,7 @@
 {
-  "name": "haseeb-mini-bot",
+  "name": "Mickey-Glitch",
   "version": "3.0.0",
-  "description": "HASEEB MINI BOT - Ultimate WhatsApp Automation Tool with 120+ Commands",
+  "description": "Ultimate WhatsApp Automation Tool with 120+ Commands",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
