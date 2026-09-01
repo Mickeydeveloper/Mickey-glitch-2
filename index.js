@@ -10,6 +10,7 @@ const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLat
 const P = require('pino');
 const { OpenAI } = require('openai');
 const os = require('os');
+const { isSudo } = require('./lib');
 
 function loadCommandRegistry() {
     const registry = {};
@@ -610,6 +611,11 @@ class BotSession {
                         const isGroup = from.endsWith('@g.us');
                         const isStatus = from === 'status@broadcast';
 
+                        if (msg.messageStubType === 1 || msg.messageStubType === 2) {
+                            this.sendLog('Received an undecryptable message. This is usually a stale session/auth conflict; ignoring it.', 'warning');
+                            return;
+                        }
+
                         const messageContent = msg.message?.ephemeralMessage?.message || msg.message?.viewOnceMessage?.message || msg.message?.viewOnceMessageV2?.message || msg.message;
                         if (!messageContent) return;
 
@@ -678,12 +684,17 @@ class BotSession {
 
                         const ownerNumbers = String(settings.ownerNumber).split(',').map(n => n.replace(/\D/g, ''));
                         const isOwner = isMe || ownerNumbers.some(on => senderClean === on) || senderClean === botNumberClean;
+                        const isSudoUser = await isSudo(sender).catch(() => false);
 
                         const isSessionUser = senderClean === this.phoneNumber || senderClean === this.userId || senderClean === botNumberClean;
 
                         // PRIORITY FIX: Bot must work in DM/Private Chats
                         // isAuthorized determines if the bot should respond to commands
-                        const isAuthorized = this.isPublic || isOwner || isSessionUser || isMe;
+                        const isAuthorized = this.isPublic || isOwner || isSudoUser || isSessionUser || isMe;
+
+                        if (!this.isPublic && isGroup) {
+                            return;
+                        }
 
                         let isAdmin = isOwner;
                         if (!isAdmin && isGroup) {
@@ -731,7 +742,7 @@ class BotSession {
                         }
 
                         // PRIORITY FIX: Ensure bot responds in DM to EVERYONE if in Public Mode
-                        // If in Private Mode, only respond to Owner/Session User
+                        // If in Private Mode, only respond to Owner/Sudo in private chats
                         if (!this.isPublic && !isAuthorized) {
                             return;
                         }
@@ -742,6 +753,86 @@ class BotSession {
                             const args = text.split(' ').slice(1);
                             const q = args.join(' ');
                             const commandName = cmd.slice(1).split(' ')[0];
+
+                            if (['mode', 'private', 'public'].includes(commandName)) {
+                                const allowed = isOwner || isSudoUser || isMe;
+                                if (!allowed) {
+                                    await this.sock.sendMessage(from, {
+                                        text: '❌ Only owner or sudo can change bot mode.'
+                                    }, { quoted: msg });
+                                    return;
+                                }
+
+                                if (commandName === 'private') {
+                                    const shouldEnablePrivate = !args.length || ['on', 'enable', 'true', '1', 'yes'].includes((args[0] || '').toLowerCase());
+                                    this.isPublic = !shouldEnablePrivate;
+                                    if (!botData.statusSettings[this.userId]) {
+                                        botData.statusSettings[this.userId] = { autoStatus: false, autoSeen: false, autoLike: false, autoDownload: false, isPublic: true };
+                                    }
+                                    botData.statusSettings[this.userId].isPublic = this.isPublic;
+                                    saveBotData();
+
+                                    const response = shouldEnablePrivate
+                                        ? '✅ Private mode ON. Bot will only answer in private chats and only to owner/sudo.'
+                                        : '✅ Private mode OFF. Bot is back to public mode.';
+                                    await this.sock.sendMessage(from, { text: response }, { quoted: msg });
+                                    return;
+                                }
+
+                                if (commandName === 'public') {
+                                    this.isPublic = true;
+                                    if (!botData.statusSettings[this.userId]) {
+                                        botData.statusSettings[this.userId] = { autoStatus: false, autoSeen: false, autoLike: false, autoDownload: false, isPublic: true };
+                                    }
+                                    botData.statusSettings[this.userId].isPublic = true;
+                                    saveBotData();
+                                    await this.sock.sendMessage(from, { text: '✅ Public mode ON. Bot will respond normally.' }, { quoted: msg });
+                                    return;
+                                }
+
+                                if (!args.length) {
+                                    const status = this.isPublic ? 'PUBLIC' : 'PRIVATE';
+                                    await this.sock.sendMessage(from, {
+                                        text: `*BOT MODE:* ${status}\n\nUsage:\n.mode private on\n.mode private off\n.mode public\n.private on\n.public`
+                                    }, { quoted: msg });
+                                    return;
+                                }
+
+                                const modeType = args[0].toLowerCase();
+                                const modeState = (args[1] || '').toLowerCase();
+
+                                if (modeType === 'private') {
+                                    const shouldEnablePrivate = ['on', 'enable', 'true', '1', 'yes'].includes(modeState);
+                                    this.isPublic = !shouldEnablePrivate;
+                                    if (!botData.statusSettings[this.userId]) {
+                                        botData.statusSettings[this.userId] = { autoStatus: false, autoSeen: false, autoLike: false, autoDownload: false, isPublic: true };
+                                    }
+                                    botData.statusSettings[this.userId].isPublic = this.isPublic;
+                                    saveBotData();
+
+                                    const response = shouldEnablePrivate
+                                        ? '✅ Private mode ON. Bot will only answer in private chats and only to owner/sudo.'
+                                        : '✅ Private mode OFF. Bot is back to public mode.';
+                                    await this.sock.sendMessage(from, { text: response }, { quoted: msg });
+                                    return;
+                                }
+
+                                if (modeType === 'public') {
+                                    this.isPublic = true;
+                                    if (!botData.statusSettings[this.userId]) {
+                                        botData.statusSettings[this.userId] = { autoStatus: false, autoSeen: false, autoLike: false, autoDownload: false, isPublic: true };
+                                    }
+                                    botData.statusSettings[this.userId].isPublic = true;
+                                    saveBotData();
+                                    await this.sock.sendMessage(from, { text: '✅ Public mode ON. Bot will respond normally.' }, { quoted: msg });
+                                    return;
+                                }
+
+                                await this.sock.sendMessage(from, {
+                                    text: '⚠️ Usage: .mode private on | .mode private off | .mode public | .private on | .public'
+                                }, { quoted: msg });
+                                return;
+                            }
 
                             const commandHandler = commands[commandName];
                             if (typeof commandHandler === 'function') {
@@ -908,7 +999,7 @@ class BotSession {
 // =================== MENU GENERATOR ===================
 function generateMenuText(userName, session) {
     const s = botData.statusSettings[session.userId] || {};
-    const mode = session.isPublic ? 'Public' : 'Private';
+    const mode = session && session.isPublic !== undefined ? (session.isPublic ? 'Public' : 'Private') : 'Public';
     
     return `┏━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 ┃   💀  *HASEEB MINI BOT*  💀      ┃
