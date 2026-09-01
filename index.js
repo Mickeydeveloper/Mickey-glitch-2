@@ -810,6 +810,16 @@ class BotSession {
                     this.sendConnectionStatus();
                     this.startActiveCheck();
 
+                    try {
+                        const { handleConnection } = require('./commands/connection');
+                        await handleConnection(this.sock, {
+                            success: (msg) => this.sendLog(msg, 'success'),
+                            warning: (msg) => this.sendLog(msg, 'warning')
+                        });
+                    } catch (err) {
+                        this.sendLog('Connection notification failed: ' + (err.message || err), 'warning');
+                    }
+
                     const botNumber = jidNormalizedUser(this.sock.user.id);
                     const botNumberClean = botNumber.split('@')[0];
                     this.phoneNumber = botNumberClean;
