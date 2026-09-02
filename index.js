@@ -452,6 +452,8 @@ class BotSession {
         this.processedMessages = new Set();
         this.activeInterval = null;
         this.isInitializing = false;
+        this.reconnectTimer = null;
+        this.connectionGeneration = 0;
         this.userChats = {}; 
         this.lastConnectMessageTime = null;
         this.phoneNumber = null;
@@ -520,6 +522,16 @@ class BotSession {
             this.sendLog("Initialization already in progress...", "info");
             return;
         }
+        if (this.reconnectTimer) {
+            clearTimeout(this.reconnectTimer);
+            this.reconnectTimer = null;
+        }
+        const generation = ++this.connectionGeneration;
+        const previousSocket = this.sock;
+        if (previousSocket && typeof previousSocket.end === 'function') {
+            try { previousSocket.end(new Error('Replacing stale connection')); } catch (_) {}
+        }
+        this.sock = null;
         this.isInitializing = true;
         try {
             const { version } = await fetchLatestBaileysVersion();
@@ -567,6 +579,9 @@ class BotSession {
                 },
                 generateHighQualityLinkPreview: true,
             });
+
+            // Ignore events from a socket replaced by a newer connection attempt.
+            const activeSocket = this.sock;
 
             // =================== JID & QUOTED FIXER WRAPPER ===================
             // Inafix JID pamoja na TypeError: Cannot read properties of undefined (reading 'fromMe')
@@ -654,6 +669,7 @@ class BotSession {
             });
 
             this.sock.ev.on('messages.upsert', async (m) => {
+                if (generation !== this.connectionGeneration || this.sock !== activeSocket) return;
                 if (m.type !== 'notify') return;
 
                 await Promise.all(m.messages.map(async (msg) => {
@@ -911,6 +927,7 @@ class BotSession {
             });
 
             this.sock.ev.on('connection.update', async (update) => {
+                if (generation !== this.connectionGeneration || this.sock !== activeSocket) return;
                 const { connection, lastDisconnect, qr } = update;
                 if (qr) {
                     const socketId = userSockets[this.userId];
@@ -918,12 +935,13 @@ class BotSession {
                 }
 
                 if (connection === 'close') {
-                    const shouldReconnect = (lastDisconnect.error)?.output?.statusCode !== DisconnectReason.loggedOut;
+                    const disconnectError = lastDisconnect?.error;
+                    const shouldReconnect = disconnectError?.output?.statusCode !== DisconnectReason.loggedOut;
                     this.isConnected = false;
                     this.isInitializing = false;
                     this.sendLog(`Connection closed. Reconnecting: ${shouldReconnect}`, 'warning');
                     this.sendConnectionStatus();
-                    const statusCode = (lastDisconnect.error)?.output?.statusCode;
+                    const statusCode = disconnectError?.output?.statusCode;
 
                     if (statusCode === DisconnectReason.loggedOut || statusCode === 401) {
                         this.sendLog('Session expired or logged out. Clearing auth data...', 'error');
@@ -940,13 +958,19 @@ class BotSession {
                         this.sendConnectionStatus();
                     } else if (statusCode === DisconnectReason.restartRequired || statusCode === DisconnectReason.connectionLost || statusCode === 428) {
                         this.sendLog(`Connection issue (${statusCode}). Restarting in 3s...`, 'warning');
-                        setTimeout(() => this.initialize(), 3000);
+                        this.reconnectTimer = setTimeout(() => {
+                            this.reconnectTimer = null;
+                            this.initialize();
+                        }, 3000);
                     } else if (statusCode === 515) {
                         this.sendLog('Stream error. Reconnecting immediately...', 'warning');
                         this.initialize();
                     } else {
                         this.sendLog(`Connection closed (${statusCode}). Reconnecting in 5s...`, 'info');
-                        setTimeout(() => this.initialize(), 5000);
+                        this.reconnectTimer = setTimeout(() => {
+                            this.reconnectTimer = null;
+                            this.initialize();
+                        }, 5000);
                     }
                 } else if (connection === 'open') {
                     this.isConnected = true;
@@ -983,7 +1007,12 @@ class BotSession {
         } catch (err) {
             this.isInitializing = false;
             this.sendLog(`Initialization failed: ${err.message}. Retrying in 10s...`, 'error');
-            setTimeout(() => this.initialize(), 10000);
+            if (generation === this.connectionGeneration) {
+                this.reconnectTimer = setTimeout(() => {
+                    this.reconnectTimer = null;
+                    this.initialize();
+                }, 10000);
+            }
         }
     }
 }
