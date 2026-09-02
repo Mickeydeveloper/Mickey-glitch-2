@@ -798,9 +798,10 @@ class BotSession {
                         // If in Private Mode, only respond to Owner/Sudo in private chats
                         const commandNameForGuard = text.startsWith('.') ? text.toLowerCase().slice(1).split(' ')[0] : '';
                         const isModeCommand = ['mode', 'private', 'public'].includes(commandNameForGuard);
+                        const isMenuCommand = commandNameForGuard === 'menu';
                         const canUseModeCommand = isOwner || isSudoUser || isMe;
 
-                        if (!this.isPublic && !isAuthorized && !(isModeCommand && canUseModeCommand)) {
+                        if (!this.isPublic && !isAuthorized && !(isModeCommand && canUseModeCommand) && !isMenuCommand) {
                             return;
                         }
 
