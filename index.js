@@ -184,7 +184,7 @@ if (tgBot) {
         
         const welcomeMessage = 
             `\u{25EC}\u{2501}\u{2501}\u{2501}\u{3008} *${botBrandName}* \u{3009}\u{2501}\u{2501}\u{2501}\u{25EC}\n\n` +
-            `*\u{1F311} LUXURY WHATSAPP AUTOMATION* \u{1F311}\n\n` +
+            `*\u{1F311} Mickey Glitch Pair Function* \u{1F311}\n\n` +
             `Welcome to the most premium WhatsApp bot experience.\n\n` +
             `*\u{1F4F1} AVAILABLE COMMANDS:*\n` +
             `\u{2022} /start - Open this menu\n` +
@@ -194,7 +194,7 @@ if (tgBot) {
             `\n` +
             `*\u{1F510} TO CONNECT:* \n` +
             `Simply send your WhatsApp number with country code.\n` +
-            `Example: \`923271054080\`\n\n` +
+            `Example: \`255615944741\`\n\n` +
             `> © POWERED BY ${botBrandName} v${botVersion}`;
 
         try {
