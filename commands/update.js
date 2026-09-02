@@ -12,13 +12,11 @@ const REPO_URL = `https://github.com/${REPO_OWNER}/${REPO_NAME}`;
 
 /**
  * @project: MICKEY GLITCH
- * @command: UPDATE (Fixed Edition - With Fallback Extraction)
+ * @command: UPDATE (Full Replace Edition)
  */
 
-// Helper: Try different extraction methods
 async function extractZipFile(zipPath, extractPath) {
     return new Promise((resolve, reject) => {
-        // Method 1: Try AdmZip JS extraction first (no external unzip required)
         try {
             const zip = new AdmZip(zipPath);
             zip.extractAllTo(extractPath, true);
@@ -28,7 +26,6 @@ async function extractZipFile(zipPath, extractPath) {
             console.log(chalk.yellow('⚠ AdmZip JS extraction failed, trying native unzip/7z...'), admErr.message);
         }
 
-        // Method 2: Try unzip command (Linux/Mac)
         exec(`unzip -o "${zipPath}" -d "${extractPath}"`, (err) => {
             if (!err) {
                 console.log(chalk.green('✓ Extracted using unzip'));
@@ -37,7 +34,6 @@ async function extractZipFile(zipPath, extractPath) {
 
             console.log(chalk.yellow('⚠ unzip failed, trying 7z...'));
 
-            // Method 3: Try 7z command (Windows/Linux)
             exec(`7z x "${zipPath}" -o"${extractPath}" -y`, (err2) => {
                 if (!err2) {
                     console.log(chalk.green('✓ Extracted using 7z'));
@@ -46,21 +42,14 @@ async function extractZipFile(zipPath, extractPath) {
 
                 console.log(chalk.yellow('⚠ 7z failed, trying tar...'));
 
-                // Method 4: Try tar command (for .tar.gz, etc)
                 exec(`tar -xzf "${zipPath}" -C "${extractPath}"`, (err3) => {
                     if (!err3) {
                         console.log(chalk.green('✓ Extracted using tar'));
                         return resolve(true);
                     }
 
-                    // All methods failed
                     reject(new Error(
-                        'EXTRACTION_FAILED: AdmZip, unzip, 7z, na tar zote hazifanya kazi.\n' +
-                        'Panel yako inaweza kuwa na restrictions kwenye extraction tools.\n' +
-                        'Suluhisho:\n' +
-                        '1. Contact hosting provider kuomba unzip/7z permissions\n' +
-                        '2. Jaribu manual update kutoka GitHub\n' +
-                        '3. Deploy bot kwenye panel inayoruhusu extraction'
+                        'EXTRACTION_FAILED: AdmZip, unzip, 7z, na tar zote hazifanyi kazi.'
                     ));
                 });
             });
@@ -205,7 +194,6 @@ async function updateCommand(sock, chatId, message, zipUrl) {
         if (fs.existsSync(tmpDir)) fs.removeSync(tmpDir);
         fs.ensureDirSync(tmpDir);
 
-        // --- 🛡️ AXIOS WITH ERROR HANDLING ---
         const response = await axios({ 
             method: 'get', 
             url: updateZipUrl, 
@@ -223,8 +211,7 @@ async function updateCommand(sock, chatId, message, zipUrl) {
             writer.on('error', reject);
         });
 
-        // Extraction - with fallback methods
-        await sock.sendMessage(chatId, { text: "📦 *Mchakato wa ku-update umeanza...*" });
+        await sock.sendMessage(chatId, { text: "📦 *Mchakato wa ku-update zote umeanza...*" });
 
         try {
             await extractZipFile(zipPath, extractPath);
@@ -247,63 +234,44 @@ async function updateCommand(sock, chatId, message, zipUrl) {
                     }))
                     : rootFolder;
 
+            // ⚠️ IGNORING ONLY SENSITIVE RUNTIME/SESSION FOLDERS AND SYSTEM DATA
+            // Files kama config.js, .env, main.js sasa hivi ZITAKUA UPDATED kikamilifu!
             const ignore = new Set([
                 'node_modules',
                 'session',
                 'auth_info',
                 'auth_info_baileys',
                 '.git',
-                'config.js',
-                '.env',
-                'main.js',
                 'temp_update'
             ]);
 
             const deletedFiles = syncExtractedRepo(repoRoot, process.cwd(), ignore);
 
-            if (deletedFiles.length > 0) {
-                console.log(chalk.red(`[Update] Deleted stale files (${deletedFiles.length}):`));
-                for (const file of deletedFiles) {
-                    console.log(chalk.red(`  - ${file}`));
-                }
-            } else {
-                console.log(chalk.green('[Update] No stale files were deleted.'));
-            }
-
             fs.removeSync(tmpDir);
 
             const filteredDeleted = deletedFiles.filter(file => {
                 const normalized = String(file).replace(/\\/g, '/').toLowerCase();
-                return !normalized.includes('/auth_info/') && !normalized.startsWith('auth_info/') && !normalized.includes('/auth_info') && !normalized.startsWith('auth_info') && !normalized.includes('auth_info');
+                return !normalized.includes('session') && !normalized.includes('auth_info');
             });
 
             const deletedSummary = filteredDeleted.length > 0
-                ? `\n\n🗑️ *Files zilizofutwa:*\n${filteredDeleted.slice(0, 10).map(f => `• ${f}`).join('\n')}${filteredDeleted.length > 10 ? '\n... na zaidi' : ''}`
+                ? `\n\n🗑️ *Files zilizofutwa (zilizondolewa kwe repo):*\n${filteredDeleted.slice(0, 10).map(f => `• ${f}`).join('\n')}${filteredDeleted.length > 10 ? '\n... na zaidi' : ''}`
                 : '';
 
-            await sock.sendMessage(chatId, { text: `✅ *Update Imekamilika kwa mafanikio!*\n\nBot inajizima na kuwaka upya.${deletedSummary}` });
-            console.log(chalk.green.bold('📢 UPDATE SUCCESSFUL!'));
+            await sock.sendMessage(chatId, { text: `✅ *Update ya Fayil ZOTE imekamilika!*\n\nBot inajizima na kuwaka upya.${deletedSummary}` });
+            console.log(chalk.green.bold('📢 FULL UPDATE SUCCESSFUL!'));
 
             restartBot(3000);
         } catch (extractErr) {
             console.error(chalk.red('Extraction Error:'), extractErr.message);
             fs.removeSync(tmpDir);
 
-            // Provide helpful error message
-            const errorMsg = extractErr.message.includes('EXTRACTION_FAILED')
-                ? extractErr.message
-                : `❌ *Extraction Imefeli:* ${extractErr.message}\n\n` +
-                  '*Suluhisho:*\n' +
-                  '• Hakikisha panel inaruhusu unzip/7z commands\n' +
-                  '• Jaribu `.repo` command kudownload bot kwenye local\n' +
-                  '• Sitiki kwenye hosting provider';
-
+            const errorMsg = `❌ *Extraction Imefeli:* ${extractErr.message}`;
             await sock.sendMessage(chatId, { text: errorMsg }).catch(() => {});
         }
 
     } catch (err) {
         console.error(chalk.red("Update Error:"), err.message);
-        // Hapa bot haitazima (crash), itatuma tu ujumbe wa kosa
         await sock.sendMessage(chatId, { text: `❌ *Update Imefeli:* ${err.message}` }).catch(() => {});
     }
 }
