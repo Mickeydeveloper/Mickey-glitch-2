@@ -9,7 +9,7 @@ module.exports = {
     tgOwnerId: process.env.OWNER_TELEGRAM_ID || '8488081516',
     premiumUsers: [],
     connectedBots: [],
-    version: '3.0.0',
+    version: '1.0.0',
     prefix: '.',
     timezone: 'Africa/Dar_es_Salaam',
     locale: 'en-GB',
@@ -33,7 +33,7 @@ module.exports = {
             newsletterJid: this.newsletterJid || '120363398106360290@newsletter',
             newsletterName: this.newsletterName || this.botName || 'MICKEY GLITCH BOT',
             timezone: this.timezone || 'Africa/Dar_es_Salaam',
-            version: this.version || '3.0.0',
+            version: this.version || '1.0.0',
         };
     }
 };
