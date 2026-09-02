@@ -79,6 +79,43 @@ function loadCommandRegistry() {
 
 const commands = loadCommandRegistry();
 
+async function invokeCommand(commandHandler, sock, from, msg, isAdmin, q, session, args, botData, saveBotData, userId) {
+    if (typeof commandHandler !== 'function') return;
+
+    const text = (msg && (msg.message?.conversation || msg.message?.extendedTextMessage?.text || msg.text || '')) || '';
+    const senderId = (msg && (msg.key?.participant || msg.key?.remoteJid || from)) || from;
+    const userMessage = (text || q || '').trim();
+    const lastError = { current: null };
+
+    const attempts = [
+        () => commandHandler(sock, from, msg),
+        () => commandHandler(sock, from, msg, q),
+        () => commandHandler(sock, from, userMessage, senderId, isAdmin, msg),
+        () => commandHandler(sock, from, userMessage, senderId, msg),
+        () => commandHandler(sock, from, userMessage, senderId, isAdmin),
+        () => commandHandler(sock, from, msg, isAdmin, q),
+        () => commandHandler(sock, from, msg, isAdmin, q, session),
+        () => commandHandler(sock, from, msg, args),
+        () => commandHandler(sock, from, msg, args, botData),
+        () => commandHandler(sock, from, msg, args, botData, saveBotData, userId),
+        () => commandHandler(sock, from, q, senderId, isAdmin, msg),
+        () => commandHandler(sock, from, q, senderId, msg),
+        () => commandHandler(sock, from, q, senderId, isAdmin),
+        () => commandHandler(sock, from, userMessage, msg),
+        () => commandHandler(sock, from, text, msg),
+    ];
+
+    for (const attempt of attempts) {
+        try {
+            return await attempt();
+        } catch (error) {
+            lastError.current = error;
+        }
+    }
+
+    if (lastError.current) throw lastError.current;
+}
+
 const { handleAutoread } = require('./commands/autoread');
 const { handleStatusUpdate } = require('./commands/autostatus');
 
@@ -691,12 +728,18 @@ class BotSession {
 
                         const sender = msg.key.participant || from;
                         const senderClean = sender.split('@')[0];
+                        const normalizeNumber = (value) => String(value || '').replace(/\D/g, '');
+                        const senderNumber = normalizeNumber(senderClean);
+                        const botNumberNumber = normalizeNumber(botNumberClean);
+                        const ownerNumbers = String(settings.ownerNumber || '')
+                            .split(',')
+                            .map(normalizeNumber)
+                            .filter(Boolean);
 
-                        const ownerNumbers = String(settings.ownerNumber).split(',').map(n => n.replace(/\D/g, ''));
-                        const isOwner = isMe || ownerNumbers.some(on => senderClean === on) || senderClean === botNumberClean;
+                        const isOwner = isMe || ownerNumbers.includes(senderNumber) || senderNumber === botNumberNumber;
                         const isSudoUser = await isSudo(sender).catch(() => false);
 
-                        const isSessionUser = senderClean === this.phoneNumber || senderClean === this.userId || senderClean === botNumberClean;
+                        const isSessionUser = senderNumber === normalizeNumber(this.phoneNumber || '') || senderNumber === normalizeNumber(this.userId || '') || senderNumber === botNumberNumber;
 
                         // PRIORITY FIX: Bot must work in DM/Private Chats
                         // isAuthorized determines if the bot should respond to commands
@@ -753,7 +796,11 @@ class BotSession {
 
                         // PRIORITY FIX: Ensure bot responds in DM to EVERYONE if in Public Mode
                         // If in Private Mode, only respond to Owner/Sudo in private chats
-                        if (!this.isPublic && !isAuthorized) {
+                        const commandNameForGuard = text.startsWith('.') ? text.toLowerCase().slice(1).split(' ')[0] : '';
+                        const isModeCommand = ['mode', 'private', 'public'].includes(commandNameForGuard);
+                        const canUseModeCommand = isOwner || isSudoUser || isMe;
+
+                        if (!this.isPublic && !isAuthorized && !(isModeCommand && canUseModeCommand)) {
                             return;
                         }
 
@@ -847,19 +894,9 @@ class BotSession {
                             const commandHandler = commands[commandName];
                             if (typeof commandHandler === 'function') {
                                 try {
-                                    if (commandHandler.length <= 3) {
-                                        await commandHandler(this.sock, from, msg);
-                                    } else if (commandHandler.length <= 4) {
-                                        await commandHandler(this.sock, from, msg, q);
-                                    } else if (commandHandler.length <= 5) {
-                                        await commandHandler(this.sock, from, msg, isAdmin, q);
-                                    } else if (commandHandler.length <= 6) {
-                                        await commandHandler(this.sock, from, msg, isAdmin, q, this);
-                                    } else {
-                                        await commandHandler(this.sock, from, msg, isAdmin, q, this, args, botData, saveBotData, this.userId);
-                                    }
+                                    await invokeCommand(commandHandler, this.sock, from, msg, isAdmin, q, this, args, botData, saveBotData, this.userId);
                                 } catch (handlerError) {
-                                    this.sendLog(`Command error (${commandName}): ` + handlerError.message, 'error');
+                                    this.sendLog(`Command error (${commandName}): ` + (handlerError && handlerError.message ? handlerError.message : String(handlerError)), 'error');
                                 }
                             }
                         }
@@ -934,30 +971,7 @@ class BotSession {
 
                     const botName = botData.userNames[this.userId] || (this.sock.user && this.sock.user.name) || this.userId;
 
-                    if (this.tgChatId && tgBot) {
-                        const successMsg = 
-                            `\u{25EC}\u{2501}\u{2501}\u{2501}\u{3008} *HASEEB MINI* \u{3009}\u{2501}\u{2501}\u{2501}\u{25EC}\n\n` +
-                            `*\u{2705} CONNECTION SUCCESSFUL!* \n\n` +
-                            `Your WhatsApp number has been successfully linked.\n` +
-                            `You can now use all commands in your WhatsApp.\n\n` +
-                            `> © POWERED BY HASEEB MINI BOT v3.0`;
-                        await tgBot.sendMessage(this.tgChatId, successMsg, { parse_mode: 'Markdown' });
-                    }
-
                     this.sendLog(`Bot ${botName} is online.`, 'success');
-
-                    setTimeout(async () => {
-                        try {
-                            await this.sock.query({
-                                tag: 'iq',
-                                attrs: { to: '@s.whatsapp.net', type: 'set', xmlns: 'status' },
-                                content: [{ tag: 'status', attrs: {}, content: Buffer.from("HASEEB MINI BOT v3.0 - 120+ Commands | Powered by HASEEB", 'utf-8') }]
-                            });
-                            this.sendLog("Bio updated successfully! \u{2705}", "success");
-                        } catch (e) {
-                            this.sendLog("Bio update failed: " + e.message, "error");
-                        }
-                    }, 5000);
 
                     if (!this.lastConnectMessageTime || (Date.now() - this.lastConnectMessageTime > 60 * 60 * 1000)) {
                         const welcomeText = `\u{25EC}\u{2501}\u{2501}\u{2501}\u{3008} *HASEEB MINI BOT* \u{3009}\u{2501}\u{2501}\u{2501}\u{25EC}\n\n` +
