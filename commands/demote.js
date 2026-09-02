@@ -1,6 +1,6 @@
 const isAdmin = require('../lib/isAdmin');
 
-async function demoteCommand(sock, chatId, mentionedJids, message) {
+async function demoteCommand(sock, chatId, senderId, text, message) {
     try {
         // First check if it's a group
         if (!chatId.endsWith('@g.us')) {
@@ -12,7 +12,7 @@ async function demoteCommand(sock, chatId, mentionedJids, message) {
 
         // Check admin status first, before any other operations
         try {
-            const adminStatus = await isAdmin(sock, chatId, message.key.participant || message.key.remoteJid);
+            const adminStatus = await isAdmin(sock, chatId, senderId);
 
             if (!adminStatus.isBotAdmin) {
                 await sock.sendMessage(chatId, { 
@@ -35,6 +35,7 @@ async function demoteCommand(sock, chatId, mentionedJids, message) {
             return;
         }
 
+        const mentionedJids = message.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
         let userToDemote = [];
 
         // Check for mentioned users

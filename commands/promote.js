@@ -1,7 +1,18 @@
-const { isAdmin } = require('../lib/isAdmin');
+const isAdmin = require('../lib/isAdmin');
 
 // Function to handle manual promotions via command only
-async function promoteCommand(sock, chatId, mentionedJids, message) {
+async function promoteCommand(sock, chatId, senderId, text, message) {
+    const adminStatus = await isAdmin(sock, chatId, senderId);
+    if (!adminStatus.isBotAdmin) {
+        await sock.sendMessage(chatId, { text: 'Please make the bot an admin first.' }, { quoted: message });
+        return;
+    }
+    if (!adminStatus.isSenderAdmin && !message.key.fromMe) {
+        await sock.sendMessage(chatId, { text: 'Only group admins can use this command.' }, { quoted: message });
+        return;
+    }
+
+    const mentionedJids = message.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
     let userToPromote = [];
 
     // Check for mentioned users

@@ -4,16 +4,15 @@ const isAdmin = require('../lib/isAdmin');
  * kickCommand - Mickey Glitch Advanced Kick System
  * Uwezo: Kick kawaida & Kick All (Admins & Owner protected)
  */
-async function kickCommand(sock, chatId, senderId, mentionedJids, m) {
+async function kickCommand(sock, chatId, senderId, text, m) {
     try {
         if (!sock || !chatId || !m) return;
 
         const isOwner = m.key.fromMe;
-        const text = (m.message?.extendedTextMessage?.text || 
-                     m.message?.conversation || '').toLowerCase().trim();
+        const commandText = (text || '').toLowerCase().trim();
 
         // 1. Tambua kama ni Kick All au Kick ya kawaida
-        const isKickAll = text.includes('kick all');
+        const isKickAll = commandText === 'all' || commandText.includes('kick all');
 
         // 2. Ruhusa (Permissions)
         const { isSenderAdmin, isBotAdmin } = await isAdmin(sock, chatId, senderId);
@@ -51,7 +50,8 @@ async function kickCommand(sock, chatId, senderId, mentionedJids, m) {
 
         } else {
             // Mbinu ya Kick Kawaida (Mention au Reply)
-            if (mentionedJids && mentionedJids.length > 0) {
+            const mentionedJids = m.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
+            if (mentionedJids.length > 0) {
                 usersToKick = mentionedJids;
             } else if (m.message?.extendedTextMessage?.contextInfo?.participant) {
                 usersToKick = [m.message.extendedTextMessage.contextInfo.participant];

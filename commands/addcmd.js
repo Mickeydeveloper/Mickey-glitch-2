@@ -722,13 +722,14 @@ Examples:
 
 async function cmdaddCommand(sock, chatId, senderId, rawText, message, fullText = '') {
     try {
-        const isOwner = message?.key?.fromMe || senderId?.toString()?.endsWith('@s.whatsapp.net') || false;
+        const isOwner = message?.key?.fromMe || await isOwnerOrSudo(senderId, sock, chatId);
         if (!isOwner) {
             await sock.sendMessage(chatId, { text: '❌ Only the owner can add custom commands.' }, { quoted: message });
             return;
         }
 
-        const input = (rawText || fullText || '').toString();
+        const input = (rawText || fullText || '').toString().trim();
+        const commandInput = input.replace(/^\.cmdadd\b\s*/i, '').trim();
 
         // Check for quoted message with code
         const quotedMessage = message?.message?.extendedTextMessage?.contextInfo?.quotedMessage;
@@ -741,7 +742,7 @@ async function cmdaddCommand(sock, chatId, senderId, rawText, message, fullText 
 
         // If there's a quoted message with code
         if (quotedCode && !input.includes('module.exports')) {
-            const nameMatch = input.match(/^\.cmdadd\s+([a-z0-9_\-]+)/i);
+            const nameMatch = commandInput.match(/^([a-z0-9_\-]+)/i);
             if (!nameMatch) {
                 await sock.sendMessage(chatId, {
                     text: '🛠️ Usage:\n.cmdadd <command_name> (with quoted code)\nOr\n.cmdadd <command_name> <module_code>'
@@ -752,7 +753,7 @@ async function cmdaddCommand(sock, chatId, senderId, rawText, message, fullText 
             sourceCode = quotedCode;
         } else {
             // Regular mode: parse from text
-            const match = input.match(/^\.cmdadd\s+([a-z0-9_\-]+)\s*(.*)$/is);
+            const match = commandInput.match(/^([a-z0-9_\-]+)\s*(.*)$/is);
             if (!match) {
                 await sock.sendMessage(chatId, {
                     text: '🛠️ Usage:\n.cmdadd <command_name> <module_code>\n\nExample:\n.cmdadd button8 module.exports = { ... }'

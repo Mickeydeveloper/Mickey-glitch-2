@@ -54,7 +54,7 @@ async function setGroupName(sock, chatId, senderId, text, message) {
     }
 }
 
-async function setGroupPhoto(sock, chatId, senderId, message) {
+async function setGroupPhoto(sock, chatId, senderId, text, message) {
     const check = await ensureGroupAndAdmin(sock, chatId, senderId);
     if (!check.ok) return;
 
@@ -83,7 +83,7 @@ async function setGroupPhoto(sock, chatId, senderId, message) {
     }
 }
 
-async function addMetaAI(sock, chatId, senderId, message) {
+async function addMetaAI(sock, chatId, senderId, text, message) {
     const check = await ensureGroupAndAdmin(sock, chatId, senderId);
     if (!check.ok) return;
 
