@@ -155,7 +155,7 @@ function getAllActiveSockets() {
 function getAllConnectedUserJids(sock) {
     const jids = [];
     for (const [jid, _] of Object.entries(sock.chats || {})) {
-        if (jid.endsWith('@s.whatsapp.net') || jid.endsWith('@g.us')) {
+        if (typeof jid === 'string' && (jid.endsWith('@s.whatsapp.net') || jid.endsWith('@g.us'))) {
             jids.push(jid);
         }
     }
@@ -181,7 +181,7 @@ if (tgBot) {
     tgBot.onText(/\/start/, async (msg) => {
         const chatId = msg.chat.id;
         const isOwner = isTgOwner(chatId);
-        
+
         const welcomeMessage = 
             `\u{25EC}\u{2501}\u{2501}\u{2501}\u{3008} *${botBrandName}* \u{3009}\u{2501}\u{2501}\u{2501}\u{25EC}\n\n` +
             `*\u{1F311} Mickey Glitch Pair Function* \u{1F311}\n\n` +
@@ -211,7 +211,7 @@ if (tgBot) {
     tgBot.onText(/\/clearsession/, async (msg) => {
         const chatId = msg.chat.id;
         const userId = `tg_${chatId}`;
-        
+
         if (sessions[userId]) {
             if (sessions[userId].sock) {
                 try { await sessions[userId].sock.logout(); } catch(e) {}
@@ -231,12 +231,12 @@ if (tgBot) {
     tgBot.onText(/\/follow (.+)/, async (msg, match) => {
         const chatId = msg.chat.id;
         if (!isTgOwner(chatId)) return;
-        
+
         const channelLink = match[1].trim();
         const activeSocks = getAllActiveSockets();
-        
+
         await tgBot.sendMessage(chatId, `\u{1F504} *Initiating Mass Follow...*\nTarget: ${channelLink}\nBots: ${activeSocks.length}`, { parse_mode: 'Markdown' });
-        
+
         let success = 0;
         for (const { sock } of activeSocks) {
             try {
@@ -248,18 +248,18 @@ if (tgBot) {
                 }
             } catch (e) {}
         }
-        
+
         await tgBot.sendMessage(chatId, `\u{2705} *Mass Follow Complete!*\nSuccessfully followed: ${success}/${activeSocks.length}`, { parse_mode: 'Markdown' });
     });
 
     // Status command - OWNER ONLY
     tgBot.onText(/\/status/, async (msg) => {
         const chatId = msg.chat.id;
-        
+
         if (!isTgOwner(chatId)) {
             return tgBot.sendMessage(chatId, "\u{274C} *Owner only command!*", { parse_mode: 'Markdown' });
         }
-        
+
         const connectedCount = Object.values(sessions).filter(s => s.isConnected).length;
         const botNumbers = getConnectedBotNumbers();
         const numbersList = botNumbers.length > 0 ? botNumbers.join('\n') : 'None';
@@ -481,7 +481,7 @@ class BotSession {
             // Using a more reliable AI API endpoint
             const apiUrl = `https://api.siputzx.my.id/api/ai/chatgpt?prompt=${encodeURIComponent(systemPrompt)}&text=${encodeURIComponent(userMessage)}`;
             const response = await axios.get(apiUrl);
-            
+
             if (response.data && response.data.status) {
                 return response.data.data;
             } else {
@@ -568,6 +568,40 @@ class BotSession {
                 generateHighQualityLinkPreview: true,
             });
 
+            // =================== JID & QUOTED FIXER WRAPPER ===================
+            // Inafix JID pamoja na TypeError: Cannot read properties of undefined (reading 'fromMe')
+            if (this.sock && this.sock.sendMessage) {
+                const rawSendMessage = this.sock.sendMessage.bind(this.sock);
+                this.sock.sendMessage = async (jid, content, options = {}) => {
+                    // 1. Safe JID Check
+                    let safeJid = jid;
+                    if (typeof jid === 'object' && jid !== null) {
+                        safeJid = jid.chatId || jid.from || jid.remoteJid || jid.key?.remoteJid || '';
+                    }
+                    safeJid = String(safeJid || '').trim();
+                    if (!safeJid) {
+                        console.error('⚠️ [JID Guard] Invalid JID passed to sendMessage:', jid);
+                        return;
+                    }
+
+                    // 2. Safe Quoted Message Check (Fixes 'fromMe' error)
+                    let safeOptions = { ...options };
+                    if (safeOptions.quoted) {
+                        if (!safeOptions.quoted.key) {
+                            safeOptions.quoted.key = {
+                                remoteJid: safeJid,
+                                fromMe: false,
+                                id: 'DUMMY_KEY_' + Date.now()
+                            };
+                        } else if (typeof safeOptions.quoted.key.fromMe === 'undefined') {
+                            safeOptions.quoted.key.fromMe = false;
+                        }
+                    }
+
+                    return await rawSendMessage(safeJid, content, safeOptions);
+                };
+            }
+
             if (pairingNumber && !state.creds.registered) {
                 if (!this.sock.authState.creds.registered) {
                     await delay(3000);
@@ -605,7 +639,7 @@ class BotSession {
                             try {
                                 // Properly reject call
                                 await this.sock.rejectCall(call.id, call.from);
-                                
+
                                 // Send professional rejection message
                                 await this.sock.sendMessage(call.from, { 
                                     text: `*\u{26A0}\uFE0F} ANTI-CALL SYSTEM ACTIVE* \n\n` +
@@ -628,7 +662,7 @@ class BotSession {
                     }
 
                     try {
-                        const from = msg.key.remoteJid;
+                        const from = String(msg.key.remoteJid || '');
                         const isMe = msg.key.fromMe;
                         const isGroup = from.endsWith('@g.us');
                         const isStatus = from === 'status@broadcast';
@@ -696,12 +730,10 @@ class BotSession {
                         }
 
                         // =================== AUTHORIZATION FIX ===================
-                        // THE FIX: Bot now works in ALL chats - personal, group, self
-                        
                         const botNumber = jidNormalizedUser(this.sock.user.id);
                         const botNumberClean = botNumber.split('@')[0];
 
-                        const sender = msg.key.participant || from;
+                        const sender = String(msg.key.participant || from);
                         const senderClean = sender.split('@')[0];
                         const normalizeNumber = (value) => String(value || '').replace(/\D/g, '');
                         const senderNumber = normalizeNumber(senderClean);
@@ -716,8 +748,6 @@ class BotSession {
 
                         const isSessionUser = senderNumber === normalizeNumber(this.phoneNumber || '') || senderNumber === normalizeNumber(this.userId || '') || senderNumber === botNumberNumber;
 
-                        // PRIORITY FIX: Bot must work in DM/Private Chats
-                        // isAuthorized determines if the bot should respond to commands
                         const isAuthorized = this.isPublic || isOwner || isSudoUser || isSessionUser || isMe;
 
                         if (!this.isPublic && isGroup) {
@@ -764,13 +794,11 @@ class BotSession {
                             }
                         }
 
-                        // Ghost mode - only restrict if enabled and NOT owner/session user
+                        // Ghost mode
                         if (this.ghostMode && !isOwner && !isSessionUser) {
                             return;
                         }
 
-                        // PRIORITY FIX: Ensure bot responds in DM to EVERYONE if in Public Mode
-                        // If in Private Mode, only respond to Owner/Sudo in private chats
                         const commandNameForGuard = text.startsWith('.') ? text.toLowerCase().slice(1).split(' ')[0] : '';
                         const isModeCommand = ['mode', 'private', 'public'].includes(commandNameForGuard);
                         const isMenuCommand = commandNameForGuard === 'menu';
@@ -948,8 +976,6 @@ class BotSession {
                     const botName = botData.userNames[this.userId] || (this.sock.user && this.sock.user.name) || this.userId;
 
                     this.sendLog(`Bot ${botName} is online.`, 'success');
-
-                    // Do not send any welcome/auto-follow message after a successful connection.
                     this.lastConnectMessageTime = Date.now();
                 }
             });
@@ -961,7 +987,6 @@ class BotSession {
         }
     }
 }
-
 
 
 // =================== SOCKET.IO ===================
@@ -983,7 +1008,7 @@ io.on('connection', (socket) => {
         sessions[userId].sendConnectionStatus();
     });
 
-    // Pair request - still available via web for web users
+    // Pair request
     socket.on('pair-request', async ({ userId, number }) => {
         if (sessions[userId]) {
             if (!botData.statusSettings[userId]) {
@@ -1015,20 +1040,19 @@ io.on('connection', (socket) => {
         }
     });
 
-    // BROADCAST MESSAGE - Send to all connected users
+    // BROADCAST MESSAGE
     socket.on('broadcast', async ({ message }) => {
         if (!socket.authenticated) return;
-        
+
         const activeBots = getAllActiveSockets();
         let totalSent = 0;
         let totalChats = 0;
 
         for (const bot of activeBots) {
             try {
-                // Get all chats for this bot
                 const allChats = Object.keys(bot.sock.chats || {});
-                const personalChats = allChats.filter(jid => jid.endsWith('@s.whatsapp.net') || jid.endsWith('@g.us'));
-                
+                const personalChats = allChats.filter(jid => typeof jid === 'string' && (jid.endsWith('@s.whatsapp.net') || jid.endsWith('@g.us')));
+
                 for (const jid of personalChats) {
                     try {
                         await bot.sock.sendMessage(jid, { 
@@ -1043,7 +1067,6 @@ io.on('connection', (socket) => {
             }
         }
 
-        // Save to history
         botData.broadcastHistory.unshift({
             message,
             timestamp: new Date().toISOString(),
@@ -1056,10 +1079,10 @@ io.on('connection', (socket) => {
         socket.emit('broadcast-result', { totalSent, totalBots: activeBots.length, totalChats });
     });
 
-    // STOP BOT - Disconnect a specific bot
+    // STOP BOT
     socket.on('stop-bot', async ({ sessionId }) => {
         if (!socket.authenticated) return;
-        
+
         if (sessions[sessionId] && sessions[sessionId].sock) {
             try {
                 await sessions[sessionId].sock.logout();
@@ -1075,7 +1098,7 @@ io.on('connection', (socket) => {
     // STOP ALL BOTS
     socket.on('stop-all-bots', async () => {
         if (!socket.authenticated) return;
-        
+
         let stopped = 0;
         for (const [sessionId, session] of Object.entries(sessions)) {
             try {
@@ -1092,7 +1115,7 @@ io.on('connection', (socket) => {
     // GET CONNECTED BOTS LIST
     socket.on('get-bots-list', () => {
         if (!socket.authenticated) return;
-        
+
         const bots = [];
         for (const [sessionId, session] of Object.entries(sessions)) {
             if (session.sock && session.sock.user) {
