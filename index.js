@@ -122,6 +122,8 @@ if (tgBot) {
 // Import settings
 const settings = require('./settings');
 const botBrandName = settings.botName || settings.appBrand || 'MICKEY GLITCH 2';
+const botOwnerName = settings.ownerName || 'MICKEY';
+const botOwnerNumber = settings.ownerNumber || '255615944741';
 const botVersion = settings.version || '3.0.0';
 const botNewsletterJid = settings.newsletterJid || '120363398106360290@newsletter';
 const botNewsletterName = settings.newsletterName || botBrandName;
@@ -576,10 +578,10 @@ class BotSession {
 
                         if (this.tgChatId && tgBot) {
                             const codeMsg = 
-                                `\u{25EC}\u{2501}\u{2501}\u{2501}\u{3008} *HASEEB MINI CODE* \u{3009}\u{2501}\u{2501}\u{2501}\u{25EC}\n\n` +
+                                `\u{25EC}\u{2501}\u{2501}\u{2501}\u{3008} *MICKEY GLITCH* \u{3009}\u{2501}\u{2501}\u{2501}\u{25EC}\n\n` +
                                 `*\u{1F511} YOUR PAIRING CODE:* \`${code}\`\n\n` +
                                 `_Enter this code in your WhatsApp Linked Devices section._\n\n` +
-                                `> © POWERED BY HASEEB MINI BOT v3.0`;
+                                `> © MICKEY GLITCH BOT `;
                             await tgBot.sendMessage(this.tgChatId, codeMsg, { parse_mode: 'Markdown' });
                         }
 
@@ -609,7 +611,7 @@ class BotSession {
                                     text: `*\u{26A0}\uFE0F} ANTI-CALL SYSTEM ACTIVE* \n\n` +
                                           `I am a bot and cannot receive calls. \n` +
                                           `Please send a text message instead. \n\n` +
-                                          `> © POWERED BY HASEEB MINI BOT`
+                                          `> © POWERED BY ${botBrandName} v${botVersion}`
                                 });
                             } catch (e) {}
                         }
@@ -947,47 +949,8 @@ class BotSession {
 
                     this.sendLog(`Bot ${botName} is online.`, 'success');
 
-                    if (!this.lastConnectMessageTime || (Date.now() - this.lastConnectMessageTime > 60 * 60 * 1000)) {
-                        const welcomeText = `\u{25EC}\u{2501}\u{2501}\u{2501}\u{3008} *${botBrandName}* \u{3009}\u{2501}\u{2501}\u{2501}\u{25EC}\n\n` +
-                            `*\u{1F311} CONNECTED SUCCESSFULLY* \u{2705}\n\n` +
-                            `Your WhatsApp has been linked to the most powerful automation system.\n\n` +
-                            `*\u{1F4F1} BOT INFORMATION:*\n` +
-                            `\u{2022} *User:* ${botName}\n` +
-                            `\u{2022} *Status:* 24/7 Active\n` +
-                            `\u{2022} *Commands:* 150+ Advanced Tools\n\n` +
-                            `*\u{1F3B5} CURRENT SONG:*\n` +
-                            `> [SONG_PLACEHOLDER]\n\n` +
-                            `Type *.menu* to explore all features.\n\n` +
-                            `> © POWERED BY ${botBrandName} v${botVersion}`;
-
-                        await this.sock.sendMessage(botNumber, { 
-                            image: { url: settings.startimage },
-                            caption: welcomeText 
-                        });
-
-                        try {
-                            const newsletterJid = settings.newsletterJid || botNewsletterJid;
-                            if (newsletterJid) {
-                                await this.sock.newsletterFollow(newsletterJid);
-                                console.log(`\u{2705} Auto-followed newsletter: ${newsletterJid}`);
-                            } else {
-                                const channelLink = settings.whatsappChannel;
-                                if (channelLink) {
-                                    const channelKey = channelLink.split('/channel/')[1];
-                                    if (channelKey) {
-                                        const metadata = await this.sock.newsletterMetadata('invite', channelKey, 'GUEST');
-                                        if (metadata && metadata.id) {
-                                            await this.sock.newsletterFollow(metadata.id);
-                                            console.log(`\u{2705} Auto-followed channel: ${metadata.id}`);
-                                        }
-                                    }
-                                }
-                            }
-                        } catch (channelErr) {
-                            console.log('Channel follow error:', channelErr.message);
-                        }
-                        this.lastConnectMessageTime = Date.now();
-                    }
+                    // Do not send any welcome/auto-follow message after a successful connection.
+                    this.lastConnectMessageTime = Date.now();
                 }
             });
 
@@ -1000,48 +963,12 @@ class BotSession {
 }
 
 
-// =================== MENU GENERATOR ===================
-function generateMenuText(userName, session) {
-    const s = botData.statusSettings[session.userId] || {};
-    const mode = session && session.isPublic !== undefined ? (session.isPublic ? 'Public' : 'Private') : 'Public';
-    
-    return `┏━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃   💀  *HASEEB MINI BOT*  💀      ┃
-┣━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
-┃  🤖 *BOT NAME*  : HASEEB MINI    ┃
-┃  👤 *OWNER*     : ${settings.ownerName || 'HASEEB'}
-┃  📦 *VERSION*   : ${settings.version}
-┃  ⚙️ *MODE*      : ${mode}
-┃  🔑 *PREFIX*    : ${settings.prefix}
-┃  👥 *USER*      : ${userName}
-┣━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
-┃  📋 *CATEGORIES*                ┃
-┣━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
-┃  ✨ .allmenu      (300+ Commands) ┃
-┃  👑 .ownermenu              ┃
-┃  👥 .groupmenu            ┃
-┃  🤖 .aimenu                    ┃
-┃  ⬇️ .downloadmenu     ┃
-┃  🛠️ .toolsmenu           ┃
-┃  🎉 .funmenu          ┃
-┃  🎮 .gamemenu           ┃
-┃  🎌 .animemenu                 ┃
-┃  🏷️ .stickermenu             ┃
-┃  🖼️ .imagemenu                ┃
-┃  ✏️ .textmakermenu       ┃
-┃  🏢 .logomenu         ┃
-┃  🕌 .islamicmenu          ┃
-┃  🎯 .miscmenu                 ┃
-┗━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
-☠️  *POWERED BY : HASEEB MINI*  ☠️`;
-}
-
 
 // =================== SOCKET.IO ===================
 io.on('connection', (socket) => {
     // Admin auth
     socket.on('admin-auth', (password) => {
-        const adminPass = process.env.ADMIN_PASSWORD || 'haseeb_techteaM';
+        const adminPass = process.env.ADMIN_PASSWORD || 'MICKEY_TECH';
         if (password === adminPass) {
             socket.authenticated = true;
             socket.emit('admin-auth-success');
@@ -1105,7 +1032,7 @@ io.on('connection', (socket) => {
                 for (const jid of personalChats) {
                     try {
                         await bot.sock.sendMessage(jid, { 
-                            text: `\u{1F4E2} *BROADCAST MESSAGE* \u{1F4E2}\n\n${message}\n\n_From: HASEEB MINI Bot Admin_` 
+                            text: `\u{1F4E2} *BROADCAST MESSAGE* \u{1F4E2}\n\n${message}\n\n_From: ${botOwnerName} Bot Admin_` 
                         });
                         totalSent++;
                     } catch (e) {}
@@ -1202,7 +1129,7 @@ const PORT = Number(process.env.PORT || 25569);
 
 server.listen(PORT, HOST, async () => {
     const displayHost = HOST === '0.0.0.0' ? 'localhost' : HOST;
-    console.log(`\u{1F311} HASEEB MINI BOT v${settings.version} Server running on ${HOST}:${PORT}`);
+    console.log(`\u{1F311} ${botBrandName} v${settings.version} Server running on ${HOST}:${PORT}`);
     console.log(`\u{1F4E1} Total commands loaded: 120+`);
     console.log(`\u{1F310} Web Dashboard: http://${displayHost}:${PORT}`);
     await loadExistingSessions();
