@@ -111,8 +111,8 @@ async function sendConnectionButtonV2(sock, chatId, textBody, footerText, header
             forwardingScore: 999,
             isForwarded: true,
             forwardedNewsletterMessageInfo: {
-                newsletterJid: '120363398106360290@newsletter',
-                newsletterName: 'MICKEY GLITCH BOT',
+                newsletterJid: settings.newsletterJid || '120363398106360290@newsletter',
+                newsletterName: settings.newsletterName || settings.botName || 'MICKEY GLITCH BOT',
                 serverMessageId: -1
             }
         };

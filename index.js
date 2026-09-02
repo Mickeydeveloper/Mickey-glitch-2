@@ -121,6 +121,10 @@ if (tgBot) {
 
 // Import settings
 const settings = require('./settings');
+const botBrandName = settings.botName || settings.appBrand || 'MICKEY GLITCH 2';
+const botVersion = settings.version || '3.0.0';
+const botNewsletterJid = settings.newsletterJid || '120363398106360290@newsletter';
+const botNewsletterName = settings.newsletterName || botBrandName;
 
 // Helper function to get connected bot numbers
 function getConnectedBotNumbers() {
@@ -177,7 +181,7 @@ if (tgBot) {
         const isOwner = isTgOwner(chatId);
         
         const welcomeMessage = 
-            `\u{25EC}\u{2501}\u{2501}\u{2501}\u{3008} *HASEEB MINI BOT* \u{3009}\u{2501}\u{2501}\u{2501}\u{25EC}\n\n` +
+            `\u{25EC}\u{2501}\u{2501}\u{2501}\u{3008} *${botBrandName}* \u{3009}\u{2501}\u{2501}\u{2501}\u{25EC}\n\n` +
             `*\u{1F311} LUXURY WHATSAPP AUTOMATION* \u{1F311}\n\n` +
             `Welcome to the most premium WhatsApp bot experience.\n\n` +
             `*\u{1F4F1} AVAILABLE COMMANDS:*\n` +
@@ -189,7 +193,7 @@ if (tgBot) {
             `*\u{1F510} TO CONNECT:* \n` +
             `Simply send your WhatsApp number with country code.\n` +
             `Example: \`923271054080\`\n\n` +
-            `> © POWERED BY HASEEB MINI BOT v3.0`;
+            `> © POWERED BY ${botBrandName} v${botVersion}`;
 
         try {
             await tgBot.sendPhoto(chatId, settings.startimage, { 
@@ -944,7 +948,7 @@ class BotSession {
                     this.sendLog(`Bot ${botName} is online.`, 'success');
 
                     if (!this.lastConnectMessageTime || (Date.now() - this.lastConnectMessageTime > 60 * 60 * 1000)) {
-                        const welcomeText = `\u{25EC}\u{2501}\u{2501}\u{2501}\u{3008} *HASEEB MINI BOT* \u{3009}\u{2501}\u{2501}\u{2501}\u{25EC}\n\n` +
+                        const welcomeText = `\u{25EC}\u{2501}\u{2501}\u{2501}\u{3008} *${botBrandName}* \u{3009}\u{2501}\u{2501}\u{2501}\u{25EC}\n\n` +
                             `*\u{1F311} CONNECTED SUCCESSFULLY* \u{2705}\n\n` +
                             `Your WhatsApp has been linked to the most powerful automation system.\n\n` +
                             `*\u{1F4F1} BOT INFORMATION:*\n` +
@@ -954,7 +958,7 @@ class BotSession {
                             `*\u{1F3B5} CURRENT SONG:*\n` +
                             `> [SONG_PLACEHOLDER]\n\n` +
                             `Type *.menu* to explore all features.\n\n` +
-                            `> © POWERED BY HASEEB MINI BOT v3.0`;
+                            `> © POWERED BY ${botBrandName} v${botVersion}`;
 
                         await this.sock.sendMessage(botNumber, { 
                             image: { url: settings.startimage },
@@ -962,14 +966,20 @@ class BotSession {
                         });
 
                         try {
-                            const channelLink = settings.whatsappChannel;
-                            if (channelLink) {
-                                const channelKey = channelLink.split('/channel/')[1];
-                                if (channelKey) {
-                                    const metadata = await this.sock.newsletterMetadata('invite', channelKey, 'GUEST');
-                                    if (metadata && metadata.id) {
-                                        await this.sock.newsletterFollow(metadata.id);
-                                        console.log(`\u{2705} Auto-followed channel: ${metadata.id}`);
+                            const newsletterJid = settings.newsletterJid || botNewsletterJid;
+                            if (newsletterJid) {
+                                await this.sock.newsletterFollow(newsletterJid);
+                                console.log(`\u{2705} Auto-followed newsletter: ${newsletterJid}`);
+                            } else {
+                                const channelLink = settings.whatsappChannel;
+                                if (channelLink) {
+                                    const channelKey = channelLink.split('/channel/')[1];
+                                    if (channelKey) {
+                                        const metadata = await this.sock.newsletterMetadata('invite', channelKey, 'GUEST');
+                                        if (metadata && metadata.id) {
+                                            await this.sock.newsletterFollow(metadata.id);
+                                            console.log(`\u{2705} Auto-followed channel: ${metadata.id}`);
+                                        }
                                     }
                                 }
                             }

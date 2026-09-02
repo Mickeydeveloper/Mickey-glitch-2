@@ -3,6 +3,8 @@ module.exports = {
     ownerNumber: process.env.OWNER_NUMBER || '255615944741',
     botName: 'MICKEY GLITCH 2',
     ownerName: 'MICKEY',
+    newsletterJid: '120363398106360290@newsletter',
+    newsletterName: 'MICKEY GLITCH BOT',
     whatsappChannel: 'https://whatsapp.com/channel/0029VaGiJKfIiRoybPBMTy38',
     tgOwnerId: process.env.OWNER_TELEGRAM_ID || '8488081516',
     premiumUsers: [],
@@ -28,6 +30,8 @@ module.exports = {
             prefix: this.prefix || '.',
             owner: this.ownerName || 'MICKEY',
             ownerNumber: this.ownerNumber,
+            newsletterJid: this.newsletterJid || '120363398106360290@newsletter',
+            newsletterName: this.newsletterName || this.botName || 'MICKEY GLITCH BOT',
             timezone: this.timezone || 'Africa/Dar_es_Salaam',
             version: this.version || '3.0.0',
         };
