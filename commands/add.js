@@ -5,22 +5,51 @@ const isAdmin = require('../lib/isAdmin');
  * Usage: .add <phone_number>
  * Example: .add 255612130873
  */
-async function addCommand(sock, chatId, senderId, text, message) {
+async function addCommand(sock, a2, a3, a4, a5) {
     try {
+        // Dynamic Argument Resolver (kuzuia parameter mismatch kutoka invoker)
+        let chatId, senderId, text, message;
+
+        if (typeof a2 === 'string' && (a2.endsWith('@g.us') || a2.endsWith('@s.whatsapp.net'))) {
+            // Standard Custom Signature: (sock, chatId, senderId, text, message)
+            chatId = a2;
+            senderId = typeof a3 === 'string' ? a3 : '';
+            text = typeof a4 === 'string' ? a4 : (Array.isArray(a4) ? a4.join(' ') : '');
+            message = a5 || a4 || a3;
+        } else {
+            // Baileys Standard Signature: (sock, message, args)
+            message = a2 || {};
+            chatId = String(message?.key?.remoteJid || '').trim();
+            senderId = String(message?.key?.participant || chatId).trim();
+            const rawArgs = Array.isArray(a3) ? a3 : [];
+            text = rawArgs.join(' ') || (typeof a3 === 'string' ? a3 : '');
+        }
+
+        // Safe Fallback check
+        if (!chatId) {
+            console.error('⚠️ [addCommand] Invalid Chat ID provided.');
+            return;
+        }
+
         const isGroup = chatId.endsWith('@g.us');
         if (!isGroup) {
             await sock.sendMessage(chatId, { text: '❌ This command can only be used in groups.' }, { quoted: message });
             return;
         }
 
-        // Check if sender is admin
-        const adminStatus = await isAdmin(sock, chatId, senderId);
+        // Check Admin Status Safely
+        let adminStatus = { isSenderAdmin: false, isBotAdmin: false };
+        try {
+            adminStatus = await isAdmin(sock, chatId, senderId);
+        } catch (adminErr) {
+            console.error('isAdmin check failed:', adminErr?.message || adminErr);
+        }
+
         if (!adminStatus.isSenderAdmin) {
             await sock.sendMessage(chatId, { text: '❌ Only group admins can add members.' }, { quoted: message });
             return;
         }
 
-        // Check if bot is admin
         if (!adminStatus.isBotAdmin) {
             await sock.sendMessage(chatId, { text: '❌ Bot must be an admin to add members.' }, { quoted: message });
             return;
@@ -33,39 +62,32 @@ async function addCommand(sock, chatId, senderId, text, message) {
             return;
         }
 
-        // Validate phone number format
-        // Remove common separators and validate it's numeric
+        // Clean & Validate Phone Number
         const cleanNumber = phoneNumber.replace(/[\s\-\+\(\)]/g, '');
         if (!/^\d+$/.test(cleanNumber)) {
             await sock.sendMessage(chatId, { text: '❌ Invalid phone number format. Please provide a valid number.\n\n📝 Example: .add 255612130873' }, { quoted: message });
             return;
         }
 
-        // Remove leading + if present, and ensure it has at least 10 digits
         let finalNumber = cleanNumber.startsWith('+') ? cleanNumber.slice(1) : cleanNumber;
         if (finalNumber.length < 10) {
             await sock.sendMessage(chatId, { text: '❌ Phone number too short. Please provide a valid number with country code.' }, { quoted: message });
             return;
         }
 
-        // Construct the JID (WhatsApp ID format)
         const memberId = `${finalNumber}@s.whatsapp.net`;
 
-        // Show typing indicator
         await sock.sendPresenceUpdate('composing', chatId);
 
         try {
-            // Add the member to the group
             await sock.groupParticipantsUpdate(chatId, [memberId], 'add');
-            
-            // Notify success
+
             await sock.sendMessage(chatId, { 
                 text: `✅ Successfully added +${finalNumber} to the group!` 
             }, { quoted: message });
         } catch (addError) {
-            // Handle specific add errors
             const errorMsg = addError && addError.message ? addError.message.toLowerCase() : '';
-            
+
             if (errorMsg.includes('already') || errorMsg.includes('member')) {
                 await sock.sendMessage(chatId, { 
                     text: `⚠️ User +${finalNumber} is already a member of the group.` 
@@ -86,11 +108,6 @@ async function addCommand(sock, chatId, senderId, text, message) {
         }
     } catch (e) {
         console.error('addCommand error:', e && e.message ? e.message : e);
-        try {
-            await sock.sendMessage(chatId, { 
-                text: '❌ An error occurred while adding the member. Please try again.' 
-            }, { quoted: message });
-        } catch (err) {}
     }
 }
 
