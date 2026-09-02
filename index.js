@@ -79,41 +79,10 @@ function loadCommandRegistry() {
 
 const commands = loadCommandRegistry();
 
+const { invokeCommand: invokeCompatibleCommand } = require('./lib/commandInvoker');
+
 async function invokeCommand(commandHandler, sock, from, msg, isAdmin, q, session, args, botData, saveBotData, userId) {
-    if (typeof commandHandler !== 'function') return;
-
-    const text = (msg && (msg.message?.conversation || msg.message?.extendedTextMessage?.text || msg.text || '')) || '';
-    const senderId = (msg && (msg.key?.participant || msg.key?.remoteJid || from)) || from;
-    const userMessage = (text || q || '').trim();
-    const lastError = { current: null };
-
-    const attempts = [
-        () => commandHandler(sock, from, msg),
-        () => commandHandler(sock, from, msg, q),
-        () => commandHandler(sock, from, userMessage, senderId, isAdmin, msg),
-        () => commandHandler(sock, from, userMessage, senderId, msg),
-        () => commandHandler(sock, from, userMessage, senderId, isAdmin),
-        () => commandHandler(sock, from, msg, isAdmin, q),
-        () => commandHandler(sock, from, msg, isAdmin, q, session),
-        () => commandHandler(sock, from, msg, args),
-        () => commandHandler(sock, from, msg, args, botData),
-        () => commandHandler(sock, from, msg, args, botData, saveBotData, userId),
-        () => commandHandler(sock, from, q, senderId, isAdmin, msg),
-        () => commandHandler(sock, from, q, senderId, msg),
-        () => commandHandler(sock, from, q, senderId, isAdmin),
-        () => commandHandler(sock, from, userMessage, msg),
-        () => commandHandler(sock, from, text, msg),
-    ];
-
-    for (const attempt of attempts) {
-        try {
-            return await attempt();
-        } catch (error) {
-            lastError.current = error;
-        }
-    }
-
-    if (lastError.current) throw lastError.current;
+    return invokeCompatibleCommand(commandHandler, sock, from, msg, isAdmin, q, session, args, botData, saveBotData, userId);
 }
 
 const { handleAutoread } = require('./commands/autoread');
