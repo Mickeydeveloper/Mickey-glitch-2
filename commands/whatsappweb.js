@@ -8,24 +8,73 @@ const whatsappBrowserHtml = `
 body{margin:0;padding:16px;background:#0b141a;color:#e9edef;font-family:Arial,sans-serif}
 .browser{width:100%;max-width:620px;margin:auto;background:#111b21;border:1px solid #2a3942;border-radius:14px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.35)}
 .top{padding:18px 20px;background:#202c33;border-bottom:1px solid #2a3942;font-size:20px;font-weight:700}
-.body{padding:24px 20px;text-align:center}
-.icon{font-size:58px;margin-bottom:12px}
-h2{margin:0 0 10px;font-size:24px}
-p{margin:8px 0;color:#aebac1;line-height:1.5}
-.open{display:inline-block;margin-top:18px;padding:13px 20px;background:#00a884;color:#fff;text-decoration:none;border-radius:8px;font-weight:700}
-.open:hover{background:#06cf9b}
-.url{margin-top:16px;font-size:12px;color:#8696a0;word-break:break-all}
+.body{padding:20px}
+.toolbar{display:flex;gap:7px;align-items:center;margin-bottom:16px}
+.toolbar button{width:38px;height:38px;border:0;border-radius:7px;background:#2a3942;color:#e9edef;font-size:17px;cursor:pointer}
+.toolbar button:hover{background:#3b4a52}
+.address{display:flex;gap:7px;margin-bottom:18px}
+.address input{min-width:0;flex:1;padding:12px;border:1px solid #3b4a52;border-radius:7px;background:#202c33;color:#e9edef;font-size:14px;outline:0}
+.address input:focus{border-color:#00a884}
+.go,.open{padding:12px 16px;border:0;border-radius:7px;background:#00a884;color:#fff;text-decoration:none;font-weight:700;cursor:pointer;white-space:nowrap}
+.go:hover,.open:hover{background:#06cf9b}
+.icon{text-align:center;font-size:58px;margin:8px 0 12px}
+h2{text-align:center;margin:0 0 10px;font-size:24px}
+p{text-align:center;margin:8px 0;color:#aebac1;line-height:1.5}
+.open{display:block;width:max-content;margin:18px auto 0}
+.url{text-align:center;margin-top:16px;font-size:12px;color:#8696a0;word-break:break-all}
 </style>
 <div class="browser">
-    <div class="top">WhatsApp Web Desktop</div>
+        <div class="top">Desktop Browser</div>
     <div class="body">
+                <div class="toolbar">
+                        <button type="button" id="browserBack" title="Back">&#8592;</button>
+                        <button type="button" id="browserForward" title="Forward">&#8594;</button>
+                        <button type="button" id="browserReload" title="Reload">&#8635;</button>
+                </div>
+                <form class="address" id="browserForm">
+                        <input id="browserUrl" type="text" value="https://web.whatsapp.com/" placeholder="https://example.com" autocomplete="url">
+                        <button class="go" type="submit">Go</button>
+                </form>
         <div class="icon">💻</div>
-        <h2>Open WhatsApp Web</h2>
-        <p>Use the official desktop website to scan the real QR code and access your chats.</p>
-        <a class="open" href="https://web.whatsapp.com/" target="_blank" rel="noopener noreferrer">🌐 Open in Chrome</a>
-        <div class="url">https://web.whatsapp.com/</div>
+                <h2>Open Any Website</h2>
+                <p>Type any <strong>http</strong> or <strong>https</strong> link above, then open it in your desktop browser.</p>
+                <button class="open" type="button" id="openBrowser">🌐 Open in Chrome</button>
+                <div class="url" id="browserStatus">Ready: https://web.whatsapp.com/</div>
     </div>
 </div>
+<script>
+(function(){
+    var input=document.getElementById('browserUrl');
+    var status=document.getElementById('browserStatus');
+    var current='https://web.whatsapp.com/';
+    var history=[current];
+    var position=0;
+    function normalize(value){
+        var url=value.trim();
+        if(!/^https?:\\/\\//i.test(url)) url='https://'+url;
+        try{
+            var parsed=new URL(url);
+            if(parsed.protocol!=='http:'&&parsed.protocol!=='https:') return null;
+            return parsed.href;
+        }catch(error){return null;}
+    }
+    function openUrl(value,addHistory){
+        var url=normalize(value);
+        if(!url){status.textContent='Invalid link. Use http:// or https://';return;}
+        current=url;
+        input.value=url;
+        status.textContent='Ready: '+url;
+        if(addHistory){history=history.slice(0,position+1);history.push(url);position=history.length-1;}
+        var popup=window.open(url,'_blank','noopener,noreferrer');
+        if(!popup) window.location.href=url;
+    }
+    document.getElementById('browserForm').addEventListener('submit',function(event){event.preventDefault();openUrl(input.value,true);});
+    document.getElementById('openBrowser').addEventListener('click',function(){openUrl(input.value,true);});
+    document.getElementById('browserBack').addEventListener('click',function(){if(position>0){position--;openUrl(history[position],false);}});
+    document.getElementById('browserForward').addEventListener('click',function(){if(position<history.length-1){position++;openUrl(history[position],false);}});
+    document.getElementById('browserReload').addEventListener('click',function(){openUrl(current,false);});
+})();
+</script>
 `;
 
 // WhatsApp Web Desktop Interface - Real Pairing System
