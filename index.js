@@ -81,6 +81,15 @@ function loadCommandRegistry() {
 const commands = loadCommandRegistry();
 
 const { invokeCommand: invokeCompatibleCommand } = require('./lib/commandInvoker');
+const {
+    getButtonId,
+    isButtonResponse,
+    isCommandId,
+    autoDetectButtonCommand,
+    executeButtonHandler,
+    loadButtonHandlers
+} = require('./lib/buttonLoader');
+const buttonHandlersPromise = loadButtonHandlers();
 
 async function invokeCommand(commandHandler, sock, from, msg, isAdmin, q, session, args, botData, saveBotData, userId) {
     return invokeCompatibleCommand(commandHandler, sock, from, msg, isAdmin, q, session, args, botData, saveBotData, userId);
@@ -753,7 +762,10 @@ class BotSession {
                         if (!messageContent) return;
 
                         let type = Object.keys(messageContent)[0];
-                        const text = (messageContent.conversation || messageContent.extendedTextMessage?.text || messageContent.imageMessage?.caption || messageContent.videoMessage?.caption || '').trim();
+                        const buttonMessage = { ...msg, message: messageContent };
+                        const buttonId = getButtonId(buttonMessage);
+                        const buttonCommand = autoDetectButtonCommand(buttonMessage);
+                        const text = (messageContent.conversation || messageContent.extendedTextMessage?.text || messageContent.imageMessage?.caption || messageContent.videoMessage?.caption || buttonCommand || '').trim();
 
                         // Antidelete feature has been disabled.
                         if (!isMe && !isStatus) {
@@ -883,6 +895,12 @@ class BotSession {
 
                         if (!this.isPublic && !isAuthorized && !(isModeCommand && canUseModeCommand) && !isMenuCommand) {
                             return;
+                        }
+
+                        if (isButtonResponse(buttonMessage) && buttonId && !isCommandId(buttonId)) {
+                            const buttonHandlers = await buttonHandlersPromise;
+                            const handled = await executeButtonHandler(buttonId, this.sock, from, msg, buttonHandlers);
+                            if (handled) return;
                         }
 
                         // Command processing
