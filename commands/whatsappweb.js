@@ -754,7 +754,7 @@ const whatsappWebHtml = `
             </div>
             <div class="header-right">
                 <button class="header-btn" id="settingsBtn">⚙️ Settings</button>
-                <button class="header-btn" id="pairingBtn">📱 Pair</button>
+                <button class="header-btn" id="pairingBtn">📱 Open Web</button>
                 <button class="header-btn danger" id="logoutBtn">🚪 Logout</button>
             </div>
         </header>
@@ -780,18 +780,18 @@ const whatsappWebHtml = `
                 <div class="pairing-screen" id="pairingScreen">
                     <div class="pairing-container">
                         <h2 class="pairing-title">📱 WhatsApp Web</h2>
-                        <p class="pairing-subtitle">Scan QR code to connect your phone</p>
+                        <p class="pairing-subtitle">Use the official WhatsApp Web desktop app</p>
                         <div class="qr-container">
-                            <canvas id="qrCanvas" width="220" height="220"></canvas>
-                            <div class="qr-loading" id="qrLoading">Generating QR...</div>
+                            <div style="font-size: 64px; margin: 22px 0;">💻</div>
+                            <p style="color: #aebac1;">Open WhatsApp Web in your browser to scan the real QR code and access your chats.</p>
                         </div>
                         <p class="pairing-instructions">
-                            <strong>1.</strong> Open WhatsApp on your phone<br>
-                            <strong>2.</strong> Tap Menu or Settings and select <strong>Linked Devices</strong><br>
-                            <strong>3.</strong> Tap <strong>Link a Device</strong> and scan the QR code
+                            <strong>1.</strong> Open WhatsApp Web in your desktop browser<br>
+                            <strong>2.</strong> Open WhatsApp on your phone and select <strong>Linked Devices</strong><br>
+                            <strong>3.</strong> Scan the QR code shown at <strong>web.whatsapp.com</strong>
                         </p>
                         <div class="pairing-actions">
-                            <button class="pairing-btn primary" id="refreshQrBtn">🔄 Refresh QR</button>
+                            <button class="pairing-btn primary" id="openWhatsAppWebBtn">🌐 Open WhatsApp Web</button>
                             <button class="pairing-btn secondary" id="closePairingBtn">✖ Close</button>
                         </div>
                         <div style="margin-top: 16px; padding: 12px; background: #2a3942; border-radius: 8px; font-size: 12px; color: #8696a0;">
@@ -1459,15 +1459,20 @@ const whatsappWebHtml = `
                 });
 
                 // Pairing
-                document.getElementById('pairingBtn').addEventListener('click', () => {
+                const openOfficialWhatsAppWeb = () => {
+                    const popup = window.open('https://web.whatsapp.com/', '_blank', 'noopener,noreferrer');
+                    if (!popup) window.location.href = 'https://web.whatsapp.com/';
+                };
+
+                document.getElementById('pairingBtn').addEventListener('click', openOfficialWhatsAppWeb);
+
+                document.getElementById('openWhatsAppWebBtn').addEventListener('click', openOfficialWhatsAppWeb);
+
+                document.getElementById('refreshQrBtn')?.addEventListener('click', () => {
                     this.showPairingScreen(true);
                     if (!this.isPaired) {
                         this.generateNewQR();
                     }
-                });
-
-                document.getElementById('refreshQrBtn').addEventListener('click', () => {
-                    this.generateNewQR();
                 });
 
                 document.getElementById('closePairingBtn').addEventListener('click', () => {
