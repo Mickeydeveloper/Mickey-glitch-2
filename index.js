@@ -12,6 +12,7 @@ const P = require('pino');
 const { OpenAI } = require('openai');
 const os = require('os');
 const { isSudo } = require('./lib');
+const { isSessionRepairableError, backupSignalState } = require('./lib/sessionRecovery');
 
 function loadCommandRegistry() {
     const registry = {};
@@ -509,6 +510,9 @@ class BotSession {
         this.lastConnectMessageTime = null;
         this.phoneNumber = null;
         this.ghostMode = false;
+        this.sessionRepairInProgress = false;
+        this.lastSessionRepairAt = 0;
+        this.decryptErrorCount = 0;
     }
 
     sendLog(message, type = 'info') {
@@ -527,6 +531,35 @@ class BotSession {
             });
         }
         io.emit('total-active', Object.values(sessions).filter(s => s.isConnected).length);
+    }
+
+    async repairSignalSession(error) {
+        if (!isSessionRepairableError(error) || this.sessionRepairInProgress) return false;
+
+        const now = Date.now();
+        if (now - this.lastSessionRepairAt < 60000) return false;
+
+        this.sessionRepairInProgress = true;
+        this.lastSessionRepairAt = now;
+        this.isConnected = false;
+        this.sendLog('Bad MAC detected. Backing up stale Signal keys and rebuilding the session...', 'warning');
+
+        try {
+            const backupPath = backupSignalState(this.authPath, now);
+            if (backupPath) this.sendLog(`Signal keys backed up to ${backupPath}`, 'info');
+
+            if (this.sock && typeof this.sock.end === 'function') {
+                try { this.sock.end(new Error('Rebuilding stale Signal session')); } catch (_) {}
+            }
+
+            await this.initialize();
+            return true;
+        } catch (repairError) {
+            this.sendLog(`Automatic session repair failed: ${repairError.message}`, 'error');
+            return false;
+        } finally {
+            this.sessionRepairInProgress = false;
+        }
     }
 
     async getAIResponse(userJid, userMessage, systemPrompt = "Helpful assistant.") {
@@ -745,6 +778,13 @@ class BotSession {
                 await Promise.all(m.messages.map(async (msg) => {
                     if (msg.messageStubType === 1 || msg.messageStubType === 2) {
                         this.sendLog('Received an undecryptable message. This might be due to a session conflict.', 'warning');
+                        this.decryptErrorCount += 1;
+                        if (this.decryptErrorCount >= 3) {
+                            await this.repairSignalSession(new Error('Failed to decrypt message with any known session'));
+                            this.decryptErrorCount = 0;
+                        }
+                    } else {
+                        this.decryptErrorCount = 0;
                     }
 
                     try {
