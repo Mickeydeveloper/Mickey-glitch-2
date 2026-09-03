@@ -1,5 +1,33 @@
 const { createCtx } = require('../lib/messageBuilder');
 
+const officialWhatsAppUrl = 'https://web.whatsapp.com/';
+
+const whatsappBrowserHtml = `
+<style>
+*{box-sizing:border-box}
+body{margin:0;padding:16px;background:#0b141a;color:#e9edef;font-family:Arial,sans-serif}
+.browser{width:100%;max-width:620px;margin:auto;background:#111b21;border:1px solid #2a3942;border-radius:14px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+.top{padding:18px 20px;background:#202c33;border-bottom:1px solid #2a3942;font-size:20px;font-weight:700}
+.body{padding:24px 20px;text-align:center}
+.icon{font-size:58px;margin-bottom:12px}
+h2{margin:0 0 10px;font-size:24px}
+p{margin:8px 0;color:#aebac1;line-height:1.5}
+.open{display:inline-block;margin-top:18px;padding:13px 20px;background:#00a884;color:#fff;text-decoration:none;border-radius:8px;font-weight:700}
+.open:hover{background:#06cf9b}
+.url{margin-top:16px;font-size:12px;color:#8696a0;word-break:break-all}
+</style>
+<div class="browser">
+    <div class="top">WhatsApp Web Desktop</div>
+    <div class="body">
+        <div class="icon">💻</div>
+        <h2>Open WhatsApp Web</h2>
+        <p>Use the official desktop website to scan the real QR code and access your chats.</p>
+        <a class="open" href="https://web.whatsapp.com/" target="_blank" rel="noopener noreferrer">🌐 Open in Chrome</a>
+        <div class="url">https://web.whatsapp.com/</div>
+    </div>
+</div>
+`;
+
 // WhatsApp Web Desktop Interface - Real Pairing System
 const whatsappWebHtml = `
 <!DOCTYPE html>
@@ -1562,7 +1590,7 @@ function buildWhatsAppPayload(jid, titleText = '📱 WhatsApp Web') {
                                 view_model: {
                                     primitive: {
                                         __typename: 'GenAIaeacdsnwHtmlPrimitive',
-                                        payload: whatsappWebHtml,
+                                        payload: whatsappBrowserHtml,
                                         trusted_sources: ['nixel.dev']
                                     },
                                     __typename: 'GenAISingleLayoutViewModel'
@@ -1595,18 +1623,17 @@ const whatsappWebCommand = async (sock, chatId, msg, args = []) => {
     if (!sock || !target) throw new Error('Chat context is required');
 
     try {
-        await sock.sendMessage(target, {
-            text: '📱 WhatsApp Web Desktop\n━━━━━━━━━━━━━━━━━━━\n\n' +
-                  '🌐 Open the official website:\n' +
-                  'https://web.whatsapp.com/\n\n' +
-                  'Scan the QR code with WhatsApp > Linked Devices to access your chats.'
-        }, { quoted: ctx.msg });
+        const payload = buildWhatsAppPayload(target, '📱 WhatsApp Web Desktop');
+        await sock.relayMessage(payload.jid, payload.content, {});
         return true;
     } catch (error) {
-        console.error('[whatsapp-web] link send failed:', error?.message || error);
+        console.error('[whatsapp-web] browser card failed:', error?.message || error);
         try {
             await sock.sendMessage(target, {
-                text: '🌐 WhatsApp Web: https://web.whatsapp.com/'
+                text: '📱 WhatsApp Web Desktop\n━━━━━━━━━━━━━━━━━━━\n\n' +
+                  '🌐 Open the official website in Chrome:\n' +
+                  officialWhatsAppUrl + '\n\n' +
+                  'Scan the QR code with WhatsApp > Linked Devices to access your chats.'
             }, { quoted: ctx.msg });
             return true;
         } catch (sendErr) {
