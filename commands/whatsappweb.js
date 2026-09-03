@@ -1595,18 +1595,18 @@ const whatsappWebCommand = async (sock, chatId, msg, args = []) => {
     if (!sock || !target) throw new Error('Chat context is required');
 
     try {
-        const payload = buildWhatsAppPayload(target, '📱 WhatsApp Web');
-        await sock.relayMessage(payload.jid, payload.content, {});
+        await sock.sendMessage(target, {
+            text: '📱 WhatsApp Web Desktop\n━━━━━━━━━━━━━━━━━━━\n\n' +
+                  '🌐 Open the official website:\n' +
+                  'https://web.whatsapp.com/\n\n' +
+                  'Scan the QR code with WhatsApp > Linked Devices to access your chats.'
+        }, { quoted: ctx.msg });
         return true;
     } catch (error) {
-        console.error('[whatsapp-web] relay failed:', error?.message || error);
+        console.error('[whatsapp-web] link send failed:', error?.message || error);
         try {
             await sock.sendMessage(target, {
-                text: '📱 WHATSAPP WEB\n━━━━━━━━━━━━━━━━━━━\n\n' +
-                      '🔗 Link your phone by scanning the QR code\n' +
-                      '💾 Data stored locally (localStorage)\n' +
-                      '📱 Full desktop experience\n\n' +
-                      'Click the link above to open WhatsApp Web!'
+                text: '🌐 WhatsApp Web: https://web.whatsapp.com/'
             }, { quoted: ctx.msg });
             return true;
         } catch (sendErr) {
