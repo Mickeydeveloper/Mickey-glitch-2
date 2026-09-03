@@ -4,6 +4,7 @@ const http = require('http');
 const socketIo = require('socket.io');
 const fs = require('fs-extra');
 const path = require('path');
+const { randomBytes } = require('crypto');
 const axios = require('axios');
 const TelegramBot = require('node-telegram-bot-api');
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, makeCacheableSignalKeyStore, downloadContentFromMessage, jidNormalizedUser, Browsers, delay } = require('@whiskeysockets/baileys');
@@ -127,6 +128,33 @@ const botOwnerNumber = settings.ownerNumber || '255615944741';
 const botVersion = settings.version || '3.0.0';
 const botNewsletterJid = settings.newsletterJid || '120363398106360290@newsletter';
 const botNewsletterName = settings.newsletterName || botBrandName;
+
+function addBotMessageContext(content) {
+    if (!content || typeof content !== 'object' || Array.isArray(content)) return content;
+    if (content.react || content.delete || content.protocolMessage) return content;
+
+    return {
+        ...content,
+        messageContextInfo: {
+            ...(content.messageContextInfo || {}),
+            messageSecret: randomBytes(32),
+            supportPayload: JSON.stringify({
+                version: 1,
+                is_ai_message: true,
+                should_show_system_message: true,
+                ticket_id: '1669945700536053'
+            })
+        }
+    };
+}
+
+function addBotRelayNodes(options = {}) {
+    const nodes = Array.isArray(options.additionalNodes) ? [...options.additionalNodes] : [];
+    const hasNode = (tag) => nodes.some((node) => node?.tag === tag);
+    if (!hasNode('bot')) nodes.push({ attrs: { biz_bot: '1' }, tag: 'bot' });
+    if (!hasNode('biz')) nodes.push({ attrs: {}, tag: 'biz' });
+    return { ...options, additionalNodes: nodes };
+}
 
 // Helper function to get connected bot numbers
 function getConnectedBotNumbers() {
@@ -601,6 +629,9 @@ class BotSession {
             // Inafix JID pamoja na TypeError: Cannot read properties of undefined (reading 'fromMe')
             if (this.sock && this.sock.sendMessage) {
                 const rawSendMessage = this.sock.sendMessage.bind(this.sock);
+                const rawRelayMessage = typeof this.sock.relayMessage === 'function'
+                    ? this.sock.relayMessage.bind(this.sock)
+                    : null;
                 this.sock.sendMessage = async (jid, content, options = {}) => {
                     // 1. Safe JID Check
                     let safeJid = jid;
@@ -627,8 +658,24 @@ class BotSession {
                         }
                     }
 
-                    return await rawSendMessage(safeJid, content, safeOptions);
+                    return await rawSendMessage(safeJid, addBotMessageContext(content), safeOptions);
                 };
+
+                if (rawRelayMessage) {
+                    this.sock.relayMessage = async (jid, content, options = {}) => {
+                        const safeJid = String(jid || '').trim();
+                        if (!safeJid) {
+                            console.error('⚠️ [JID Guard] Invalid JID passed to relayMessage:', jid);
+                            return;
+                        }
+
+                        return await rawRelayMessage(
+                            safeJid,
+                            addBotMessageContext(content),
+                            addBotRelayNodes(options)
+                        );
+                    };
+                }
             }
 
             if (pairingNumber && !state.creds.registered) {
