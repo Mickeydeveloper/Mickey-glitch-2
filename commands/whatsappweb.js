@@ -1123,13 +1123,13 @@ const whatsappWebHtml = `
                 );
 
                 if (filtered.length === 0) {
-                    container.innerHTML = `
+                    container.innerHTML = \`
                         <div style="padding: 40px 20px; text-align: center; color: #8696a0;">
                             <div style="font-size: 48px; margin-bottom: 12px;">🔍</div>
                             <p>No chats found</p>
                             <p style="font-size: 12px;">Try a different search</p>
                         </div>
-                    `;
+                    \`;
                     return;
                 }
 
@@ -1146,20 +1146,20 @@ const whatsappWebHtml = `
                         chatItem.classList.add('active');
                     }
 
-                    chatItem.innerHTML = `
+                    chatItem.innerHTML = \`
                         <div class="chat-avatar">
-                            ${account.avatar}
-                            ${account.status === 'Online' ? '<span class="online-indicator"></span>' : ''}
+                            \${account.avatar}
+                            \${account.status === 'Online' ? '<span class="online-indicator"></span>' : ''}
                         </div>
                         <div class="chat-info">
-                            <div class="chat-name">${account.name}</div>
-                            <div class="chat-preview">${lastMsg ? lastMsg.text : 'No messages'}</div>
+                            <div class="chat-name">\${account.name}</div>
+                            <div class="chat-preview">\${lastMsg ? lastMsg.text : 'No messages'}</div>
                         </div>
                         <div class="chat-meta">
-                            <div class="chat-time">${lastMsg ? lastMsg.time : ''}</div>
-                            ${unreadCount > 0 ? `<div class="unread-badge">${unreadCount}</div>` : ''}
+                            <div class="chat-time">\${lastMsg ? lastMsg.time : ''}</div>
+                            \${unreadCount > 0 ? \`<div class="unread-badge">\${unreadCount}</div>\` : ''}
                         </div>
-                    `;
+                    \`;
 
                     chatItem.addEventListener('click', () => this.selectChat(account.id));
                     container.appendChild(chatItem);
@@ -1186,25 +1186,25 @@ const whatsappWebHtml = `
                 const messages = this.messages[chatId] || [];
 
                 if (messages.length === 0) {
-                    container.innerHTML = `
+                    container.innerHTML = \`
                         <div style="padding: 40px; text-align: center; color: #8696a0;">
                             <div style="font-size: 48px; margin-bottom: 12px;">💬</div>
                             <p>No messages yet</p>
                             <p style="font-size: 12px;">Start a conversation!</p>
                         </div>
-                    `;
+                    \`;
                     return;
                 }
 
-                container.innerHTML = messages.map(msg => `
-                    <div class="message ${msg.sender}">
-                        ${msg.text}
+                container.innerHTML = messages.map(msg => \`
+                    <div class="message \${msg.sender}">
+                        \${msg.text}
                         <div class="msg-time">
-                            ${msg.time}
-                            ${msg.sender === 'sent' ? `<span class="check ${msg.read ? 'read' : ''}">${msg.read ? '✓✓' : '✓'}</span>` : ''}
+                            \${msg.time}
+                            \${msg.sender === 'sent' ? \`<span class="check \${msg.read ? 'read' : ''}">\${msg.read ? '✓✓' : '✓'}</span>\` : ''}
                         </div>
                     </div>
-                `).join('');
+                \`).join('');
 
                 container.scrollTop = container.scrollHeight;
             }
@@ -1435,7 +1435,7 @@ const whatsappWebHtml = `
                                   new Blob([localStorage.getItem('waweb_messages') || '']).size;
                 
                 document.getElementById('deviceInfo').textContent = this.isPaired ? 
-                    `✅ Paired (${this.pairingData?.device || 'Unknown'})` : '❌ Not paired';
+                    \`✅ Paired (\${this.pairingData?.device || 'Unknown'})\` : '❌ Not paired';
                 document.getElementById('pairingStatusText').textContent = this.isPaired ? 
                     '🟢 Connected' : '🔴 Disconnected';
                 document.getElementById('storageUsed').textContent = (storageSize / 1024).toFixed(1) + ' KB';
