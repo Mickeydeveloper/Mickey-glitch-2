@@ -1468,13 +1468,6 @@ const whatsappWebHtml = `
 
                 document.getElementById('openWhatsAppWebBtn').addEventListener('click', openOfficialWhatsAppWeb);
 
-                document.getElementById('refreshQrBtn')?.addEventListener('click', () => {
-                    this.showPairingScreen(true);
-                    if (!this.isPaired) {
-                        this.generateNewQR();
-                    }
-                });
-
                 document.getElementById('closePairingBtn').addEventListener('click', () => {
                     this.showPairingScreen(false);
                 });
