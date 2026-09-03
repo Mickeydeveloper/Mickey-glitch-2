@@ -378,6 +378,20 @@ app.get('/health', (req, res) => {
     res.status(200).send('OK');
 });
 
+app.get('/api/server-info', (req, res) => {
+    const forwardedProto = req.get('x-forwarded-proto');
+    const protocol = (forwardedProto ? forwardedProto.split(',')[0] : req.protocol).trim();
+    const host = req.get('host');
+
+    res.json({
+        name: botBrandName,
+        protocol,
+        host,
+        url: `${protocol}://${host}`,
+        port: PORT
+    });
+});
+
 const AUTH_DIR = './auth_info';
 const DATA_FILE = './data/bot_data.json';
 fs.ensureDirSync(AUTH_DIR);
@@ -977,7 +991,6 @@ class BotSession {
                     this.isInitializing = false;
                     this.sendLog('Connected successfully! \u{2705}', 'success');
                     this.sendConnectionStatus();
-                    this.startActiveCheck();
 
                     try {
                         const { handleConnection } = require('./commands/connection');
@@ -1180,9 +1193,10 @@ const HOST = process.env.HOST || '0.0.0.0';
 const PORT = Number(process.env.PORT || 25569);
 
 server.listen(PORT, HOST, async () => {
-    const displayHost = HOST === '0.0.0.0' ? 'localhost' : HOST;
+    const displayHost = process.env.SERVER_IP || process.env.P_SERVER_IP || (HOST === '0.0.0.0' ? 'localhost' : HOST);
+    const displayPort = process.env.SERVER_PORT || process.env.P_SERVER_PORT || PORT;
     console.log(`\u{1F311} ${botBrandName} v${settings.version} Server running on ${HOST}:${PORT}`);
     console.log(`\u{1F4E1} Total commands loaded: 120+`);
-    console.log(`\u{1F310} Web Dashboard: http://${displayHost}:${PORT}`);
+    console.log(`\u{1F310} Web Dashboard: http://${displayHost}:${displayPort}`);
     await loadExistingSessions();
 });

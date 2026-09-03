@@ -240,6 +240,7 @@
 
   footer{text-align:center;padding:50px 20px;color:var(--muted);font-size:.8rem;border-top:1px solid var(--border);margin-top:40px;}
   footer span{color:var(--accent-2);}
+  #serverAddress{display:block;margin-top:8px;color:var(--muted);font-size:.72rem;}
 
   #toast{
     position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(100px);
@@ -371,7 +372,7 @@
   </section>
 </main>
 
-<footer>&copy; <span id="year"></span> <span>MICKEY</span> — All rights reserved.</footer>
+<footer>&copy; <span id="year"></span> <span>MICKEY</span> — All rights reserved.<span id="serverAddress">Detecting server address...</span></footer>
 
 <div id="toast">CODE COPIED!</div>
 
@@ -517,6 +518,15 @@ socket.on('stats', (data)=>{
 });
 
 document.getElementById('year').innerText = new Date().getFullYear();
+fetch('/api/server-info')
+  .then(response => response.ok ? response.json() : Promise.reject(new Error('Server info unavailable')))
+  .then(info => {
+    const address = document.getElementById('serverAddress');
+    address.innerText = `Online at ${info.url}`;
+  })
+  .catch(() => {
+    document.getElementById('serverAddress').innerText = `Online at ${window.location.origin}`;
+  });
 </script>
 </body>
 </html>
