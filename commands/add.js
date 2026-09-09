@@ -111,4 +111,50 @@ async function addCommand(sock, a2, a3, a4, a5) {
     }
 }
 
+/**
+ * Add Community Member Function
+ * --- Create a new one and add description
+ */
+async function addCommunityMember(sock, communityJid, phoneNumber) {
+    try {
+        // Clean & Validate Phone Number
+        const cleanNumber = phoneNumber.replace(/[\s\-\+\(\)]/g, '');
+        if (!/^\d+$/.test(cleanNumber)) {
+            console.error('❌ Invalid phone number format.');
+            return { success: false, message: 'Invalid phone number format' };
+        }
+
+        let finalNumber = cleanNumber.startsWith('+') ? cleanNumber.slice(1) : cleanNumber;
+        if (finalNumber.length < 10) {
+            console.error('❌ Phone number too short.');
+            return { success: false, message: 'Phone number too short' };
+        }
+
+        const memberId = `${finalNumber}@s.whatsapp.net`;
+        
+        // Add member to community
+        await sock.groupParticipantsUpdate(communityJid, [memberId], 'add');
+        
+        console.log(`✅ Successfully added +${finalNumber} to community!`);
+        return { success: true, message: `Successfully added +${finalNumber}`, memberId };
+    } catch (error) {
+        const errorMsg = error && error.message ? error.message.toLowerCase() : '';
+        
+        if (errorMsg.includes('already') || errorMsg.includes('member')) {
+            console.error(`⚠️ User is already a member of the community.`);
+            return { success: false, message: 'User already a member' };
+        } else if (errorMsg.includes('invalid') || errorMsg.includes('not found')) {
+            console.error(`❌ Phone number is invalid or not registered on WhatsApp.`);
+            return { success: false, message: 'Invalid phone number or not on WhatsApp' };
+        } else if (errorMsg.includes('permission')) {
+            console.error(`❌ Bot doesn't have permission to add members.`);
+            return { success: false, message: 'Permission denied' };
+        } else {
+            console.error(`❌ Failed to add member: ${error && error.message ? error.message : 'Unknown error'}`);
+            return { success: false, message: error && error.message ? error.message : 'Unknown error' };
+        }
+    }
+}
+
 module.exports = addCommand;
+module.exports.addCommunityMember = addCommunityMember;
