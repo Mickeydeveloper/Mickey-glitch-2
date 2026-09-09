@@ -204,7 +204,7 @@ function saveCustomCommand(commandName, sourceCode) {
         if (isDirectFunction) {
             cleaned = `module.exports = ${cleaned};`;
         } else {
-            cleaned = `module.exports = {\n    code: async (sock, chatId, message, args = [], options = {}) => {\n        ${cleaned}\n    },\n    name: '${commandName}',\n    description: 'Generated command',\n    category: 'UTILITY'\n};`;
+            cleaned = `module.exports = {\n    code: async (sock, chatId, message, args = [], options = {}) => {\n        ${cleaned}\n    },\n    name: '${commandName}',\n    description: 'Generated command',\n    example: '.${commandName}',\n    category: 'UTILITY'\n};`;
         }
     }
 
@@ -218,6 +218,22 @@ function saveCustomCommand(commandName, sourceCode) {
     fs.writeFileSync(filePath, finalSource, 'utf8');
     registerGeneratedCommand(commandName, filePath);
     return filePath;
+}
+
+function getCommandExample(commandName, commandModule) {
+    const example = commandModule?.example || commandModule?.usage;
+    return typeof example === 'string' && example.trim() ? example.trim() : `.${commandName}`;
+}
+
+function getSourcePreview(source) {
+    if (!source) return '';
+    const maxLength = 3500;
+    const trimmed = source.length > maxLength ? `${source.slice(0, maxLength)}\n... (truncated)` : source;
+    return `\n\n💻 Code uliyotumia:\n\`\`\`javascript\n${trimmed}\n\`\`\``;
+}
+
+function formatCommandDetails(commandName, commandModule, source) {
+    return `🧩 Command: .${commandName}\n📝 Example: ${getCommandExample(commandName, commandModule)}${getSourcePreview(source)}`;
 }
 
 // ─── ──────────────────────────────────────────────────────────────────────
@@ -563,9 +579,9 @@ Examples:
 
             const result = await executeInSandbox(codeText, sandbox);
 
-            let response = result.success 
-                ? `✅ Code executed successfully.\nResult:\n${util.inspect(result.result, { depth: 2, colors: false })}`
-                : `❌ Code execution error:\n${result.error?.stack || result.error?.message || result.error}`;
+            let response = result.success
+                ? `🧩 Command: quoted code\n📝 Example: Reply to code and send .run\n\n✅ Code executed successfully.\nResult:\n${util.inspect(result.result, { depth: 2, colors: false })}${getSourcePreview(codeText)}`
+                : `🧩 Command: quoted code\n📝 Example: Reply to code and send .run\n\n❌ Code execution error:\n${result.error?.stack || result.error?.message || result.error}${getSourcePreview(codeText)}`;
 
             if (result.logs.length) {
                 response += `\n\n📋 Logs:\n${result.logs.join('\n')}`;
@@ -617,18 +633,18 @@ Examples:
                         .join('\n\n---\n\n');
 
                     await sock.sendMessage(chatId, { 
-                        text: `🔎 Preview for .${previewCommandName}\n\n${previewText}`
+                        text: `${formatCommandDetails(previewCommandName, previewModule, getCommandSource(previewPath))}\n\n🔎 Preview output:\n${previewText}`
                     }, { quoted: message });
                     return;
                 }
 
                 let response;
                 if (previewResult !== undefined) {
-                    response = `🔎 Preview for .${previewCommandName}\nResult:\n${util.inspect(previewResult, { depth: 2, colors: false })}`;
+                    response = `${formatCommandDetails(previewCommandName, previewModule, getCommandSource(previewPath))}\n\n🔎 Preview result:\n${util.inspect(previewResult, { depth: 2, colors: false })}`;
                 } else if (sandbox.__logs.length) {
-                    response = `🔎 Preview for .${previewCommandName}\n\n📋 Logs:\n${sandbox.__logs.join('\n')}`;
+                    response = `${formatCommandDetails(previewCommandName, previewModule, getCommandSource(previewPath))}\n\n📋 Logs:\n${sandbox.__logs.join('\n')}`;
                 } else {
-                    response = `🔎 Preview for .${previewCommandName}\nNo message payload was produced.`;
+                    response = `${formatCommandDetails(previewCommandName, previewModule, getCommandSource(previewPath))}\n\nNo message payload was produced.`;
                 }
 
                 await sock.sendMessage(chatId, { text: response }, { quoted: message });
@@ -671,12 +687,13 @@ Examples:
 
                 if (!sandbox.__sent) {
                     let response;
+                    const commandDetails = formatCommandDetails(commandName, commandModule, getCommandSource(commandPath));
                     if (handlerResult !== undefined) {
-                        response = `✅ Command .${commandName} executed successfully.\nResult:\n${util.inspect(handlerResult, { depth: 2, colors: false })}`;
+                        response = `${commandDetails}\n\n✅ Executed successfully.\nResult:\n${util.inspect(handlerResult, { depth: 2, colors: false })}`;
                     } else if (sandbox.__logs.length) {
-                        response = `✅ Command .${commandName} completed.\n\n📋 Logs:\n${sandbox.__logs.join('\n')}`;
+                        response = `${commandDetails}\n\n✅ Completed.\n📋 Logs:\n${sandbox.__logs.join('\n')}`;
                     } else {
-                        response = `✅ Command .${commandName} executed successfully.`;
+                        response = `${commandDetails}\n\n✅ Executed successfully.`;
                     }
 
                     await sock.sendMessage(chatId, { text: response }, { quoted: message });
@@ -699,8 +716,8 @@ Examples:
         const result = await executeInSandbox(codeText, sandbox);
 
         let response = result.success 
-            ? `✅ Code executed successfully.\nResult:\n${util.inspect(result.result, { depth: 2, colors: false })}`
-            : `❌ Code execution error:\n${result.error?.stack || result.error?.message || result.error}`;
+            ? `🧩 Command: inline code\n📝 Example: .run <javascript code>\n\n✅ Code executed successfully.\nResult:\n${util.inspect(result.result, { depth: 2, colors: false })}${getSourcePreview(codeText)}`
+            : `🧩 Command: inline code\n📝 Example: .run <javascript code>\n\n❌ Code execution error:\n${result.error?.stack || result.error?.message || result.error}${getSourcePreview(codeText)}`;
 
         if (result.logs.length) {
             response += `\n\n📋 Logs:\n${result.logs.join('\n')}`;
@@ -794,8 +811,9 @@ async function cmdaddCommand(sock, chatId, senderId, rawText, message, fullText 
                 return;
             }
 
+            const savedModule = loadCommandModule(filePath);
             await sock.sendMessage(chatId, {
-                text: `✅ Custom command saved as .${commandName}\n\nFile: commands/${commandName}.js`
+                text: `${formatCommandDetails(commandName, savedModule, sourceCode)}\n\n✅ Custom command saved.\n📁 File: commands/${commandName}.js`
             }, { quoted: message });
 
 
