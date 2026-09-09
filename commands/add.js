@@ -56,7 +56,13 @@ async function addCommand(sock, a2, a3, a4, a5) {
         }
 
         // Extract phone number from text
-        const phoneNumber = (text || '').trim();
+        let phoneNumber = (text || '').trim();
+        if (/^[.!#$%^&*+=\-/]\S+\s+/.test(phoneNumber)) {
+            phoneNumber = phoneNumber.replace(/^[.!#$%^&*+=\-/]\S+\s+/, '').trim();
+        }
+        if (/^add\s+/i.test(phoneNumber)) {
+            phoneNumber = phoneNumber.replace(/^add\s+/i, '').trim();
+        }
         if (!phoneNumber) {
             await sock.sendMessage(chatId, { text: '❌ Usage: .add <phone_number>\n\n📝 Example: .add 255612130873' }, { quoted: message });
             return;
