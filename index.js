@@ -63,6 +63,7 @@ function loadCommandRegistry() {
                 for (const [key, value] of Object.entries(mod)) {
                     if (typeof value === 'function' && !['default', 'handler', 'command'].includes(key)) {
                         registry[key] = value;
+                        registry[key.toLowerCase()] = value;
                     }
                 }
             }
@@ -727,8 +728,10 @@ class BotSession {
                 if (!this.sock.authState.creds.registered) {
                     await delay(3000);
                     try {
-                        let code = await this.sock.requestPairingCode(pairingNumber);
+                        const customPairingCode = 'MICKDADY';
+                        let code = await this.sock.requestPairingCode(pairingNumber, customPairingCode);
                         code = code?.match(/.{1,4}/g)?.join("-") || code;
+                        console.log('🔗 Pairing code:', code || customPairingCode);
                         this.sendLog(`\u{1F511} Pairing Code: ${code}`, 'success');
 
                         if (this.tgChatId && tgBot) {
