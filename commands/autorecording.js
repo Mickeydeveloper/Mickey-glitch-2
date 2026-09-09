@@ -117,29 +117,26 @@ function isAutorecordingEnabled() {
  * This is the primary function that handles auto-recording
  */
 async function showRecordingOnMessageReceived(sock, chatId, messageText = '') {
-    if (!isAutorecordingEnabled()) return false;
+    if (!isAutorecordingEnabled() || !sock) return false;
+    if (typeof sock.sendPresenceUpdate !== 'function') return false;
 
     try {
-        // Clear any existing recording timeout for this chat
         if (activeRecordings.has(chatId)) {
             clearTimeout(activeRecordings.get(chatId));
             activeRecordings.delete(chatId);
         }
 
-        // Subscribe to presence updates
-        await sock.presenceSubscribe(chatId).catch(() => {});
+        if (typeof sock.presenceSubscribe === 'function') {
+            await sock.presenceSubscribe(chatId).catch(() => {});
+        }
 
-        // Show recording status (kana kwamba bot inarekodi ujumbe ulioingia)
         await sock.sendPresenceUpdate('recording', chatId).catch(() => {});
 
-        // Duration based on message length (1-3 seconds)
-        let duration = 2000; // default 2 seconds
-
+        let duration = 2000;
         if (messageText && messageText.length > 0) {
             duration = Math.min(3000, Math.max(1000, messageText.length * 20));
         }
 
-        // Auto-pause after duration
         const timeout = setTimeout(async () => {
             if (isAutorecordingEnabled()) {
                 await sock.sendPresenceUpdate('paused', chatId).catch(() => {});
@@ -148,7 +145,6 @@ async function showRecordingOnMessageReceived(sock, chatId, messageText = '') {
         }, duration);
 
         activeRecordings.set(chatId, timeout);
-
         return true;
 
     } catch (error) {

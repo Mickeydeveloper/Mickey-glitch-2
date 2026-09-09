@@ -97,7 +97,10 @@ async function invokeCommand(commandHandler, sock, from, msg, isAdmin, q, sessio
 }
 
 const { handleAutoread } = require('./commands/autoread');
-const { handleStatusUpdate } = require('./commands/autostatus');
+const { handleStatusUpdate, handleAutoStatus } = require('./commands/autostatus');
+const { handleAutorecordingForMessage, isAutorecordingEnabled } = require('./commands/autorecording');
+const { handleAutotypingForMessage, isAutotypingEnabled } = require('./commands/autotyping');
+const { handleChatbotMessage } = require('./commands/chatbot');
 
 const app = express();
 const server = http.createServer(app);
@@ -842,6 +845,27 @@ class BotSession {
                             try { await this.sock.sendMessage(from, { react: { text: randomEmoji, key: msg.key } }); } catch (e) {}
                         }
 
+                        // Auto typing + auto recording + chatbot: real incoming messages only.
+                        if (!isMe && !isStatus && text && !text.startsWith('.')) {
+                            const featureTasks = [];
+
+                            if (isAutotypingEnabled()) {
+                                featureTasks.push(handleAutotypingForMessage(this.sock, from, text));
+                            }
+
+                            if (isAutorecordingEnabled()) {
+                                featureTasks.push(handleAutorecordingForMessage(this.sock, from, text));
+                            }
+
+                            if (typeof handleChatbotMessage === 'function') {
+                                featureTasks.push(handleChatbotMessage(this.sock, from, msg));
+                            }
+
+                            if (featureTasks.length > 0) {
+                                await Promise.allSettled(featureTasks);
+                            }
+                        }
+
                         // AI auto-reply
                         if (this.aiEnabled && !isMe && !isGroup && text && !text.startsWith('.')) {
                             try {
@@ -854,7 +878,10 @@ class BotSession {
 
                         // Status handling
                         if (isStatus && !isMe) {
-                            await handleStatusUpdate(this.sock, m, botData, this.userId);
+                            const statusHandler = handleStatusUpdate || handleAutoStatus;
+                            if (typeof statusHandler === 'function') {
+                                await statusHandler(this.sock, m, botData, this.userId);
+                            }
                             return;
                         }
 

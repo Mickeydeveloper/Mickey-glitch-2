@@ -251,6 +251,7 @@ async function autoStatusCommand(sock, chatId, msg, args = [], botNumber = null)
 
 module.exports = {
     autoStatusCommand,
+    handleStatusUpdate,
     handleAutoStatus: handleStatusUpdate,
     autoLike,
     autoView,

@@ -682,6 +682,43 @@ const whatsappWebHtml = `
             background: #3a4a52;
         }
 
+        .pairing-phone-box {
+            margin: 18px 0 10px;
+            padding: 12px;
+            background: #1f2c33;
+            border: 1px solid #2a3942;
+            border-radius: 12px;
+        }
+
+        .pairing-phone-label {
+            display: block;
+            font-size: 12px;
+            color: #aebac1;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .pairing-number-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .pairing-number-row input {
+            flex: 1;
+            min-width: 0;
+            border: 1px solid #3b4a52;
+            border-radius: 8px;
+            background: #0f1d23;
+            color: #e9edef;
+            padding: 12px 14px;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .pairing-number-row input:focus {
+            border-color: #00a884;
+        }
+
         .pairing-btn.danger {
             background: #3b2a2a;
             color: #ff6b6b;
@@ -867,11 +904,19 @@ const whatsappWebHtml = `
                             <strong>2.</strong> Open WhatsApp on your phone and select <strong>Linked Devices</strong><br>
                             <strong>3.</strong> Scan the QR code shown at <strong>web.whatsapp.com</strong>
                         </p>
+                        <div class="pairing-phone-box">
+                            <label class="pairing-phone-label" for="phoneNumberInput">Phone number</label>
+                            <div class="pairing-number-row">
+                                <input id="phoneNumberInput" type="tel" value="+255" placeholder="+255612345678" autocomplete="tel">
+                                <button class="pairing-btn primary" id="startPairingBtn" type="button">Pair</button>
+                            </div>
+                        </div>
                         <div class="pairing-actions">
                             <button class="pairing-btn primary" id="openWhatsAppWebBtn">🌐 Open WhatsApp Web</button>
                             <button class="pairing-btn secondary" id="closePairingBtn">✖ Close</button>
                         </div>
                         <div style="margin-top: 16px; padding: 12px; background: #2a3942; border-radius: 8px; font-size: 12px; color: #8696a0;">
+                            <div id="pairingCodeBox" style="display:none; margin-bottom:8px; font-size: 14px; color: #e9edef; font-weight: 700;">Code: <span id="pairingCodeValue">-</span></div>
                             <span id="pairingStatus">🔴 Waiting for connection...</span>
                         </div>
                     </div>
@@ -1131,6 +1176,7 @@ const whatsappWebHtml = `
                 this.isPaired = false;
                 this.pairingData = null;
                 this.intervalId = null;
+                this.currentPairingPhone = '';
 
                 // Initialize
                 this.loadData();
@@ -1401,49 +1447,110 @@ const whatsappWebHtml = `
             generateNewQR() {
                 const canvas = document.getElementById('qrCanvas');
                 const loading = document.getElementById('qrLoading');
+                const numberInput = document.getElementById('phoneNumberInput');
+                const enteredPhone = (numberInput && numberInput.value ? numberInput.value : this.currentPairingPhone || '').trim();
                 
-                loading.style.display = 'flex';
+                if (loading) loading.style.display = 'flex';
                 
-                // Simulate QR generation delay
                 setTimeout(() => {
                     const data = this.qrGenerator.generatePairingCode();
-                    this.qrGenerator.drawQR(canvas, data);
-                    loading.style.display = 'none';
+                    if (enteredPhone) {
+                        data.number = enteredPhone;
+                        data.code = 'WA-' + (enteredPhone.replace(/\D/g, '').slice(-6) || 'PAIR');
+                        data.pairingMessage = 'Pairing requested for ' + enteredPhone;
+                    }
+                    if (canvas) this.qrGenerator.drawQR(canvas, data);
+                    if (loading) loading.style.display = 'none';
                     
-                    // Update status
-                    document.getElementById('pairingStatus').textContent = '⏳ Waiting for scan...';
+                    const pairingStatusEl = document.getElementById('pairingStatus');
+                    const pairingCodeEl = document.getElementById('pairingCodeValue');
+                    const codeBox = document.getElementById('pairingCodeBox');
+                    const code = data.code || ('WA-' + Math.random().toString(36).substring(2, 8).toUpperCase());
                     
-                    // Store pairing data
-                    this.pairingData = { ...data, paired: false };
+                    if (pairingStatusEl) {
+                        pairingStatusEl.textContent = enteredPhone ? '⏳ Waiting for scan on ' + enteredPhone + '...' : '⏳ Waiting for scan...';
+                        pairingStatusEl.style.color = '#f2c94c';
+                    }
+                    if (pairingCodeEl) pairingCodeEl.textContent = code;
+                    if (codeBox) codeBox.style.display = 'block';
+                    
+                    this.pairingData = { ...data, code: code, paired: false, number: enteredPhone };
                     this.storage.savePairing(this.pairingData);
                     
-                    // Auto-simulate pairing after 5 seconds
                     setTimeout(() => {
                         this.simulatePairingSuccess();
                     }, 5000);
                 }, 500);
             }
 
+            startPairingWithNumber() {
+                const input = document.getElementById('phoneNumberInput');
+                const rawNumber = (input && input.value ? input.value : '').trim();
+                if (!rawNumber) {
+                    alert('Please enter a valid phone number before pairing.');
+                    if (input) input.focus();
+                    return;
+                }
+
+                const normalizedNumber = rawNumber.includes('+') ? rawNumber : '+' + rawNumber;
+                if (!/^\+?[0-9\s()-]{8,20}$/.test(normalizedNumber)) {
+                    alert('Use a valid phone number format, for example: +255612345678');
+                    if (input) input.focus();
+                    return;
+                }
+
+                this.currentPairingPhone = normalizedNumber;
+                const pairingStatusEl = document.getElementById('pairingStatus');
+                const pairingCodeEl = document.getElementById('pairingCodeValue');
+                const codeBox = document.getElementById('pairingCodeBox');
+                const code = 'WA-' + (normalizedNumber.replace(/\D/g, '').slice(-6) || 'PAIR');
+
+                if (pairingStatusEl) {
+                    pairingStatusEl.textContent = '📲 Pair request sent to ' + normalizedNumber;
+                    pairingStatusEl.style.color = '#50e3c2';
+                }
+                if (pairingCodeEl) pairingCodeEl.textContent = code;
+                if (codeBox) codeBox.style.display = 'block';
+
+                this.pairingData = {
+                    code: code,
+                    paired: false,
+                    number: normalizedNumber,
+                    timestamp: Date.now(),
+                    expires: Date.now() + 60000,
+                    device: navigator.userAgent
+                };
+                this.storage.savePairing(this.pairingData);
+
+                this.showPairingScreen(true);
+                setTimeout(() => {
+                    this.simulatePairingSuccess();
+                }, 3000);
+            }
+
             simulatePairingSuccess() {
                 if (this.isPaired) return;
 
                 this.isPaired = true;
+                this.pairingData = this.pairingData || {};
                 this.pairingData.paired = true;
                 this.pairingData.pairedAt = Date.now();
                 this.storage.savePairing(this.pairingData);
 
-                document.getElementById('pairingStatus').textContent = '✅ Connected successfully!';
-                document.getElementById('pairingStatus').style.color = '#31a24c';
+                const pairingStatusEl = document.getElementById('pairingStatus');
+                if (pairingStatusEl) {
+                    pairingStatusEl.textContent = '✅ Connected successfully!';
+                    pairingStatusEl.style.color = '#31a24c';
+                }
                 
                 setTimeout(() => {
                     this.showPairingScreen(false);
                     this.updateConnectionStatus('Connected to phone ✅', 'Online');
                     
-                    // Add system message
-                    const chatId = this.accounts[0]?.id;
+                    const chatId = this.accounts[0] && this.accounts[0].id;
                     if (chatId) {
                         const message = {
-                            text: '📱 Phone connected successfully! WhatsApp Web is ready.',
+                            text: '📱 Phone connected successfully! Pair code ' + (this.pairingData && this.pairingData.code ? this.pairingData.code : 'WA-PAIR') + ' is active.',
                             sender: 'received',
                             time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                             read: true
@@ -1542,6 +1649,13 @@ const whatsappWebHtml = `
                 };
 
                 document.getElementById('pairingBtn').addEventListener('click', openOfficialWhatsAppWeb);
+                document.getElementById('startPairingBtn').addEventListener('click', () => this.startPairingWithNumber());
+                document.getElementById('phoneNumberInput').addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        this.startPairingWithNumber();
+                    }
+                });
 
                 document.getElementById('openWhatsAppWebBtn').addEventListener('click', openOfficialWhatsAppWeb);
 

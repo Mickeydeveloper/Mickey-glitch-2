@@ -2,6 +2,13 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 const { invokeCommand } = require('../lib/commandInvoker');
+const { handleStatusUpdate, handleAutoStatus } = require('../commands/autostatus');
+
+test('status handler is exported under both compatibility names', () => {
+  assert.equal(typeof handleStatusUpdate, 'function');
+  assert.equal(typeof handleAutoStatus, 'function');
+  assert.equal(handleStatusUpdate, handleAutoStatus);
+});
 
 test('invokeCommand passes real chatId, senderId, text and message to modern handlers', async () => {
   const msg = {

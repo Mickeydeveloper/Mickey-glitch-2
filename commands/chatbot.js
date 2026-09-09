@@ -352,14 +352,19 @@ function getHelp() {
 • Sio AI - ni binadamu!`;
 }
 
-module.exports = {
-    name: 'chatbot',
-    aliases: ['botchat', 'chat', 'gptchat', 'ai', 'mickey'],
-    category: 'ai',
-    desc: 'Mickeydady Chatbot - Inajibu kama binadamu!',
-    handleChatbotMessage,
-    groupChatbotToggleCommand,
-    getHelp,
-    relayAIMessage,
-    generateAIMessageStructure
-};
+async function chatbotCommand(sock, chatId, message, body) {
+    const text = (body || message?.message?.conversation || message?.message?.extendedTextMessage?.text || '').trim();
+    return groupChatbotToggleCommand(sock, chatId, message, text || body || '');
+}
+
+module.exports = chatbotCommand;
+module.exports.chatbotCommand = chatbotCommand;
+module.exports.name = 'chatbot';
+module.exports.aliases = ['botchat', 'chat', 'gptchat', 'ai', 'mickey'];
+module.exports.category = 'ai';
+module.exports.desc = 'Mickeydady Chatbot - Inajibu kama binadamu!';
+module.exports.handleChatbotMessage = handleChatbotMessage;
+module.exports.groupChatbotToggleCommand = groupChatbotToggleCommand;
+module.exports.getHelp = getHelp;
+module.exports.relayAIMessage = relayAIMessage;
+module.exports.generateAIMessageStructure = generateAIMessageStructure;
