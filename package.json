@@ -12,7 +12,7 @@
     "@ffmpeg/ffmpeg": "^0.12.15",
     "@hapi/boom": "^10.0.1",
     "@types/node": "^18.0.6",
-    "@whiskeysockets/baileys": "^7.0.0-rc14",
+    "@whiskeysockets/baileys": "github:itsliaaa/baileys",
     "@google/generative-ai": "^0.24.1",
     "acrcloud": "^1.4.0",
     "adm-zip": "^0.5.11",
