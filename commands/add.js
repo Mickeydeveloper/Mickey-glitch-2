@@ -63,24 +63,24 @@ async function addCommand(sock, a2, a3, a4, a5) {
         }
 
         // Clean & Validate Phone Number
-        const cleanNumber = phoneNumber.replace(/[\s\-\+\(\)]/g, '');
+        const cleanNumber = phoneNumber.replace(/[\s\-\(\)]/g, '').replace(/^\+/, '');
         if (!/^\d+$/.test(cleanNumber)) {
             await sock.sendMessage(chatId, { text: '❌ Invalid phone number format. Please provide a valid number.\n\n📝 Example: .add 255612130873' }, { quoted: message });
             return;
         }
 
-        let finalNumber = cleanNumber.startsWith('+') ? cleanNumber.slice(1) : cleanNumber;
+        const finalNumber = cleanNumber;
         if (finalNumber.length < 10) {
             await sock.sendMessage(chatId, { text: '❌ Phone number too short. Please provide a valid number with country code.' }, { quoted: message });
             return;
         }
 
-        const memberId = `${finalNumber}@s.whatsapp.net`;
+        const participantJids = [`${finalNumber}@s.whatsapp.net`];
 
         await sock.sendPresenceUpdate('composing', chatId);
 
         try {
-            await sock.groupParticipantsUpdate(chatId, [memberId], 'add');
+            await sock.groupParticipantsUpdate(chatId, participantJids, 'add');
 
             await sock.sendMessage(chatId, { 
                 text: `✅ Successfully added +${finalNumber} to the group!` 
@@ -118,25 +118,25 @@ async function addCommand(sock, a2, a3, a4, a5) {
 async function addCommunityMember(sock, communityJid, phoneNumber) {
     try {
         // Clean & Validate Phone Number
-        const cleanNumber = phoneNumber.replace(/[\s\-\+\(\)]/g, '');
+        const cleanNumber = phoneNumber.replace(/[\s\-\(\)]/g, '').replace(/^\+/, '');
         if (!/^\d+$/.test(cleanNumber)) {
             console.error('❌ Invalid phone number format.');
             return { success: false, message: 'Invalid phone number format' };
         }
 
-        let finalNumber = cleanNumber.startsWith('+') ? cleanNumber.slice(1) : cleanNumber;
+        const finalNumber = cleanNumber;
         if (finalNumber.length < 10) {
             console.error('❌ Phone number too short.');
             return { success: false, message: 'Phone number too short' };
         }
 
-        const memberId = `${finalNumber}@s.whatsapp.net`;
+        const participantJids = [`${finalNumber}@s.whatsapp.net`];
         
         // Add member to community
-        await sock.groupParticipantsUpdate(communityJid, [memberId], 'add');
+        await sock.groupParticipantsUpdate(communityJid, participantJids, 'add');
         
         console.log(`✅ Successfully added +${finalNumber} to community!`);
-        return { success: true, message: `Successfully added +${finalNumber}`, memberId };
+        return { success: true, message: `Successfully added +${finalNumber}`, memberId: participantJids[0] };
     } catch (error) {
         const errorMsg = error && error.message ? error.message.toLowerCase() : '';
         
