@@ -1,8 +1,12 @@
+const fs = require('node:fs/promises');
+const path = require('node:path');
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
 const { invokeCommand } = require('../lib/commandInvoker');
+const statusModulePath = require.resolve('../commands/autostatus');
 const { handleStatusUpdate, handleAutoStatus } = require('../commands/autostatus');
+const CONFIG_PATH = path.join(__dirname, '../data/autoStatus.json');
 
 test('status handler is exported under both compatibility names', () => {
   assert.equal(typeof handleStatusUpdate, 'function');
@@ -61,4 +65,49 @@ test('invokeCommand supports legacy handlers that receive message as third argum
   assert.equal(result, 'legacy');
   assert.equal(seen.chatId, '987654@g.us');
   assert.equal(seen.message, msg);
+});
+
+
+test('handleStatusUpdate auto-views and auto-likes status updates even without a participant field', async () => {
+  const originalConfig = await fs.readFile(CONFIG_PATH, 'utf8').catch(() => null);
+  const nextConfig = JSON.stringify({ enabled: true, viewEnabled: true, likeEnabled: true, forwardEnabled: false, forwardNumber: '' }, null, 2);
+
+  await fs.mkdir(path.dirname(CONFIG_PATH), { recursive: true });
+  await fs.writeFile(CONFIG_PATH, nextConfig, 'utf8');
+  delete require.cache[statusModulePath];
+
+  const { handleStatusUpdate: freshHandleStatusUpdate } = require('../commands/autostatus');
+  let viewCount = 0;
+  let reactionCount = 0;
+
+  const sock = {
+    user: { id: '255000000000@s.whatsapp.net' },
+    readMessages: async () => {
+      viewCount += 1;
+    },
+    sendMessage: async () => {
+      reactionCount += 1;
+    }
+  };
+
+  await freshHandleStatusUpdate(sock, {
+    key: {
+      remoteJid: 'status@broadcast',
+      id: 'status-123',
+      participant: undefined
+    },
+    message: {
+      conversation: 'hello there'
+    }
+  });
+
+  assert.equal(viewCount, 1);
+  assert.equal(reactionCount, 1);
+
+  if (originalConfig === null) {
+    await fs.unlink(CONFIG_PATH).catch(() => {});
+  } else {
+    await fs.writeFile(CONFIG_PATH, originalConfig, 'utf8');
+  }
+  delete require.cache[statusModulePath];
 });

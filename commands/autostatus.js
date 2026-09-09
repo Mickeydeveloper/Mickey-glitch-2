@@ -67,12 +67,13 @@ async function autoView(sock, statusKey) {
 }
 
 async function autoLike(sock, statusKey) {
-    if (!statusKey?.id || !statusKey?.participant) return;
+    if (!statusKey?.id) return;
+    const participant = statusKey.participant || statusKey.remoteJid || 'status@broadcast';
     const emoji = getRandomEmoji();
     try {
         await sock.sendMessage('status@broadcast', {
             react: { text: emoji, key: statusKey }
-        }, { statusJidList: [statusKey.participant] });
+        }, { statusJidList: [participant] });
     } catch (err) {
         console.error(`[AutoLike] Failed:`, err.message);
     }
