@@ -21,7 +21,12 @@ async function getGroupAudience(sock, groupJid) {
 
 const groupStatusCommand = async (sock, chatId, msg, args = []) => {
     try {
-        const ctx = createCtx(sock, chatId, msg, { args });
+        const normalizedArgs = Array.isArray(args)
+            ? args.filter((arg) => typeof arg === 'string')
+            : typeof args === 'string'
+                ? args.trim().split(/\s+/).filter(Boolean)
+                : [];
+        const ctx = createCtx(sock, chatId, msg, { args: normalizedArgs });
         const target = ctx.chatId || chatId || msg?.key?.remoteJid;
 
         if (!sock || !target) {
@@ -42,8 +47,8 @@ const groupStatusCommand = async (sock, chatId, msg, args = []) => {
         let input = '';
         
         // Check args
-        if (args && args.length > 0) {
-            input = args.join(' ');
+        if (normalizedArgs.length > 0) {
+            input = normalizedArgs.join(' ');
         }
 
         // If no args, check quoted message
@@ -76,18 +81,11 @@ const groupStatusCommand = async (sock, chatId, msg, args = []) => {
             }
         }
 
-        // If no input, show usage
-        if (!input) {
-            await sock.sendMessage(target, {
-                text: `📝 GROUP STATUS\n━━━━━━━━━━━━━━━━━━━\n⚠️ Please provide a message!\n━━━━━━━━━━━━━━━━━━━\n📌 Examples:\n.groupstatus Hello everyone!\n━━━━━━━━━━━━━━━━━━━\n📎 Or quote a message with caption`
-            }, { quoted: msg });
-            return true;
-        }
-
         // Check for media in quoted message
         let hasMedia = false;
         let mediaBuffer = null;
         let mediaType = null;
+        let mediaMimetype = null;
 
         const quoted = msg?.quoted || msg?.msg?.contextInfo?.quotedMessage;
         
@@ -97,6 +95,7 @@ const groupStatusCommand = async (sock, chatId, msg, args = []) => {
                 try {
                     mediaBuffer = await sock.downloadMediaMessage(quoted);
                     mediaType = 'image';
+                    mediaMimetype = quoted.imageMessage.mimetype;
                     hasMedia = true;
                     console.log('[groupstatus] Image downloaded');
                 } catch (e) {
@@ -108,6 +107,7 @@ const groupStatusCommand = async (sock, chatId, msg, args = []) => {
                 try {
                     mediaBuffer = await sock.downloadMediaMessage(quoted);
                     mediaType = 'video';
+                    mediaMimetype = quoted.videoMessage.mimetype;
                     hasMedia = true;
                     console.log('[groupstatus] Video downloaded');
                 } catch (e) {
@@ -119,12 +119,33 @@ const groupStatusCommand = async (sock, chatId, msg, args = []) => {
                 try {
                     mediaBuffer = await sock.downloadMediaMessage(quoted);
                     mediaType = 'document';
+                    mediaMimetype = quoted.documentMessage.mimetype;
                     hasMedia = true;
                     console.log('[groupstatus] Document downloaded');
                 } catch (e) {
                     console.error('[groupstatus] Document download failed:', e);
                 }
             }
+            // Check for audio or voice note
+            else if (quoted?.audioMessage) {
+                try {
+                    mediaBuffer = await sock.downloadMediaMessage(quoted);
+                    mediaType = 'audio';
+                    mediaMimetype = quoted.audioMessage.mimetype || 'audio/ogg; codecs=opus';
+                    hasMedia = true;
+                    console.log('[groupstatus] Audio downloaded');
+                } catch (e) {
+                    console.error('[groupstatus] Audio download failed:', e);
+                }
+            }
+        }
+
+        // A replied media message can be posted without a caption.
+        if (!input && !hasMedia) {
+            await sock.sendMessage(target, {
+                text: `📝 GROUP STATUS\n━━━━━━━━━━━━━━━━━━━\n⚠️ Please provide a message or reply to media!\n━━━━━━━━━━━━━━━━━━━\n📌 Examples:\n.groupstatus Hello everyone!\n━━━━━━━━━━━━━━━━━━━\n📎 Reply to a picture, video, or audio`
+            }, { quoted: msg });
+            return true;
         }
 
         // Build and send content
@@ -134,7 +155,8 @@ const groupStatusCommand = async (sock, chatId, msg, args = []) => {
             // Send with media
             content = {
                 [mediaType]: mediaBuffer,
-                caption: input,
+                ...(mediaMimetype ? { mimetype: mediaMimetype } : {}),
+                ...(mediaType !== 'audio' ? { caption: input } : {}),
                 contextInfo: {
                     isGroupStatus: true,
                     pairedMediaType: 'NOT_PAIRED_MEDIA',
