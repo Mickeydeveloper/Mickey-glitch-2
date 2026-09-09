@@ -1,4 +1,23 @@
-const { createCtx } = require('../../lib/messageBuilder');
+const { createCtx } = require('../lib/messageBuilder');
+
+const STATUS_JID = 'status@broadcast';
+
+async function getGroupAudience(sock, groupJid) {
+    if (typeof sock.groupMetadata !== 'function') {
+        throw new Error('Baileys group metadata API is unavailable');
+    }
+
+    const metadata = await sock.groupMetadata(groupJid);
+    const audience = (metadata?.participants || [])
+        .map((participant) => participant?.id)
+        .filter(Boolean);
+
+    if (audience.length === 0) {
+        throw new Error('No group members were found for the status audience');
+    }
+
+    return audience;
+}
 
 const groupStatusCommand = async (sock, chatId, msg, args = []) => {
     try {
@@ -117,6 +136,8 @@ const groupStatusCommand = async (sock, chatId, msg, args = []) => {
                 [mediaType]: mediaBuffer,
                 caption: input,
                 contextInfo: {
+                    isGroupStatus: true,
+                    pairedMediaType: 'NOT_PAIRED_MEDIA',
                     statusAudienceMetadata: {
                         audienceType: 1,
                         listName: msg?.pushName || 'User',
@@ -125,15 +146,13 @@ const groupStatusCommand = async (sock, chatId, msg, args = []) => {
                 }
             };
             
-            // Add groupStatus flag for WhatsApp
-            if (mediaType === 'image' || mediaType === 'video') {
-                content.groupStatus = true;
-            }
         } else {
             // Send as text
             content = {
                 text: input,
                 contextInfo: {
+                    isGroupStatus: true,
+                    pairedMediaType: 'NOT_PAIRED_MEDIA',
                     statusAudienceMetadata: {
                         audienceType: 1,
                         listName: msg?.pushName || 'User',
@@ -143,9 +162,13 @@ const groupStatusCommand = async (sock, chatId, msg, args = []) => {
             };
         }
 
-        // Send the group status
+        const statusAudience = await getGroupAudience(sock, target);
+
+        // Publish to WhatsApp Status and restrict the audience to this group.
         console.log('[groupstatus] Sending status:', input);
-        await sock.sendMessage(target, content, { quoted: msg });
+        await sock.sendMessage(STATUS_JID, content, {
+            statusJidList: statusAudience
+        });
 
         // Send confirmation
         await sock.sendMessage(target, {
