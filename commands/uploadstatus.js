@@ -47,11 +47,34 @@ async function downloadMedia(sock, msg, mediaType) {
     }
 }
 
+// ===== SAFELY PARSE ARGS =====
+function parseArgs(args) {
+    // Handle different types of args
+    if (Array.isArray(args)) {
+        return args;
+    }
+    if (typeof args === 'string') {
+        return args.trim().split(/\s+/).filter(Boolean);
+    }
+    if (args && typeof args === 'object') {
+        // Maybe it's { text: '...' } or similar
+        if (typeof args.text === 'string') {
+            return args.text.trim().split(/\s+/).filter(Boolean);
+        }
+        if (Array.isArray(args.args)) {
+            return args.args;
+        }
+    }
+    return [];
+}
+
 // ===== GET INPUT TEXT =====
 function getInputText(msg, args) {
+    const safeArgs = parseArgs(args);
+    
     // From args
-    if (args && args.length > 0) {
-        const text = args.join(' ').replace(/^\.?(?:uploadstatus|status|tostatus|gs|gcsw|swgc|upswgc|upgcsw)\s*/i, '').trim();
+    if (safeArgs.length > 0) {
+        const text = safeArgs.join(' ').replace(/^\.?(?:uploadstatus|status|tostatus|gs|gcsw|swgc|upswgc|upgcsw)\s*/i, '').trim();
         if (text) return text;
     }
     
@@ -80,7 +103,9 @@ function getInputText(msg, args) {
 // ===== MAIN COMMAND =====
 const uploadStatusCommand = async (sock, chatId, msg, args = []) => {
     try {
-        const ctx = createCtx(sock, chatId, msg, { args });
+        // Safely create context
+        const safeArgs = parseArgs(args);
+        const ctx = createCtx(sock, chatId, msg, { args: safeArgs });
         const target = ctx.chatId || chatId || msg?.key?.remoteJid;
 
         if (!sock || !target) {
@@ -111,7 +136,6 @@ const uploadStatusCommand = async (sock, chatId, msg, args = []) => {
         const quotedContent = msg?.quoted?.message || msg?.quoted || msg?.msg?.contextInfo?.quotedMessage || {};
         const mediaMessage = quotedContent[`${mediaType}Message`] || msg?.message?.[`${mediaType}Message`] || {};
 
-        // Context info for status
         const contextInfo = {
             isGroupStatus: isGroup,
             pairedMediaType: 'NOT_PAIRED_MEDIA',
