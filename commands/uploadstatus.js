@@ -1,142 +1,84 @@
-/**
- * uploadstatus.js - Upload Media to WhatsApp Status
- * Using @whiskeysockets/baileys
- */
+const { createCtx } = require('../lib/messageBuilder');
 
-// ─── REQUIRE MODULES ──────────────────────────────────────────────────
-const { 
-    prepareWAMessageMedia, 
-    generateWAMessageFromContent,
-    proto 
-} = require('@whiskeysockets/baileys');
+const STATUS_JID = 'status@broadcast';
 
-// ─── CONFIGURATION ─────────────────────────────────────────────────────
-const COLORS = [
-    0xFFF44336, 0xFFE91E63, 0xFF9C27B0, 0xFF673AB7, 0xFF3F51B5,
-    0xFF2196F3, 0xFF03A9F4, 0xFF00BCD4, 0xFF009688, 0xFF4CAF50,
-    0xFF8BC34A, 0xFFCDDC39, 0xFFFFEB3B, 0xFFFFC107, 0xFFFF9800, 0xFFFF5722
-];
+function getQuotedMessage(msg) {
+    return msg?.quoted || msg?.msg?.contextInfo?.quotedMessage || null;
+}
 
-// ─── MAIN HANDLER ──────────────────────────────────────────────────────
-let handler = async (m, { conn, text, command }) => {
-    try {
-        // ─── GET QUOTED MEDIA ────────────────────────────────────────────
-        let q = m.quoted;
-        let mime = q ? ((q.msg || q).mimetype || '') : '';
-        let isImage = mime.includes('image');
-        let isVideo = mime.includes('video');
-        let isAudio = mime.includes('audio');
-        let isVoice = mime.includes('audio/ogg') || q?.msg?.audioMessage?.ptt;
+function getMessageText(message) {
+    return message?.conversation || message?.extendedTextMessage?.text || message?.imageMessage?.caption || message?.videoMessage?.caption || message?.documentMessage?.caption || message?.audioMessage?.caption || '';
+}
 
-        // ─── CHECK IF THERE'S MEDIA ──────────────────────────────────────
-        if (!isImage && !isVideo && !isAudio && !isVoice) {
-            return m.reply(
-                `📤 *UPLOAD STATUS*\n\n` +
-                `Jibu picha, video, au audio na command hii:\n` +
-                `• .uploadstatus - Weka kwenye status\n` +
-                `• .status - Weka kwenye status\n\n` +
-                `✏️ *Mfano:*\n` +
-                `Jibu picha + .uploadstatus`
-            );
-        }
+async function getGroupAudience(sock, groupJid) {
+    const metadata = await sock.groupMetadata(groupJid);
+    const audience = (metadata?.participants || []).map((participant) => participant?.id).filter(Boolean);
+    if (!audience.length) throw new Error('No group members found for status audience');
+    return audience;
+}
 
-        // ─── GET CAPTION ──────────────────────────────────────────────────
-        let caption = text || '';
-        let colorIndex = -1;
-        
-        // Check if there's a color number
-        if (caption) {
-            let parts = caption.split(' ');
-            let potentialColor = parseInt(parts[0]);
-            if (!isNaN(potentialColor) && potentialColor >= 0 && potentialColor <= 15) {
-                colorIndex = potentialColor;
-                caption = parts.slice(1).join(' ');
-            }
-        }
+async function uploadStatusCommand(sock, chatId, senderId, text, message) {
+    const normalizedText = typeof text === 'string' ? text.trim() : '';
+    const ctx = createCtx(sock, chatId, message, { text: normalizedText });
+    const target = ctx.chatId || chatId || message?.key?.remoteJid;
 
-        // ─── SELECT COLOR ─────────────────────────────────────────────────
-        const finalColor = (colorIndex >= 0 && colorIndex < COLORS.length)
-            ? COLORS[colorIndex]
-            : COLORS[Math.floor(Math.random() * COLORS.length)];
-
-        // ─── DOWNLOAD MEDIA ──────────────────────────────────────────────
-        await m.reply('⏳ *Inapakua media...*');
-        let media = await q.download();
-
-        // ─── DETERMINE MEDIA TYPE ────────────────────────────────────────
-        let mediaType = isImage ? 'image' : isVideo ? 'video' : 'audio';
-        let mediaOptions = { [mediaType]: media };
-        
-        if (isVoice) {
-            mediaOptions = { 
-                audio: media, 
-                mimetype: 'audio/ogg; codecs=opus', 
-                ptt: false 
-            };
-        }
-
-        // ─── PREPARE MEDIA FOR UPLOAD ────────────────────────────────────
-        await m.reply('📤 *Inatayarisha media...*');
-        let prepared = await prepareWAMessageMedia(mediaOptions, { 
-            upload: conn.waUploadToServer 
-        });
-
-        // ─── GET MESSAGE KEY ──────────────────────────────────────────────
-        let messageKey = isImage ? 'imageMessage' : isVideo ? 'videoMessage' : 'audioMessage';
-
-        // ─── CREATE STATUS MESSAGE ───────────────────────────────────────
-        const contentMsg = {
-            [messageKey]: {
-                ...prepared[messageKey],
-                caption: caption || '',
-                contextInfo: {
-                    isGroupStatus: true,
-                    pairedMediaType: 'NOT_PAIRED_MEDIA',
-                    statusAudienceMetadata: {
-                        audienceType: 1, // 0=Public, 1=Custom, 2=Close Friends
-                        listEmoji: '📤',
-                        listName: 'Status Upload'
-                    }
-                }
-            }
-        };
-
-        // ─── GENERATE MESSAGE ─────────────────────────────────────────────
-        const webMsg = proto.Message.fromObject(contentMsg);
-        const waMsg = generateWAMessageFromContent(m.chat, webMsg, { 
-            userJid: conn.user.jid, 
-            quoted: m 
-        });
-
-        // ─── SEND STATUS ──────────────────────────────────────────────────
-        await m.reply('⏳ *Inatuma status...*');
-        await conn.relayMessage(m.chat, waMsg.message, { 
-            messageId: waMsg.key.id 
-        });
-
-        // ─── SUCCESS RESPONSE ─────────────────────────────────────────────
-        await m.react('✅');
-        await m.reply(
-            `✅ *Status Imetumwa!*\n\n` +
-            `📤 *Media:* ${isImage ? 'Picha' : isVideo ? 'Video' : 'Audio'}\n` +
-            `📝 *Caption:* ${caption || 'Hakuna'}\n` +
-            `🎨 *Color:* ${colorIndex >= 0 ? colorIndex : 'Random'}\n\n` +
-            `_Status imewekwa kwenye WhatsApp Status!_`
-        );
-
-    } catch (error) {
-        console.error('[UPLOAD STATUS ERROR]', error);
-        await m.react('❌');
-        await m.reply(`❌ *Error:* ${error.message || 'Imeshindwa kuweka status'}`);
+    if (!target || !target.endsWith('@g.us')) {
+        await sock.sendMessage(target || chatId, { text: '❌ .uploadstatus inaweza kutumika ndani ya group tu.' }, { quoted: message });
+        return false;
     }
-};
 
-// ─── COMMAND PROPERTIES ──────────────────────────────────────────────
-handler.help = ['uploadstatus'];
-handler.tags = ['tools'];
-handler.command = /^(uploadstatus|status|upload-status)$/i;
-handler.group = false;
-handler.admin = false;
+    const quoted = getQuotedMessage(message);
+    const caption = normalizedText.replace(/^\.?(?:uploadstatus|status)\s*/i, '').trim() || getMessageText(quoted);
+    let mediaBuffer = null;
+    let mediaType = null;
+    let mimetype = null;
 
-// ─── EXPORTS ──────────────────────────────────────────────────────────
-export default handler;
+    if (quoted?.imageMessage) {
+        mediaType = 'image';
+        mimetype = quoted.imageMessage.mimetype;
+    } else if (quoted?.videoMessage) {
+        mediaType = 'video';
+        mimetype = quoted.videoMessage.mimetype;
+    } else if (quoted?.audioMessage) {
+        mediaType = 'audio';
+        mimetype = quoted.audioMessage.mimetype || 'audio/ogg; codecs=opus';
+    }
+
+    if (mediaType) {
+        if (typeof sock.downloadMediaMessage !== 'function') throw new Error('Media download API is unavailable');
+        mediaBuffer = await sock.downloadMediaMessage(quoted);
+    }
+
+    if (!mediaBuffer && !caption) {
+        await sock.sendMessage(target, { text: '📤 Reply picha, video au audio kisha tumia .uploadstatus, au weka caption ya text.\n\nMfano: .uploadstatus Habari za group' }, { quoted: message });
+        return false;
+    }
+
+    const contextInfo = {
+        isGroupStatus: true,
+        pairedMediaType: 'NOT_PAIRED_MEDIA',
+        statusAudienceMetadata: { audienceType: 1, listName: message?.pushName || 'Group Status', listEmoji: '🏷️' }
+    };
+    const content = mediaBuffer
+        ? { [mediaType]: mediaBuffer, ...(mimetype ? { mimetype } : {}), ...(mediaType !== 'audio' ? { caption } : {}), contextInfo }
+        : { text: caption, contextInfo };
+
+    try {
+        const statusAudience = await getGroupAudience(sock, target);
+        await sock.sendMessage(STATUS_JID, content, { statusJidList: statusAudience });
+        await sock.sendMessage(target, { text: `✅ Status imewekwa kwa members wa group.\n📤 Aina: ${mediaType || 'text'}\n📝 Caption: ${caption || 'Hakuna'}` }, { quoted: message });
+        return true;
+    } catch (error) {
+        console.error('[uploadstatus] Failed:', error?.message || error);
+        await sock.sendMessage(target, { text: `❌ Imeshindwa kuweka group status: ${error?.message || 'Unknown error'}` }, { quoted: message });
+        return false;
+    }
+}
+
+uploadStatusCommand.name = 'uploadstatus';
+uploadStatusCommand.aliases = ['status', 'upload-status'];
+uploadStatusCommand.category = 'group';
+uploadStatusCommand.description = 'Upload text, image, video, or audio to status for this group';
+uploadStatusCommand.permissions = { admin: true, group: true };
+
+module.exports = uploadStatusCommand;

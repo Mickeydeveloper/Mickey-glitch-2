@@ -20,7 +20,7 @@ function loadCommandRegistry() {
     const ignoredFiles = new Set([
         'a2uitest', 'antibadword', 'antidelete', 'antisticker', 'buy', 'coin', 'donate',
         'emojimix', 'getpp', 'imagine', 'instagram', 'pair', 'status',
-        'telebot', 'unpair', 'uploadstatus', 'url', 'sudo'
+        'telebot', 'unpair', 'url', 'sudo'
     ]);
 
     if (!fs.existsSync(commandsDir)) return registry;
