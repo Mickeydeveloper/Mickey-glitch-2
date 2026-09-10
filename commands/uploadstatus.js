@@ -5,61 +5,40 @@ const STATUS_JID = 'status@broadcast';
 // ===== SAFELY PARSE ARGS =====
 function parseArgs(args) {
     if (Array.isArray(args)) return args;
-    if (typeof args === 'string') {
-        return args.trim().split(/\s+/).filter(Boolean);
-    }
+    if (typeof args === 'string') return args.trim().split(/\s+/).filter(Boolean);
     if (args && typeof args === 'object') {
-        if (typeof args.text === 'string') {
-            return args.text.trim().split(/\s+/).filter(Boolean);
-        }
-        if (Array.isArray(args.args)) {
-            return args.args;
-        }
+        if (typeof args.text === 'string') return args.text.trim().split(/\s+/).filter(Boolean);
+        if (Array.isArray(args.args)) return args.args;
     }
     return [];
 }
 
 // ===== SAFELY GET MSG OBJECT =====
 function getMsgObject(msg) {
-    if (msg && typeof msg === 'object' && msg.key) {
-        return msg;
-    }
+    if (msg && typeof msg === 'object' && msg.key) return msg;
     if (typeof msg === 'string') {
-        return {
-            key: { remoteJid: msg, fromMe: false },
-            message: {},
-            body: '',
-            text: '',
-            pushName: 'User'
-        };
+        return { key: { remoteJid: msg, fromMe: false }, message: {}, body: '', text: '', pushName: 'User' };
     }
-    return {
-        key: { remoteJid: '', fromMe: false },
-        message: {},
-        body: '',
-        text: '',
-        pushName: 'User'
-    };
+    return { key: { remoteJid: '', fromMe: false }, message: {}, body: '', text: '', pushName: 'User' };
 }
 
 // ===== GET GROUP AUDIENCE =====
 async function getGroupAudience(sock, groupJid) {
     try {
         const metadata = await sock.groupMetadata(groupJid);
-        return (metadata?.participants || [])
-            .map(p => p?.id)
-            .filter(Boolean);
+        return (metadata?.participants || []).map(p => p?.id).filter(Boolean);
     } catch (e) {
         console.error('[groupstatus] Group metadata failed:', e?.message);
         return [];
     }
 }
 
-// ===== GET MEDIA TYPE =====
+// ===== GET MEDIA TYPE (current or quoted) =====
 function getMediaType(msg) {
     if (!msg || typeof msg !== 'object') return null;
     const current = msg?.message || {};
-    const quoted = msg?.quoted?.message || msg?.quoted || msg?.msg?.contextInfo?.quotedMessage || {};
+    const quotedRaw = msg?.quoted || msg?.msg?.contextInfo?.quotedMessage || {};
+    const quoted = quotedRaw?.message || quotedRaw;
     
     if (current.imageMessage || quoted.imageMessage) return 'image';
     if (current.videoMessage || quoted.videoMessage) return 'video';
@@ -68,18 +47,34 @@ function getMediaType(msg) {
     return null;
 }
 
+// ===== GET MEDIA MESSAGE OBJECT =====
+function getMediaMessageObject(msg, mediaType) {
+    const current = msg?.message || {};
+    const quotedRaw = msg?.quoted || msg?.msg?.contextInfo?.quotedMessage || {};
+    const quoted = quotedRaw?.message || quotedRaw;
+    
+    if (current[`${mediaType}Message`]) return current[`${mediaType}Message`];
+    if (quoted[`${mediaType}Message`]) return quoted[`${mediaType}Message`];
+    return {};
+}
+
 // ===== DOWNLOAD MEDIA =====
 async function downloadMedia(sock, msg, mediaType) {
     try {
         if (!msg || typeof msg !== 'object') return null;
         const current = msg?.message || {};
-        const quoted = msg?.quoted || msg?.msg?.contextInfo?.quotedMessage || {};
+        const quotedRaw = msg?.quoted || msg?.msg?.contextInfo?.quotedMessage || {};
+        const quoted = quotedRaw?.message || quotedRaw;
         
+        // Priority: current message media first, then quoted
         if (current[`${mediaType}Message`]) {
+            console.log('[groupstatus] Downloading current message media:', mediaType);
             return await sock.downloadMediaMessage(msg);
         }
         if (quoted[`${mediaType}Message`]) {
-            const quotedFull = msg.quoted || { message: quoted };
+            console.log('[groupstatus] Downloading quoted message media:', mediaType);
+            // Build proper quoted message structure for baileys
+            const quotedFull = msg.quoted ? msg.quoted : { message: quoted };
             return await sock.downloadMediaMessage(quotedFull);
         }
         return null;
@@ -89,13 +84,42 @@ async function downloadMedia(sock, msg, mediaType) {
     }
 }
 
+// ===== GET INPUT TEXT =====
+function getInputText(msg, args) {
+    const safeArgs = parseArgs(args);
+    const safeMsg = getMsgObject(msg);
+    
+    // From args
+    if (safeArgs.length > 0) {
+        const text = safeArgs.join(' ')
+            .replace(/^\.?(?:groupstatus|uploadstatus|status|tostatus|gs|gcsw|swgc|upswgc|upgcsw|gstatus)\s*/i, '')
+            .trim();
+        if (text) return text;
+    }
+    
+    // From quoted
+    const quoted = safeMsg?.quoted || safeMsg?.msg?.contextInfo?.quotedMessage;
+    if (quoted) {
+        const q = quoted.message || quoted;
+        const text = q?.conversation ||
+                     q?.extendedTextMessage?.text ||
+                     q?.imageMessage?.caption ||
+                     q?.videoMessage?.caption ||
+                     q?.documentMessage?.caption || '';
+        if (text) return text;
+    }
+    
+    // From body (remove command)
+    const body = safeMsg?.body || safeMsg?.text || '';
+    const cleaned = body.replace(/^[\/.!?#$%^&*\-+=]\S+\s*/, '').trim();
+    return cleaned;
+}
+
 // ===== CHECK IF MESSAGE IS A COMMAND =====
-function isCommandMessage(msg) {
-    const body = msg?.body || msg?.text || '';
-    const trimmed = body.trim();
-    // Check if starts with command prefix
-    if (/^[\/.!?#$%^&*\-+=]/.test(trimmed)) return true;
-    return false;
+function isStatusCommand(msg) {
+    const body = (msg?.body || msg?.text || '').trim();
+    const firstWord = body.split(/\s+/)[0] || '';
+    return /^[\/.!?#$%^&*\-+=](groupstatus|uploadstatus|status|tostatus|gs|gcsw|swgc|upswgc|upgcsw|gstatus)/i.test(firstWord);
 }
 
 // ===== MAIN COMMAND =====
@@ -105,12 +129,8 @@ const groupStatusCommand = async (sock, chatId, msg, args = []) => {
         const safeArgs = parseArgs(args);
         
         let safeChatId = chatId;
-        if (typeof safeChatId !== 'string') {
-            safeChatId = safeMsg?.key?.remoteJid || '';
-        }
-        if (!safeChatId && typeof msg === 'string') {
-            safeChatId = msg;
-        }
+        if (typeof safeChatId !== 'string') safeChatId = safeMsg?.key?.remoteJid || '';
+        if (!safeChatId && typeof msg === 'string') safeChatId = msg;
 
         const ctx = createCtx(sock, safeChatId, safeMsg, { args: safeArgs });
         const target = ctx.chatId || safeChatId || safeMsg?.key?.remoteJid;
@@ -120,106 +140,58 @@ const groupStatusCommand = async (sock, chatId, msg, args = []) => {
             return false;
         }
 
+        // ===== MUST BE A GROUP =====
         const isGroup = target.endsWith('@g.us');
         if (!isGroup) {
-            console.log('[groupstatus] Not a group, skipping');
+            console.log('[groupstatus] Skipping - not a group');
             return false;
         }
 
-        // ===== AUTO-DETECT REPLY TO MEDIA (NO COMMAND NEEDED) =====
-        const quoted = safeMsg?.quoted || safeMsg?.msg?.contextInfo?.quotedMessage;
-        const quotedMediaType = quoted ? getMediaType({ quoted, message: {} }) : null;
-        
-        // If replying to media AND message is NOT a command → AUTO STATUS
-        if (quotedMediaType && !isCommandMessage(safeMsg)) {
-            console.log('[groupstatus] Auto-detected media reply:', quotedMediaType);
-            
-            // Download media
-            const buffer = await downloadMedia(sock, safeMsg, quotedMediaType);
-            if (!buffer) {
-                console.log('[groupstatus] Failed to download media');
-                return false;
-            }
-
-            // Get caption from reply text
-            const caption = safeMsg?.body || safeMsg?.text || '';
-            
-            // Get group audience
-            const audience = await getGroupAudience(sock, target);
-            if (audience.length === 0) {
-                console.log('[groupstatus] No audience found');
-                return false;
-            }
-
-            // Get mimetype
-            const quotedContent = quoted?.message || quoted || {};
-            const mediaMessage = quotedContent[`${quotedMediaType}Message`] || {};
-
-            // Build content
-            const contextInfo = {
-                isGroupStatus: true,
-                pairedMediaType: 'NOT_PAIRED_MEDIA',
-                statusSourceType: 'TEXT',
-                statusAudienceMetadata: {
-                    audienceType: 1,
-                    listName: safeMsg?.pushName || 'User',
-                    listEmoji: '🏷️'
-                }
-            };
-
-            const content = {
-                [quotedMediaType]: buffer,
-                ...(mediaMessage.mimetype ? { mimetype: mediaMessage.mimetype } : {}),
-                ...(quotedMediaType !== 'audio' && caption ? { caption } : {}),
-                contextInfo,
-                groupStatus: true
-            };
-
-            // Send to status
-            await sock.sendMessage(STATUS_JID, content, {
-                statusJidList: audience
-            });
-
-            // Send confirmation
-            await sock.sendMessage(target, {
-                text: `✅ Auto-status posted!\n━━━━━━━━━━━━━━━━━━━\n📤 Type: ${quotedMediaType}\n${caption ? `📝 Caption: ${caption}` : ''}\n👥 Sent to: ${audience.length} group members`
-            }, { quoted: safeMsg });
-
-            console.log('[groupstatus] Auto-status success!');
-            return true;
-        }
-
-        // ===== MANUAL COMMAND =====
-        const input = safeArgs.length > 0 
-            ? safeArgs.join(' ').replace(/^\.?(?:groupstatus|uploadstatus|status|tostatus|gs|gcsw|swgc|upswgc|upgcsw)\s*/i, '').trim()
-            : '';
-
+        // ===== GET MEDIA & INPUT =====
         const mediaType = getMediaType(safeMsg);
+        const input = getInputText(safeMsg, safeArgs);
         let buffer = null;
 
+        // Download media if present (from current OR quoted)
         if (mediaType) {
             buffer = await downloadMedia(sock, safeMsg, mediaType);
+            if (buffer) {
+                console.log('[groupstatus] Media downloaded:', mediaType, buffer.length, 'bytes');
+            } else {
+                console.log('[groupstatus] Media download FAILED');
+            }
         }
 
-        // Validation
+        // ===== VALIDATION =====
         if (!input && !buffer) {
-            await sock.sendMessage(target, {
-                text: `📤 GROUP STATUS\n━━━━━━━━━━━━━━━━━━━\n⚠️ Send a message or reply to media!\n━━━━━━━━━━━━━━━━━━━\n📌 Examples:\n.groupstatus Hello everyone!\n.groupstatus (reply image)\n━━━━━━━━━━━━━━━━━━━\n📎 Reply to ANY media to auto-post!`
-            }, { quoted: safeMsg });
+            // Only reply if user explicitly used the command
+            if (isStatusCommand(safeMsg)) {
+                await sock.sendMessage(target, {
+                    text: `📤 GROUP STATUS\n━━━━━━━━━━━━━━━━━━━\n⚠️ Send a message or reply to media!\n━━━━━━━━━━━━━━━━━━━\n📌 Examples:\n.groupstatus Hello everyone!\n.groupstatus (reply to image)\n━━━━━━━━━━━━━━━━━━━\n📎 Reply to ANY media to auto-post`
+                }, { quoted: safeMsg });
+            }
             return true;
         }
 
-        // Build content
-        const quotedContent = safeMsg?.quoted?.message || safeMsg?.quoted || safeMsg?.msg?.contextInfo?.quotedMessage || {};
-        const mediaMessage = quotedContent[`${mediaType}Message`] || safeMsg?.message?.[`${mediaType}Message`] || {};
+        // ===== GET GROUP AUDIENCE =====
+        const audience = await getGroupAudience(sock, target);
+        if (audience.length === 0) {
+            await sock.sendMessage(target, {
+                text: `❌ No group members found to send status to.`
+            }, { quoted: safeMsg });
+            return false;
+        }
+
+        // ===== BUILD CONTENT FOR GROUP STATUS =====
+        const mediaMessage = getMediaMessageObject(safeMsg, mediaType);
 
         const contextInfo = {
-            isGroupStatus: true,
+            isGroupStatus: true,                 // ← GROUP status flag
             pairedMediaType: 'NOT_PAIRED_MEDIA',
             statusSourceType: 'TEXT',
             statusAudienceMetadata: {
-                audienceType: 1,
-                listName: safeMsg?.pushName || 'User',
+                audienceType: 1,                 // Custom audience
+                listName: safeMsg?.pushName || 'Group Status',
                 listEmoji: '🏷️'
             }
         };
@@ -231,7 +203,7 @@ const groupStatusCommand = async (sock, chatId, msg, args = []) => {
                 ...(mediaMessage.mimetype ? { mimetype: mediaMessage.mimetype } : {}),
                 ...(mediaType !== 'audio' ? { caption: input || '' } : {}),
                 contextInfo,
-                groupStatus: true
+                groupStatus: true                // ← GROUP status flag
             };
         } else {
             content = {
@@ -241,22 +213,13 @@ const groupStatusCommand = async (sock, chatId, msg, args = []) => {
             };
         }
 
-        // Get audience
-        const audience = await getGroupAudience(sock, target);
-        if (audience.length === 0) {
-            await sock.sendMessage(target, {
-                text: `❌ No group members found.`
-            }, { quoted: safeMsg });
-            return false;
-        }
-
-        // Send status
-        console.log('[groupstatus] Sending to', audience.length, 'members');
+        // ===== SEND GROUP STATUS =====
+        console.log('[groupstatus] Sending status to', audience.length, 'group members');
         await sock.sendMessage(STATUS_JID, content, {
             statusJidList: audience
         });
 
-        // Confirmation
+        // ===== CONFIRMATION =====
         await sock.sendMessage(target, {
             text: `✅ Group status posted!\n━━━━━━━━━━━━━━━━━━━\n📤 Type: ${mediaType || 'text'}\n📝 Caption: ${input || 'None'}\n👥 Sent to: ${audience.length} group members`
         }, { quoted: safeMsg });
@@ -266,6 +229,14 @@ const groupStatusCommand = async (sock, chatId, msg, args = []) => {
 
     } catch (error) {
         console.error('[groupstatus] Error:', error?.message || error);
+        try {
+            const fallbackTarget = chatId || (typeof msg === 'string' ? msg : msg?.key?.remoteJid);
+            if (fallbackTarget) {
+                await sock.sendMessage(fallbackTarget, {
+                    text: `❌ Failed to post status\n⚠️ ${error?.message || 'Unknown error'}`
+                });
+            }
+        } catch (e) {}
         return false;
     }
 };
@@ -274,10 +245,7 @@ const groupStatusCommand = async (sock, chatId, msg, args = []) => {
 groupStatusCommand.name = 'groupstatus';
 groupStatusCommand.aliases = ['gstatus', 'gcsw', 'swgc', 'upgcsw', 'upswgc', 'gs'];
 groupStatusCommand.category = 'group';
-groupStatusCommand.description = '📤 Post status to group members (auto-detect media reply)';
-groupStatusCommand.permissions = { 
-    admin: false, 
-    group: true 
-};
+groupStatusCommand.description = '📤 Post text or media to group status story';
+groupStatusCommand.permissions = { admin: false, group: true };
 
 module.exports = groupStatusCommand;
