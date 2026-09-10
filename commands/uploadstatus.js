@@ -1,17 +1,189 @@
+const { createCtx } = require('../lib/messageBuilder');
+
+const COMMANDS = [
+    'uploadstatus',
+    'upload-status',
+    'status',
+    'gstatus',
+    'gcsw',
+    'swgc',
+    'upgcsw',
+    'upswgc'
+];
+
+/**
+ * Get quoted message safely
+ */
+function getQuoted(ctx) {
+    return ctx?.quoted || ctx?.msg?.msg?.contextInfo?.quotedMessage || null;
+}
+
+/**
+ * Get text from quoted message
+ */
+function getQuotedText(quoted) {
+    if (!quoted) return '';
+
+    const msg = quoted?.message || quoted;
+
+    return String(
+        msg?.conversation ||
+        msg?.extendedTextMessage?.text ||
+        msg?.imageMessage?.caption ||
+        msg?.videoMessage?.caption ||
+        msg?.documentMessage?.caption ||
+        msg?.audioMessage?.caption ||
+        ''
+    ).trim();
+}
+
+/**
+ * Remove the command itself.
+ *
+ * Example:
+ * .uploadstatus Hello group
+ *
+ * becomes:
+ * Hello group
+ */
+function cleanCommandText(text) {
+    if (!text) return '';
+
+    let value = String(text).trim();
+
+    const commandRegex = new RegExp(
+        `^[.!/#]?(${COMMANDS.join('|')})(?:\\s+|$)`,
+        'i'
+    );
+
+    value = value.replace(commandRegex, '').trim();
+
+    return value;
+}
+
+/**
+ * Detect media from current message or quoted message
+ */
+function getMediaType(ctx) {
+    const current = ctx?.msg?.message || {};
+    const quoted = ctx?.quoted?.message || ctx?.quoted || {};
+
+    if (current.imageMessage || quoted.imageMessage) {
+        return 'image';
+    }
+
+    if (current.videoMessage || quoted.videoMessage) {
+        return 'video';
+    }
+
+    return null;
+}
+
+/**
+ * Get the actual media message
+ */
+function getMediaMessage(ctx, type) {
+    if (!type) return null;
+
+    const key = `${type}Message`;
+
+    const current = ctx?.msg?.message?.[key];
+    if (current) return current;
+
+    const quoted = ctx?.quoted?.message?.[key];
+    if (quoted) return quoted;
+
+    const quotedRaw = ctx?.quoted?.[key];
+    if (quotedRaw) return quotedRaw;
+
+    return null;
+}
+
+/**
+ * Download media using the bot's existing media system first.
+ *
+ * This is important because the working command already uses
+ * ctx.msg.media.download() / ctx.quoted.media.download().
+ */
+async function downloadMedia(ctx, type) {
+    let lastError = null;
+
+    // 1. Current message media
+    try {
+        if (
+            ctx?.msg?.media &&
+            typeof ctx.msg.media.download === 'function'
+        ) {
+            const buffer = await ctx.msg.media.download();
+
+            if (buffer && Buffer.isBuffer(buffer) && buffer.length > 0) {
+                return buffer;
+            }
+        }
+    } catch (error) {
+        lastError = error;
+    }
+
+    // 2. Quoted media
+    try {
+        if (
+            ctx?.quoted?.media &&
+            typeof ctx.quoted.media.download === 'function'
+        ) {
+            const buffer = await ctx.quoted.media.download();
+
+            if (buffer && Buffer.isBuffer(buffer) && buffer.length > 0) {
+                return buffer;
+            }
+        }
+    } catch (error) {
+        lastError = error;
+    }
+
+    // 3. Baileys fallback
+    try {
+        if (
+            ctx?.sock &&
+            typeof ctx.sock.downloadMediaMessage === 'function'
+        ) {
+            if (ctx?.msg?.message) {
+                const buffer = await ctx.sock.downloadMediaMessage(ctx.msg);
+
+                if (buffer && Buffer.isBuffer(buffer) && buffer.length > 0) {
+                    return buffer;
+                }
+            }
+
+            if (ctx?.quoted?.message) {
+                const buffer = await ctx.sock.downloadMediaMessage(ctx.quoted);
+
+                if (buffer && Buffer.isBuffer(buffer) && buffer.length > 0) {
+                    return buffer;
+                }
+            }
+        }
+    } catch (error) {
+        lastError = error;
+    }
+
+    // Return null instead of crashing
+    return null;
+}
+
 const uploadStatusCommand = {
-    name: "groupstatus",
+    name: 'uploadstatus',
 
     aliases: [
-        "gcsw",
-        "swgc",
-        "upgcsw",
-        "upswgc",
-        "uploadstatus",
-        "upload-status",
-        "gstatus"
+        'status',
+        'upload-status',
+        'gstatus',
+        'gcsw',
+        'swgc',
+        'upgcsw',
+        'upswgc'
     ],
 
-    category: "group",
+    category: 'group',
 
     permissions: {
         admin: true,
@@ -19,222 +191,185 @@ const uploadStatusCommand = {
     },
 
     description:
-        "📤 Send text, image or video directly to WhatsApp Group Status",
+        'Post text, image or video as WhatsApp Group Status',
 
     code: async (ctx) => {
         try {
-            // ═══════════════════════════════════════════════
-            // GROUP CHECK
-            // ═══════════════════════════════════════════════
+            /*
+             * Must be used inside a group
+             */
+            const chatId =
+                ctx?.chatId ||
+                ctx?.msg?.key?.remoteJid ||
+                '';
 
-            const target =
-                ctx.chatId ||
-                ctx.msg?.key?.remoteJid;
-
-            if (
-                !target ||
-                !target.endsWith("@g.us")
-            ) {
-                return await ctx.reply(
-                    "❌ Command hii inafanya kazi ndani ya group tu."
+            if (!chatId || !chatId.endsWith('@g.us')) {
+                return ctx.reply(
+                    '❌ Command hii inaweza kutumika ndani ya group tu.'
                 );
             }
 
-            // ═══════════════════════════════════════════════
-            // GET INPUT / CAPTION
-            // ═══════════════════════════════════════════════
+            /*
+             * ================================
+             * TEXT
+             * ================================
+             *
+             * ctx.text inaweza kuwa:
+             *
+             * .uploadstatus Hello group
+             *
+             * So we remove .uploadstatus first.
+             */
+            const commandText = cleanCommandText(ctx?.text || '');
 
-            const input = String(
-                ctx.text ||
-                ctx.quoted?.body ||
-                ""
-            ).trim();
+            /*
+             * If replying to a message, get its caption/text.
+             */
+            const quoted = getQuoted(ctx);
 
-            // ═══════════════════════════════════════════════
-            // DETECT MEDIA
-            // ═══════════════════════════════════════════════
+            const quotedText = getQuotedText(quoted);
 
-            let type = null;
+            const input = commandText || quotedText || '';
 
-            try {
-                type = ctx.isMedia([
-                    "image",
-                    "video"
-                ]);
-            } catch (e) {
-                type = null;
+            /*
+             * ================================
+             * MEDIA
+             * ================================
+             */
+            let mediaType = getMediaType(ctx);
+            let buffer = null;
+
+            if (mediaType) {
+                buffer = await downloadMedia(ctx, mediaType);
+
+                if (!buffer) {
+                    return ctx.reply(
+                        '❌ Imeshindikana kupakua media.\n\n' +
+                        'Jaribu ku-reply picha/video tena kisha tumia:\n' +
+                        '.uploadstatus\n\n' +
+                        'Au hakikisha media bado inaweza kufunguliwa WhatsApp.'
+                    );
+                }
             }
 
-            // ═══════════════════════════════════════════════
-            // NOTHING PROVIDED
-            // ═══════════════════════════════════════════════
-
-            if (!input && !type) {
-                return await ctx.reply(
-                    "📤 *GROUP STATUS*\n\n" +
-                    "Reply kwenye image/video kisha tumia:\n" +
-                    "`.groupstatus`\n\n" +
-                    "Au tuma text:\n" +
-                    "`.groupstatus Hello everyone!`"
+            /*
+             * Nothing supplied
+             */
+            if (!input && !buffer) {
+                return ctx.reply(
+                    '📤 *GROUP STATUS*\n\n' +
+                    'Tuma text:\n' +
+                    '.uploadstatus Hello group\n\n' +
+                    'Au reply *image/video* kisha tumia:\n' +
+                    '.uploadstatus'
                 );
             }
 
+            /*
+             * ================================
+             * MEDIA INFORMATION
+             * ================================
+             */
+            const mediaMessage = getMediaMessage(ctx, mediaType);
+
+            const contextInfo = {
+                statusAudienceMetadata: {
+                    audienceType: 1,
+
+                    listName:
+                        ctx?.sender?.pushName ||
+                        'Group Status',
+
+                    listEmoji: '🏷️'
+                }
+            };
+
+            /*
+             * ================================
+             * BUILD STATUS CONTENT
+             * ================================
+             */
             let content;
 
-            // ═══════════════════════════════════════════════
-            // IMAGE / VIDEO
-            // ═══════════════════════════════════════════════
-
-            if (
-                type === "image" ||
-                type === "video"
-            ) {
-                let buffer = null;
-
-                // Current message
-                try {
-                    if (
-                        ctx.msg?.media?.download
-                    ) {
-                        buffer =
-                            await ctx.msg.media.download();
-                    }
-                } catch (e) {
-                    console.log(
-                        "[groupstatus] Current media download failed:",
-                        e?.message
-                    );
-                }
-
-                // Quoted message fallback
-                if (!buffer) {
-                    try {
-                        if (
-                            ctx.quoted?.media?.download
-                        ) {
-                            buffer =
-                                await ctx.quoted.media.download();
-                        }
-                    } catch (e) {
-                        console.log(
-                            "[groupstatus] Quoted media download failed:",
-                            e?.message
-                        );
-                    }
-                }
-
-                if (
-                    !buffer ||
-                    !Buffer.isBuffer(buffer) ||
-                    buffer.length === 0
-                ) {
-                    return await ctx.reply(
-                        "❌ Imeshindikana kupakua media.\n" +
-                        "Jaribu ku-reply image/video tena kisha utumie command."
-                    );
-                }
-
+            if (buffer && mediaType) {
                 content = {
-                    [type]: buffer,
+                    [mediaType]: buffer,
 
-                    ...(input
-                        ? { caption: input }
-                        : {})
+                    ...(mediaMessage?.mimetype
+                        ? {
+                              mimetype: mediaMessage.mimetype
+                          }
+                        : {}),
+
+                    ...(mediaType !== 'audio'
+                        ? {
+                              caption: input
+                          }
+                        : {}),
+
+                    contextInfo,
+
+                    groupStatus: true
+                };
+            } else {
+                content = {
+                    text: input,
+
+                    contextInfo,
+
+                    groupStatus: true
                 };
             }
 
-            // ═══════════════════════════════════════════════
-            // TEXT STATUS
-            // ═══════════════════════════════════════════════
+            /*
+             * ================================
+             * IMPORTANT
+             * ================================
+             *
+             * DO NOT use:
+             *
+             * status@broadcast
+             * statusJidList
+             * ctx.sock.sendMessage(...)
+             *
+             * We use the same Group Status mechanism
+             * as the working command.
+             */
+            await ctx.reply(content);
 
-            else {
-                content = {
-                    text: input
-                };
-            }
-
-            // ═══════════════════════════════════════════════
-            // SEND TO GROUP STATUS
-            // ═══════════════════════════════════════════════
-            //
-            // IMPORTANT:
-            // Do NOT use status@broadcast here.
-            // ctx.reply + groupStatus is the mechanism
-            // used by the working command.
-            // ═══════════════════════════════════════════════
-
-            await ctx.reply({
-                ...content,
-
-                contextInfo: {
-                    statusAudienceMetadata: {
-                        audienceType: 1,
-
-                        listName:
-                            ctx.sender?.pushName ||
-                            "Group Status",
-
-                        listEmoji: "🏷️"
-                    }
-                },
-
-                groupStatus: true
-            });
-
-            // ═══════════════════════════════════════════════
-            // SUCCESS
-            // ═══════════════════════════════════════════════
-
-            return await ctx.reply(
-                ctx.format?.info
+            /*
+             * Normal confirmation in the group.
+             * The actual status above is the Group Status.
+             */
+            return ctx.reply(
+                ctx?.format?.info
                     ? ctx.format.info(
-                        "Group status sent successfully!"
-                    )
-                    : "✅ Group status sent successfully!"
+                          `Group status sent successfully!`
+                      )
+                    : `✅ Group status sent successfully!`
             );
 
         } catch (error) {
-
             console.error(
-                "[groupstatus] Error:",
-                error?.stack ||
-                error?.message ||
+                '[UPLOADSTATUS ERROR]',
                 error
             );
 
-            // ═══════════════════════════════════════════════
-            // SAFE ERROR HANDLER
-            // ═══════════════════════════════════════════════
-
-            try {
-                if (
-                    ctx.helper?.handleError
-                ) {
-                    return await ctx.helper.handleError(
-                        ctx,
-                        error,
-                        false
-                    );
-                }
-
-                return await ctx.reply(
-                    "❌ Imeshindikana kuweka Group Status.\n" +
-                    "⚠️ " +
-                    (
-                        error?.message ||
-                        "Unknown error"
-                    )
+            if (
+                ctx?.helper &&
+                typeof ctx.helper.handleError === 'function'
+            ) {
+                return ctx.helper.handleError(
+                    ctx,
+                    error,
+                    false
                 );
-
-            } catch (fallbackError) {
-                console.error(
-                    "[groupstatus] Error handler failed:",
-                    fallbackError?.message ||
-                    fallbackError
-                );
-
-                return false;
             }
+
+            return ctx.reply(
+                '❌ Imeshindikana kuweka Group Status.\n' +
+                'Jaribu tena.'
+            );
         }
     }
 };
