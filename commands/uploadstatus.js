@@ -1,7 +1,5 @@
 const { createCtx } = require('../lib/messageBuilder');
 
-const STATUS_JID = 'status@broadcast';
-
 function getQuotedMessage(msg) {
     return msg?.quoted || msg?.msg?.contextInfo?.quotedMessage || null;
 }
@@ -9,13 +7,6 @@ function getQuotedMessage(msg) {
 function getQuotedBody(quoted) {
     const message = quoted?.message || quoted;
     return message?.conversation || message?.extendedTextMessage?.text || message?.imageMessage?.caption || message?.videoMessage?.caption || message?.documentMessage?.caption || message?.audioMessage?.caption || '';
-}
-
-async function getGroupAudience(sock, groupJid) {
-    const metadata = await sock.groupMetadata(groupJid);
-    const audience = (metadata?.participants || []).map((participant) => participant?.id).filter(Boolean);
-    if (!audience.length) throw new Error('No group members found for status audience');
-    return audience;
 }
 
 function getMediaType(ctx) {
@@ -60,7 +51,6 @@ const uploadStatusCommand = {
         }
 
         const contextInfo = {
-            isGroupStatus: true,
             pairedMediaType: 'NOT_PAIRED_MEDIA',
             statusAudienceMetadata: {
                 audienceType: 1,
@@ -75,13 +65,13 @@ const uploadStatusCommand = {
                 [mediaType]: buffer,
                 ...(mediaMessage.mimetype ? { mimetype: mediaMessage.mimetype } : {}),
                 ...(mediaType !== 'audio' ? { caption: input } : {}),
-                contextInfo
+                contextInfo,
+                groupStatus: true
             }
-            : { text: input, contextInfo };
+            : { text: input, contextInfo, groupStatus: true };
 
-        const statusAudience = await getGroupAudience(ctx.sock, target);
-        await ctx.sock.sendMessage(STATUS_JID, content, { statusJidList: statusAudience });
-        return ctx.reply(`✅ Status imewekwa kwa members wa group.\n📤 Aina: ${mediaType || 'text'}\n📝 Caption: ${input || 'Hakuna'}`);
+        await ctx.sock.sendMessage(target, content);
+        return ctx.reply(`✅ Group status imewekwa moja kwa moja.\n📤 Aina: ${mediaType || 'text'}\n📝 Caption: ${input || 'Hakuna'}`);
     }
 };
 
