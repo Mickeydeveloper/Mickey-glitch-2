@@ -506,4 +506,27 @@ socket.on('connection-status', (status)=>{
     pairingCode.style.borderColor = '#39ff14';
     setStatus('Device linked successfully!', 'success');
     showToast('CONNECTED SUCCESSFULLY!');
-    setTimeout
+    setTimeout(()=>location.reload(), 3000);
+  }
+});
+
+socket.on('stats', (data)=>{
+  if(data){
+    if(typeof data.activeSockets !== 'undefined') document.getElementById('activeSockets').innerText = data.activeSockets;
+    if(typeof data.totalUsers !== 'undefined') document.getElementById('totalUsers').innerText = data.totalUsers;
+  }
+});
+
+document.getElementById('year').innerText = new Date().getFullYear();
+fetch('/api/server-info')
+  .then(response => response.ok ? response.json() : Promise.reject(new Error('Server info unavailable')))
+  .then(info => {
+    const address = document.getElementById('serverAddress');
+    address.innerText = `Online at ${info.url}`;
+  })
+  .catch(() => {
+    document.getElementById('serverAddress').innerText = `Online at ${window.location.origin}`;
+  });
+</script>
+</body>
+</html>
