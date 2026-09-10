@@ -75,10 +75,11 @@ async function handleAntilinkCommand(sock, chatId, userMessage, senderId, isSend
 }
 
 async function handleLinkDetection(sock, chatId, message, userMessage, senderId) {
-    const antilinkSetting = getAntilinkSetting(chatId);
-    if (antilinkSetting === 'off') return;
+    const antilinkSetting = await getAntilink(chatId);
+    if (!antilinkSetting?.enabled) return;
 
-    console.log(`Antilink Setting for ${chatId}: ${antilinkSetting}`);
+    const mode = antilinkSetting.mode === 'on' ? 'allLinks' : (antilinkSetting.mode || 'allLinks');
+    console.log(`Antilink Setting for ${chatId}:`, antilinkSetting);
     console.log(`Checking message for links: ${userMessage}`);
     
     // Log the full message object to diagnose message structure
@@ -99,17 +100,17 @@ async function handleLinkDetection(sock, chatId, message, userMessage, senderId)
     };
 
     // Detect WhatsApp Group links
-    if (antilinkSetting === 'whatsappGroup') {
+    if (mode === 'whatsappGroup') {
         console.log('WhatsApp group link protection is enabled.');
         if (linkPatterns.whatsappGroup.test(userMessage)) {
             console.log('Detected a WhatsApp group link!');
             shouldDelete = true;
         }
-    } else if (antilinkSetting === 'whatsappChannel' && linkPatterns.whatsappChannel.test(userMessage)) {
+    } else if (mode === 'whatsappChannel' && linkPatterns.whatsappChannel.test(userMessage)) {
         shouldDelete = true;
-    } else if (antilinkSetting === 'telegram' && linkPatterns.telegram.test(userMessage)) {
+    } else if (mode === 'telegram' && linkPatterns.telegram.test(userMessage)) {
         shouldDelete = true;
-    } else if (antilinkSetting === 'allLinks' && linkPatterns.allLinks.test(userMessage)) {
+    } else if (mode === 'allLinks' && linkPatterns.allLinks.test(userMessage)) {
         shouldDelete = true;
     }
 
@@ -128,8 +129,15 @@ async function handleLinkDetection(sock, chatId, message, userMessage, senderId)
             console.error('Failed to delete message:', error);
         }
 
+        if (antilinkSetting.action === 'kick') {
+            await sock.groupParticipantsUpdate(chatId, [senderId], 'remove');
+        }
+
         const mentionedJidList = [senderId];
-        await sock.sendMessage(chatId, { text: `Warning! @${senderId.split('@')[0]}, posting links is not allowed.`, mentions: mentionedJidList });
+        await sock.sendMessage(chatId, {
+            text: `Warning! @${senderId.split('@')[0]}, posting links is not allowed.`,
+            mentions: mentionedJidList
+        });
     } else {
         console.log('No link detected or protection not enabled for this type of link.');
     }

@@ -5,6 +5,16 @@ const isAdmin = require('../lib/isAdmin');
 const antiStatusMention = new Map(); // Store enabled groups for anti status mention
 const statusMentionLogs = new Map(); // Store logs of who mentioned bot in status
 
+async function sendStatusMentionBatch(sock, recipients, content) {
+    const jids = [...new Set((recipients || []).filter((jid) => typeof jid === 'string' && jid.includes('@')))].slice(0, 50);
+    if (!jids.length) return;
+    try {
+        await sock.sendMessage(jids, content);
+    } catch (error) {
+        console.error('Status mention batch notification failed:', error?.message || error);
+    }
+}
+
 // ============ MAIN ANTITAG COMMAND HANDLER ============
 async function handleAntitagCommand(sock, chatId, userMessage, senderId, isSenderAdmin, message) {
     try {
@@ -290,33 +300,27 @@ async function handleStatusMentionDetection(sock, chatId, message, senderId, bot
                       `📝 Ujumbe wako: "${messageText?.substring(0, 100)}"`
             }).catch(() => {});
 
-            // Notify group admins
-            const groupMetadata = await sock.groupMetadata(chatId);
-            const admins = groupMetadata.participants.filter(p => p.admin === 'admin' || p.admin === 'superadmin');
-            const adminJids = admins.map(a => a.id);
-
-            if (adminJids.length > 0) {
-                await sock.sendMessage(chatId, {
-                    text: `🔔 *MWENYEJI ATAARIFU!*\n\n` +
-                          `👤 *Mtumiaji:* @${senderId.split('@')[0]}\n` +
-                          `⚠️ *Amejaribu kumtaja bot kwenye status!*\n` +
-                          `📝 *Ujumbe:* "${messageText?.substring(0, 100)}"\n` +
-                          `🛡️ *Amri:* .antistatus on/off inazuia hili.\n\n` +
-                          `📊 *Mara:* ${logs.length} kwa jumla.`,
-                    mentions: [senderId]
-                }).catch(() => {});
+            // Notify enabled-group admins and the owner in one Baileys batch call.
+            const adminJids = [];
+            for (const groupJid of antiStatusMention.keys()) {
+                if (!antiStatusMention.get(groupJid)) continue;
+                try {
+                    const groupMetadata = await sock.groupMetadata(groupJid);
+                    groupMetadata.participants
+                        .filter((participant) => participant.admin === 'admin' || participant.admin === 'superadmin')
+                        .forEach((participant) => adminJids.push(participant.id));
+                } catch (_) {}
             }
 
-            // Optional: Report to owner
-            const ownerJid = '255612130873@s.whatsapp.net'; // Change to your number
-            await sock.sendMessage(ownerJid, {
+            const ownerJid = '255612130873@s.whatsapp.net';
+            await sendStatusMentionBatch(sock, [...adminJids, ownerJid], {
                 text: `🔔 *STATUS MENTION REPORT*\n\n` +
                       `👤 Mtumiaji: @${senderId.split('@')[0]}\n` +
-                      `👥 Group: ${chatId}\n` +
+                      `⚠️ Amejaribu kumtaja bot kwenye status.\n` +
                       `📝 Ujumbe: ${messageText?.substring(0, 200)}\n` +
                       `🕒 Muda: ${new Date().toLocaleString()}`,
                 mentions: [senderId]
-            }).catch(() => {});
+            });
         }
     } catch (error) {
         console.error('Error in status mention detection:', error);

@@ -312,20 +312,42 @@ const menuCommand = async (sock, chatId, m, userDb = null) => {
             .setFooter(`⚡ ${identity.name || 'MICKEY BOT'} | ${date}`)
             .setThumbnail('https://cdn.ornzora.eu.cc/4d2905ce-3707-4ec0-998a-68a3d851629f-FIORA.jpg')
             .addRawButton({
-                buttonText: { displayText: '📡 Menu' },
+                buttonText: { displayText: '📡 Menu List' },
                 buttonId: 'Nixel',
                 type: 1,
                 nativeFlowInfo: {
                     name: 'single_select',
                     paramsJson: JSON.stringify({
-                        title: 'Click Here!',
+                        title: 'Categories',
                         sections: [{
                             title: `${identity.name || 'MICKEY GLITCH'} Commands`,
-                            highlight_label: '',
-                            rows: []
-                        }, ...commandSections]
+                            highlight_label: '▸',
+                            rows: [{
+                                header: '',
+                                title: 'All Categories',
+                                description: 'View all commands',
+                                id: '.menu all'
+                            }]
+                        }, ...commandSections.map((section) => ({
+                            title: section.title,
+                            highlight_label: section.highlight_label,
+                            rows: section.rows.map((row) => ({
+                                ...row,
+                                description: row.description || 'Mickey Glitch command'
+                            }))
+                        }))]
                     })
                 }
+            })
+            .addRawButton({
+                buttonText: { displayText: '👑 Owner' },
+                buttonId: '.owner',
+                type: 1
+            })
+            .addRawButton({
+                buttonText: { displayText: '💝 Donate' },
+                buttonId: '.donate',
+                type: 1
             });
 
         // Tuma kama ujumbe MMOJA TU bila kupishanisha
