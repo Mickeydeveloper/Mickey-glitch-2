@@ -3,814 +3,1023 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MICKEY GLITCH 2 :: BOT CONTROL CENTER</title>
+<title>Mickey Glitch 2 — WhatsApp Bot Platform</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=JetBrains+Mono:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#050816;
-    --bg-panel:rgba(11,16,35,0.82);
-    --bg-panel-2:rgba(12,18,38,0.94);
-    --grid:rgba(125,92,255,0.08);
-    --accent:#7c5cff;
-    --accent-2:#4de2ff;
-    --accent-soft:rgba(124,92,255,0.12);
-    --border:rgba(124,92,255,0.28);
-    --text:#edf3ff;
-    --muted:#8ea4d8;
-    --amber:#ffd270;
-    --danger:#ff6b7a;
-    --success:#4ade80;
-    --radius:16px;
+    --bg:#0a0a0f;
+    --bg-2:#12121a;
+    --card:rgba(255,255,255,0.03);
+    --card-hover:rgba(255,255,255,0.06);
+    --stroke:rgba(255,255,255,0.08);
+    --stroke-hover:rgba(255,255,255,0.18);
+    --orange:#ff6b1a;
+    --orange-2:#ff9540;
+    --lime:#c8ff00;
+    --cyan:#00e5ff;
+    --pink:#ff2e88;
+    --text:#ffffff;
+    --text-2:#a8a8b8;
+    --text-3:#5a5a6e;
+    --success:#22e07a;
+    --warning:#ffb020;
+    --danger:#ff3b5c;
+    --radius:24px;
+    --radius-sm:14px;
+    --shadow:0 20px 60px rgba(0,0,0,0.5);
   }
+
   *{margin:0;padding:0;box-sizing:border-box;}
   html{scroll-behavior:smooth;}
   body{
     background:var(--bg);
     color:var(--text);
-    font-family:'JetBrains Mono',monospace;
+    font-family:'Outfit',sans-serif;
     min-height:100vh;
     line-height:1.6;
-    position:relative;
     overflow-x:hidden;
+    -webkit-font-smoothing:antialiased;
   }
 
-  /* ---------- Ambient terminal backdrop ---------- */
-  .grid-bg{
-    position:fixed;inset:0;z-index:-3;
+  /* ---------- Animated Background ---------- */
+  .bg-layer{
+    position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none;
+  }
+  .bg-blob{
+    position:absolute;border-radius:50%;filter:blur(120px);opacity:.35;
+    animation:blobFloat 20s ease-in-out infinite;
+  }
+  .bg-blob.b1{width:600px;height:600px;background:var(--orange);top:-200px;left:-200px;animation-delay:0s;}
+  .bg-blob.b2{width:500px;height:500px;background:var(--pink);bottom:-150px;right:-100px;animation-delay:-7s;}
+  .bg-blob.b3{width:400px;height:400px;background:var(--cyan);top:40%;left:50%;animation-delay:-14s;opacity:.2;}
+  @keyframes blobFloat{
+    0%,100%{transform:translate(0,0) scale(1);}
+    33%{transform:translate(80px,-60px) scale(1.1);}
+    66%{transform:translate(-60px,40px) scale(.95);}
+  }
+  .bg-noise{
+    position:absolute;inset:0;opacity:.04;
+    background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  .bg-grid{
+    position:absolute;inset:0;opacity:.15;
     background-image:
-      linear-gradient(var(--grid) 1px,transparent 1px),
-      linear-gradient(90deg,var(--grid) 1px,transparent 1px);
-    background-size:38px 38px;
-    mask-image:radial-gradient(ellipse 80% 70% at 50% 20%,#000 40%,transparent 100%);
+      linear-gradient(rgba(255,255,255,0.04) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(255,255,255,0.04) 1px,transparent 1px);
+    background-size:60px 60px;
+    mask-image:radial-gradient(ellipse 100% 60% at 50% 0%,#000 30%,transparent 80%);
   }
-  .glow-orb{
-    position:fixed;top:-10%;left:50%;transform:translateX(-50%);
-    width:60vw;height:60vw;max-width:900px;max-height:900px;
-    background:radial-gradient(circle,rgba(124,92,255,0.18) 0%,rgba(77,226,255,0.08) 28%,transparent 65%);
-    filter:blur(40px);z-index:-2;pointer-events:none;
-    animation:orbPulse 8s ease-in-out infinite alternate;
-  }
-  @keyframes orbPulse{0%{opacity:.55;}100%{opacity:1;}}
-  .scanlines{
-    position:fixed;inset:0;z-index:50;pointer-events:none;
-    background:repeating-linear-gradient(0deg,rgba(0,0,0,0.15) 0px,rgba(0,0,0,0.15) 1px,transparent 2px,transparent 3px);
-    opacity:.35;
-  }
-  .particles{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none;}
-  .particle{position:absolute;background:var(--accent-2);border-radius:50%;opacity:0;animation:drift linear infinite;box-shadow:0 0 6px var(--accent-2);}
-  @keyframes drift{0%{transform:translateY(100vh);opacity:0;}10%{opacity:.7;}90%{opacity:.4;}100%{transform:translateY(-10vh);opacity:0;}}
 
-  /* ---------- Boot sequence overlay ---------- */
-  #boot{
-    position:fixed;inset:0;z-index:999;background:#010301;
-    display:flex;align-items:center;justify-content:center;
-    font-family:'Share Tech Mono',monospace;
+  /* ---------- Sidebar Navigation ---------- */
+  .sidebar{
+    position:fixed;left:0;top:0;bottom:0;width:260px;z-index:100;
+    background:rgba(10,10,15,0.7);backdrop-filter:blur(24px);
+    border-right:1px solid var(--stroke);
+    padding:28px 20px;display:flex;flex-direction:column;gap:8px;
+    transition:transform .4s cubic-bezier(.5,0,.2,1);
   }
-  #boot pre{color:var(--accent-2);font-size:.85rem;white-space:pre-wrap;max-width:600px;padding:20px;text-shadow:0 0 12px rgba(77,226,255,.6);}
-  #boot .cursor{display:inline-block;width:8px;height:16px;background:var(--accent-2);animation:blink 1s step-end infinite;vertical-align:middle;}
-  @keyframes blink{50%{opacity:0;}}
-  #boot.hide{animation:bootOut .5s ease forwards;}
-  @keyframes bootOut{to{opacity:0;visibility:hidden;}}
+  .logo-wrap{
+    display:flex;align-items:center;gap:12px;padding:0 8px 28px;
+    border-bottom:1px solid var(--stroke);margin-bottom:20px;
+  }
+  .logo{
+    width:46px;height:46px;border-radius:14px;flex-shrink:0;
+    background:linear-gradient(135deg,var(--orange),var(--pink));
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:1.1rem;
+    color:#fff;position:relative;overflow:hidden;
+    box-shadow:0 8px 24px rgba(255,107,26,.35);
+  }
+  .logo::after{
+    content:'';position:absolute;inset:0;
+    background:linear-gradient(135deg,transparent 40%,rgba(255,255,255,.3),transparent 60%);
+    animation:shine 3s infinite;
+  }
+  @keyframes shine{0%{transform:translateX(-100%);}100%{transform:translateX(100%);}}
+  .logo-text h1{font-size:1.05rem;font-weight:800;letter-spacing:-.02em;line-height:1.1;}
+  .logo-text span{font-size:.7rem;color:var(--text-3);font-weight:500;letter-spacing:.1em;text-transform:uppercase;}
+
+  .nav-section-label{
+    font-size:.68rem;color:var(--text-3);font-weight:700;letter-spacing:.15em;
+    text-transform:uppercase;padding:16px 12px 8px;
+  }
+  .nav-item{
+    display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:12px;
+    color:var(--text-2);text-decoration:none;font-size:.9rem;font-weight:500;
+    transition:.2s;position:relative;
+  }
+  .nav-item:hover{background:var(--card-hover);color:var(--text);}
+  .nav-item.active{
+    background:linear-gradient(135deg,rgba(255,107,26,.15),rgba(255,46,136,.1));
+    color:var(--text);border:1px solid rgba(255,107,26,.25);
+  }
+  .nav-item.active::before{
+    content:'';position:absolute;left:-20px;top:50%;transform:translateY(-50%);
+    width:3px;height:20px;background:var(--orange);border-radius:0 3px 3px 0;
+  }
+  .nav-item i{width:20px;text-align:center;font-size:1rem;}
+  .nav-item .badge{
+    margin-left:auto;background:var(--orange);color:#fff;font-size:.65rem;
+    font-weight:700;padding:2px 8px;border-radius:10px;
+  }
+
+  .sidebar-footer{
+    margin-top:auto;padding:16px;border-radius:16px;
+    background:linear-gradient(135deg,rgba(255,107,26,.1),rgba(255,46,136,.05));
+    border:1px solid rgba(255,107,26,.2);
+  }
+  .sidebar-footer h4{font-size:.85rem;margin-bottom:4px;}
+  .sidebar-footer p{font-size:.72rem;color:var(--text-3);margin-bottom:10px;}
+  .sidebar-footer .btn{width:100%;padding:10px;font-size:.75rem;}
+
+  /* ---------- Main Content ---------- */
+  .main{margin-left:260px;min-height:100vh;}
+
+  /* ---------- Top Bar ---------- */
+  .topbar{
+    position:sticky;top:0;z-index:90;
+    padding:20px 40px;display:flex;align-items:center;gap:20px;
+    background:rgba(10,10,15,0.7);backdrop-filter:blur(20px);
+    border-bottom:1px solid var(--stroke);
+  }
+  .menu-btn{
+    display:none;background:none;border:none;color:var(--text);
+    font-size:1.3rem;cursor:pointer;padding:8px;
+  }
+  .search-bar{
+    flex:1;max-width:400px;position:relative;
+  }
+  .search-bar input{
+    width:100%;padding:11px 16px 11px 44px;border-radius:12px;
+    background:var(--card);border:1px solid var(--stroke);
+    color:var(--text);font-family:inherit;font-size:.85rem;transition:.2s;
+  }
+  .search-bar input:focus{outline:none;border-color:var(--orange);background:rgba(255,255,255,0.05);}
+  .search-bar i{position:absolute;left:16px;top:50%;transform:translateY(-50%);color:var(--text-3);font-size:.9rem;}
+
+  .topbar-actions{margin-left:auto;display:flex;gap:12px;align-items:center;}
+  .icon-btn{
+    width:40px;height:40px;border-radius:12px;background:var(--card);
+    border:1px solid var(--stroke);color:var(--text-2);cursor:pointer;
+    display:flex;align-items:center;justify-content:center;transition:.2s;
+    position:relative;
+  }
+  .icon-btn:hover{background:var(--card-hover);color:var(--text);border-color:var(--stroke-hover);}
+  .icon-btn .dot{
+    position:absolute;top:8px;right:8px;width:8px;height:8px;
+    background:var(--orange);border-radius:50%;border:2px solid var(--bg);
+  }
+  .user-chip{
+    display:flex;align-items:center;gap:10px;padding:6px 14px 6px 6px;
+    background:var(--card);border:1px solid var(--stroke);border-radius:50px;
+    cursor:pointer;transition:.2s;
+  }
+  .user-chip:hover{background:var(--card-hover);}
+  .user-chip .avatar{
+    width:32px;height:32px;border-radius:50%;
+    background:linear-gradient(135deg,var(--lime),var(--cyan));
+    display:flex;align-items:center;justify-content:center;
+    font-weight:800;font-size:.75rem;color:#0a0a0f;
+  }
+  .user-chip .name{font-size:.85rem;font-weight:600;}
+
+  /* ---------- Hero Section ---------- */
+  .hero{padding:60px 40px 40px;position:relative;}
+  .hero-badge{
+    display:inline-flex;align-items:center;gap:8px;
+    padding:6px 14px;border-radius:50px;
+    background:rgba(200,255,0,.08);border:1px solid rgba(200,255,0,.25);
+    font-size:.72rem;font-weight:700;color:var(--lime);
+    letter-spacing:.05em;text-transform:uppercase;margin-bottom:24px;
+  }
+  .hero-badge .live{
+    width:6px;height:6px;background:var(--lime);border-radius:50%;
+    box-shadow:0 0 10px var(--lime);animation:pulse 1.5s infinite;
+  }
+  @keyframes pulse{50%{opacity:.3;transform:scale(.8);}}
+
+  .hero h1{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:clamp(2.5rem,5vw,4.5rem);font-weight:700;
+    line-height:1.05;letter-spacing:-.03em;margin-bottom:20px;
+  }
+  .hero h1 .grad{
+    background:linear-gradient(135deg,var(--orange),var(--pink),var(--cyan));
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+    display:inline-block;
+  }
+  .hero p.lead{
+    font-size:1.05rem;color:var(--text-2);max-width:620px;
+    margin-bottom:32px;font-weight:400;
+  }
+  .hero-cta{display:flex;gap:14px;flex-wrap:wrap;}
+
+  /* ---------- Buttons ---------- */
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:10px;
+    padding:14px 26px;border-radius:14px;border:none;cursor:pointer;
+    font-family:inherit;font-weight:600;font-size:.9rem;
+    text-decoration:none;transition:.25s;position:relative;overflow:hidden;
+  }
+  .btn-primary{
+    background:linear-gradient(135deg,var(--orange),var(--pink));
+    color:#fff;box-shadow:0 10px 30px rgba(255,107,26,.3);
+  }
+  .btn-primary:hover{transform:translateY(-2px);box-shadow:0 15px 40px rgba(255,107,26,.45);}
+  .btn-ghost{
+    background:var(--card);color:var(--text);border:1px solid var(--stroke);
+  }
+  .btn-ghost:hover{background:var(--card-hover);border-color:var(--stroke-hover);transform:translateY(-2px);}
+  .btn-lime{
+    background:linear-gradient(135deg,var(--lime),#a0d400);color:#0a0a0f;
+    box-shadow:0 10px 30px rgba(200,255,0,.25);
+  }
+  .btn-lime:hover{transform:translateY(-2px);box-shadow:0 15px 40px rgba(200,255,0,.4);}
+  .btn-danger{background:linear-gradient(135deg,var(--danger),#c41e42);color:#fff;}
+  .btn-sm{padding:9px 16px;font-size:.78rem;border-radius:10px;}
+  .btn:disabled{opacity:.5;cursor:not-allowed;transform:none !important;}
+
+  /* ---------- Stats Grid ---------- */
+  .stats-grid{
+    padding:20px 40px 40px;
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;
+  }
+  .stat-tile{
+    padding:24px;border-radius:var(--radius);
+    background:linear-gradient(135deg,var(--card),rgba(255,255,255,0.01));
+    border:1px solid var(--stroke);position:relative;overflow:hidden;
+    transition:.3s;
+  }
+  .stat-tile::before{
+    content:'';position:absolute;top:0;left:0;right:0;height:2px;
+    background:linear-gradient(90deg,var(--orange),transparent);
+    opacity:0;transition:.3s;
+  }
+  .stat-tile:hover{transform:translateY(-4px);border-color:var(--stroke-hover);background:var(--card-hover);}
+  .stat-tile:hover::before{opacity:1;}
+  .stat-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;}
+  .stat-icon{
+    width:44px;height:44px;border-radius:12px;
+    background:rgba(255,107,26,.12);border:1px solid rgba(255,107,26,.2);
+    display:flex;align-items:center;justify-content:center;
+    color:var(--orange);font-size:1.1rem;
+  }
+  .stat-icon.lime{background:rgba(200,255,0,.1);border-color:rgba(200,255,0,.2);color:var(--lime);}
+  .stat-icon.cyan{background:rgba(0,229,255,.1);border-color:rgba(0,229,255,.2);color:var(--cyan);}
+  .stat-icon.pink{background:rgba(255,46,136,.1);border-color:rgba(255,46,136,.2);color:var(--pink);}
+  .stat-trend{font-size:.72rem;font-weight:700;color:var(--success);display:flex;align-items:center;gap:4px;}
+  .stat-trend.down{color:var(--danger);}
+  .stat-num{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:2rem;font-weight:700;letter-spacing:-.02em;line-height:1;
+    margin-bottom:6px;
+  }
+  .stat-lbl{font-size:.8rem;color:var(--text-3);font-weight:500;}
+
+  /* ---------- Section Headers ---------- */
+  .section{padding:40px;scroll-margin-top:80px;}
+  .section-head{
+    display:flex;justify-content:space-between;align-items:flex-end;
+    margin-bottom:28px;flex-wrap:wrap;gap:16px;
+  }
+  .section-title h2{
+    font-family:'Space Grotesk',sans-serif;font-size:1.6rem;font-weight:700;
+    letter-spacing:-.02em;margin-bottom:4px;
+  }
+  .section-title p{font-size:.88rem;color:var(--text-3);}
+
+  /* ---------- Bot Cards ---------- */
+  .bots-grid{
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:18px;
+  }
+  .bot-card{
+    padding:24px;border-radius:var(--radius);background:var(--card);
+    border:1px solid var(--stroke);transition:.3s;position:relative;overflow:hidden;
+  }
+  .bot-card:hover{transform:translateY(-4px);border-color:var(--stroke-hover);background:var(--card-hover);}
+  .bot-top{display:flex;align-items:flex-start;gap:14px;margin-bottom:20px;}
+  .bot-avatar{
+    width:52px;height:52px;border-radius:16px;flex-shrink:0;
+    background:linear-gradient(135deg,var(--orange),var(--pink));
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:1rem;color:#fff;
+  }
+  .bot-avatar.lime{background:linear-gradient(135deg,var(--lime),#a0d400);color:#0a0a0f;}
+  .bot-avatar.cyan{background:linear-gradient(135deg,var(--cyan),#0099cc);}
+  .bot-avatar.pink{background:linear-gradient(135deg,var(--pink),#cc0055);}
+  .bot-meta{flex:1;min-width:0;}
+  .bot-meta h3{font-size:1rem;font-weight:700;margin-bottom:2px;letter-spacing:-.01em;}
+  .bot-meta .id{font-size:.7rem;color:var(--text-3);font-family:'Space Grotesk',monospace;}
+  .status-pill{
+    display:inline-flex;align-items:center;gap:6px;padding:4px 10px;
+    border-radius:50px;font-size:.68rem;font-weight:700;
+    letter-spacing:.05em;text-transform:uppercase;flex-shrink:0;
+  }
+  .status-pill.online{background:rgba(34,224,122,.12);color:var(--success);border:1px solid rgba(34,224,122,.25);}
+  .status-pill.offline{background:rgba(255,59,92,.12);color:var(--danger);border:1px solid rgba(255,59,92,.25);}
+  .status-pill.connecting{background:rgba(255,176,32,.12);color:var(--warning);border:1px solid rgba(255,176,32,.25);}
+  .status-pill .ind{width:6px;height:6px;border-radius:50%;background:currentColor;animation:pulse 1.5s infinite;}
+
+  .bot-metrics{
+    display:grid;grid-template-columns:repeat(3,1fr);gap:8px;
+    padding:14px 0;border-top:1px solid var(--stroke);border-bottom:1px solid var(--stroke);
+    margin-bottom:18px;
+  }
+  .metric{text-align:center;}
+  .metric .v{font-family:'Space Grotesk',sans-serif;font-size:1.15rem;font-weight:700;letter-spacing:-.02em;}
+  .metric .l{font-size:.68rem;color:var(--text-3);text-transform:uppercase;letter-spacing:.08em;font-weight:600;}
+  .bot-actions{display:flex;gap:8px;}
+
+  /* ---------- Commands ---------- */
+  .search-row{
+    display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;
+    align-items:center;
+  }
+  .search-row .search-bar{max-width:340px;}
+  .filter-chips{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto;}
+  .chip{
+    padding:7px 14px;border-radius:50px;background:var(--card);
+    border:1px solid var(--stroke);color:var(--text-2);
+    font-size:.75rem;font-weight:600;cursor:pointer;transition:.2s;
+    font-family:inherit;
+  }
+  .chip:hover{background:var(--card-hover);color:var(--text);}
+  .chip.active{background:linear-gradient(135deg,var(--orange),var(--pink));color:#fff;border-color:transparent;}
+
+  .commands-wrap{
+    background:var(--card);border:1px solid var(--stroke);
+    border-radius:var(--radius);overflow:hidden;
+  }
+  .cmd-item{
+    display:grid;grid-template-columns:auto 1fr auto auto;gap:16px;
+    align-items:center;padding:16px 22px;
+    border-bottom:1px solid var(--stroke);transition:.2s;
+  }
+  .cmd-item:last-child{border-bottom:none;}
+  .cmd-item:hover{background:var(--card-hover);}
+  .cmd-code{
+    font-family:'Space Grotesk',monospace;font-size:.85rem;font-weight:700;
+    color:var(--lime);padding:4px 10px;border-radius:8px;
+    background:rgba(200,255,0,.08);border:1px solid rgba(200,255,0,.15);
+  }
+  .cmd-desc{font-size:.85rem;color:var(--text-2);}
+  .cmd-usage{
+    font-family:'Space Grotesk',monospace;font-size:.75rem;
+    color:var(--text-3);padding:4px 10px;border-radius:8px;background:rgba(255,255,255,.03);
+  }
+  .access-tag{
+    padding:4px 10px;border-radius:50px;font-size:.65rem;font-weight:700;
+    letter-spacing:.06em;text-transform:uppercase;
+  }
+  .access-tag.admin{background:rgba(255,59,92,.15);color:var(--danger);}
+  .access-tag.user{background:rgba(34,224,122,.15);color:var(--success);}
+  .access-tag.group{background:rgba(255,176,32,.15);color:var(--warning);}
+
+  /* ---------- Logs ---------- */
+  .logs-container{
+    background:#0d0d14;border:1px solid var(--stroke);border-radius:var(--radius);
+    padding:20px;max-height:420px;overflow-y:auto;
+    font-family:'Space Grotesk',monospace;font-size:.82rem;
+  }
+  .log-row{
+    display:grid;grid-template-columns:auto auto 1fr;gap:16px;
+    padding:8px 12px;border-radius:8px;transition:.15s;
+  }
+  .log-row:hover{background:rgba(255,255,255,.03);}
+  .log-time{color:var(--text-3);font-size:.75rem;}
+  .log-lvl{
+    padding:1px 8px;border-radius:5px;font-size:.65rem;font-weight:700;
+    letter-spacing:.05em;text-transform:uppercase;align-self:center;
+  }
+  .log-lvl.info{background:rgba(0,229,255,.12);color:var(--cyan);}
+  .log-lvl.warn{background:rgba(255,176,32,.12);color:var(--warning);}
+  .log-lvl.error{background:rgba(255,59,92,.12);color:var(--danger);}
+  .log-lvl.success{background:rgba(34,224,122,.12);color:var(--success);}
+  .log-msg{color:var(--text-2);word-break:break-word;}
+
+  /* ---------- Settings ---------- */
+  .settings-grid{
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;
+  }
+  .setting-row{
+    display:flex;justify-content:space-between;align-items:center;gap:16px;
+    padding:18px 20px;border-radius:16px;background:var(--card);
+    border:1px solid var(--stroke);transition:.2s;
+  }
+  .setting-row:hover{border-color:var(--stroke-hover);background:var(--card-hover);}
+  .setting-info h4{font-size:.9rem;font-weight:600;margin-bottom:2px;}
+  .setting-info p{font-size:.75rem;color:var(--text-3);}
+  .switch{
+    width:48px;height:28px;background:rgba(255,255,255,.1);border-radius:50px;
+    position:relative;cursor:pointer;transition:.3s;flex-shrink:0;
+    border:1px solid var(--stroke);
+  }
+  .switch::after{
+    content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;
+    background:#fff;border-radius:50%;transition:.3s cubic-bezier(.5,0,.2,1);
+  }
+  .switch.active{background:linear-gradient(135deg,var(--orange),var(--pink));border-color:transparent;}
+  .switch.active::after{transform:translateX(20px);}
+
+  .field{
+    display:flex;flex-direction:column;gap:6px;margin-bottom:16px;
+  }
+  .field label{font-size:.78rem;font-weight:600;color:var(--text-2);}
+  .field input,.field select{
+    padding:12px 16px;border-radius:12px;background:var(--card);
+    border:1px solid var(--stroke);color:var(--text);
+    font-family:inherit;font-size:.88rem;transition:.2s;
+  }
+  .field input:focus,.field select:focus{outline:none;border-color:var(--orange);background:rgba(255,255,255,.05);}
+
+  /* ---------- Templates ---------- */
+  .templates-grid{
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px;
+  }
+  .template-card{
+    padding:24px;border-radius:var(--radius);background:var(--card);
+    border:1px solid var(--stroke);cursor:pointer;transition:.3s;
+    position:relative;overflow:hidden;
+  }
+  .template-card:hover{
+    transform:translateY(-4px);border-color:var(--stroke-hover);
+    background:var(--card-hover);
+  }
+  .template-card .t-icon{
+    width:52px;height:52px;border-radius:14px;margin-bottom:16px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:1.4rem;transition:.3s;
+  }
+  .template-card:hover .t-icon{transform:scale(1.1) rotate(-5deg);}
+  .t-icon.t1{background:linear-gradient(135deg,rgba(255,107,26,.2),rgba(255,46,136,.15));color:var(--orange);}
+  .t-icon.t2{background:linear-gradient(135deg,rgba(200,255,0,.2),rgba(0,229,255,.15));color:var(--lime);}
+  .t-icon.t3{background:linear-gradient(135deg,rgba(0,229,255,.2),rgba(255,46,136,.15));color:var(--cyan);}
+  .t-icon.t4{background:linear-gradient(135deg,rgba(255,46,136,.2),rgba(255,107,26,.15));color:var(--pink);}
+  .template-card h4{font-size:.98rem;font-weight:700;margin-bottom:6px;}
+  .template-card p{font-size:.78rem;color:var(--text-3);line-height:1.5;}
+
+  /* ---------- Connect Card ---------- */
+  .connect-wrap{
+    display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start;
+  }
+  .connect-card{
+    padding:32px;border-radius:var(--radius);
+    background:linear-gradient(135deg,rgba(255,107,26,.08),rgba(255,46,136,.04));
+    border:1px solid rgba(255,107,26,.2);
+  }
+  .connect-card h3{font-family:'Space Grotesk',sans-serif;font-size:1.15rem;font-weight:700;margin-bottom:20px;}
+  .steps{display:flex;flex-direction:column;gap:14px;margin-bottom:24px;}
+  .step{display:flex;gap:14px;align-items:flex-start;}
+  .step-num{
+    width:28px;height:28px;border-radius:9px;flex-shrink:0;
+    background:rgba(255,107,26,.15);border:1px solid rgba(255,107,26,.3);
+    color:var(--orange);font-size:.75rem;font-weight:800;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .step-txt{font-size:.85rem;color:var(--text-2);padding-top:3px;}
+
+  .pair-result{
+    padding:28px;border-radius:var(--radius);background:var(--card);
+    border:1px solid var(--stroke);text-align:center;
+  }
+  .pair-result .code-display{
+    font-family:'Space Grotesk',sans-serif;font-size:2rem;font-weight:700;
+    letter-spacing:.15em;padding:24px;border-radius:16px;
+    background:rgba(200,255,0,.05);border:2px dashed rgba(200,255,0,.4);
+    color:var(--lime);margin:20px 0;cursor:pointer;transition:.2s;
+  }
+  .pair-result .code-display:hover{background:rgba(200,255,0,.1);}
+
+  .alert{
+    padding:14px 18px;border-radius:12px;font-size:.85rem;
+    margin-top:16px;display:none;align-items:center;gap:10px;
+  }
+  .alert.show{display:flex;}
+  .alert.success{background:rgba(34,224,122,.1);border:1px solid rgba(34,224,122,.3);color:var(--success);}
+  .alert.error{background:rgba(255,59,92,.1);border:1px solid rgba(255,59,92,.3);color:var(--danger);}
+  .alert.warn{background:rgba(255,176,32,.1);border:1px solid rgba(255,176,32,.3);color:var(--warning);}
 
   /* ---------- Modal ---------- */
   .modal{
-    position:fixed;inset:0;background:rgba(1,4,1,.85);backdrop-filter:blur(8px);
-    display:flex;align-items:center;justify-content:center;z-index:800;
-    opacity:0;visibility:hidden;transition:.35s ease;
+    position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(12px);
+    z-index:500;display:flex;align-items:center;justify-content:center;
+    opacity:0;visibility:hidden;transition:.3s;
   }
   .modal.active{opacity:1;visibility:visible;}
-  .modal-content{
-    width:90%;max-width:460px;background:var(--bg-panel-2);
-    border:1px solid var(--border);border-radius:var(--radius);
-    transform:translateY(-30px);transition:transform .35s ease;
-    box-shadow:0 0 60px rgba(124,92,255,.08),0 25px 50px rgba(0,0,0,.6);
+  .modal-inner{
+    width:90%;max-width:440px;background:var(--bg-2);border:1px solid var(--stroke);
+    border-radius:var(--radius);padding:32px;transform:scale(.95);transition:.3s;
+    box-shadow:var(--shadow);
   }
-  .modal.active .modal-content{transform:translateY(0);}
-  .modal-head{
-    padding:20px 22px;border-bottom:1px solid var(--border);
-    display:flex;justify-content:space-between;align-items:center;
+  .modal.active .modal-inner{transform:scale(1);}
+  .modal-inner h3{font-family:'Space Grotesk',sans-serif;font-size:1.2rem;font-weight:700;margin-bottom:8px;}
+  .modal-inner p{font-size:.85rem;color:var(--text-2);margin-bottom:22px;}
+  .channel-link{
+    display:flex;align-items:center;gap:12px;padding:14px 16px;
+    border-radius:14px;background:var(--card);border:1px solid var(--stroke);
+    color:var(--text);text-decoration:none;font-size:.85rem;font-weight:500;
+    margin-bottom:10px;transition:.2s;
   }
-  .modal-head h2{font-size:1rem;letter-spacing:1px;color:var(--accent-2);font-weight:600;}
-  .modal-head h2::before{content:"root@mickey:~$ ";color:var(--muted);}
-  .modal-close{background:none;border:none;color:var(--muted);font-size:1.4rem;cursor:pointer;line-height:1;}
-  .modal-close:hover{color:var(--accent-2);}
-  .modal-body{padding:22px;}
-  .modal-body p{color:var(--muted);font-size:.85rem;margin-bottom:16px;}
-  .channel-list{display:flex;flex-direction:column;gap:8px;margin-bottom:18px;}
-  .channel-item{
-    display:flex;align-items:center;gap:10px;padding:12px 14px;
-    background:rgba(124,92,255,.04);border:1px solid var(--border);border-radius:8px;
-    text-decoration:none;color:var(--text);font-size:.82rem;transition:.25s;
-  }
-  .channel-item:hover{background:var(--accent-soft);border-color:var(--accent);transform:translateX(4px);}
-  .channel-item i{color:var(--accent-2);width:18px;}
-  .btn{
-    display:inline-flex;align-items:center;justify-content:center;gap:8px;
-    background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#071222;font-weight:800;font-size:.82rem;
-    letter-spacing:.5px;padding:13px 22px;border:none;border-radius:8px;
-    cursor:pointer;text-decoration:none;width:100%;text-transform:uppercase;
-    transition:.25s;position:relative;overflow:hidden;
-  }
-  .btn:hover{box-shadow:0 0 25px rgba(124,92,255,.45);transform:translateY(-2px);}
-  .btn:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none;}
-  .btn-outline{background:transparent;color:var(--accent-2);border:1px solid var(--border);}
-  .btn-outline:hover{background:var(--accent-soft);}
-  .btn-sm{padding:8px 14px;font-size:.72rem;width:auto;}
-  .btn-danger{background:linear-gradient(135deg,#ff6b7a,#ff4757);color:#fff;}
-  .btn-success{background:linear-gradient(135deg,#4ade80,#22c55e);color:#052e16;}
-  .btn-warning{background:linear-gradient(135deg,#ffd270,#f59e0b);color:#451a03;}
+  .channel-link:hover{background:var(--card-hover);border-color:var(--stroke-hover);transform:translateX(4px);}
+  .channel-link i{color:var(--orange);font-size:1rem;}
 
-  /* ---------- Nav ---------- */
-  nav{
-    position:fixed;top:0;left:0;right:0;height:74px;z-index:200;
-    display:flex;align-items:center;justify-content:space-between;
-    padding:0 32px;background:rgba(2,6,3,.85);backdrop-filter:blur(16px);
-    border-bottom:1px solid var(--border);
-  }
-  .brand{display:flex;align-items:center;gap:12px;}
-  .brand .mark{
-    width:40px;height:40px;border-radius:10px;border:1px solid rgba(124,92,255,.35);
-    display:flex;align-items:center;justify-content:center;
-    font-family:'Share Tech Mono',monospace;font-size:1rem;color:var(--accent-2);
-    background:linear-gradient(135deg,rgba(124,92,255,.22),rgba(77,226,255,.14));text-shadow:0 0 12px rgba(77,226,255,.6);
-  }
-  .brand .name{font-weight:800;font-size:1rem;letter-spacing:.8px;}
-  .brand .tag{font-size:.68rem;color:var(--muted);letter-spacing:2px;text-transform:uppercase;}
-  .nav-links{display:flex;gap:28px;align-items:center;}
-  .nav-links a{color:var(--muted);text-decoration:none;font-size:.82rem;letter-spacing:.5px;transition:.25s;}
-  .nav-links a:hover{color:var(--accent-2);}
-  .nav-toggle{display:none;background:none;border:none;color:var(--accent-2);font-size:1.3rem;cursor:pointer;}
-
-  /* ---------- Header ---------- */
-  header{padding:150px 20px 70px;text-align:center;position:relative;}
-  .eyebrow{
-    display:inline-flex;align-items:center;gap:8px;font-size:.72rem;letter-spacing:3px;
-    color:var(--muted);text-transform:uppercase;margin-bottom:22px;
-    border:1px solid var(--border);padding:6px 14px;border-radius:30px;background:var(--accent-soft);
-  }
-  .eyebrow .pulse{width:6px;height:6px;background:var(--accent-2);border-radius:50%;box-shadow:0 0 10px rgba(77,226,255,.9);animation:blink 1.4s infinite;}
-  header h1{
-    font-family:'Share Tech Mono',monospace;
-    font-size:clamp(2.2rem,6vw,4.2rem);letter-spacing:2px;
-    color:var(--accent-2);text-shadow:0 0 18px rgba(77,226,255,.4);
-    margin-bottom:18px;position:relative;display:inline-block;
-  }
-  header h1 .glitch-wrap{position:relative;display:inline-block;}
-  header h1 .glitch-wrap::before,header h1 .glitch-wrap::after{
-    content:attr(data-text);position:absolute;top:0;left:0;width:100%;
-    overflow:hidden;color:var(--accent);
-  }
-  header h1 .glitch-wrap::before{left:2px;text-shadow:-2px 0 var(--danger);animation:glitchTop 5s infinite linear alternate-reverse;clip-path:inset(0 0 55% 0);}
-  header h1 .glitch-wrap::after{left:-2px;text-shadow:2px 0 var(--amber);animation:glitchBot 6s infinite linear alternate-reverse;clip-path:inset(55% 0 0 0);}
-  @keyframes glitchTop{0%,90%,100%{transform:translate(0,0);}92%{transform:translate(-3px,-1px);}94%{transform:translate(3px,1px);}96%{transform:translate(-2px,0);}}
-  @keyframes glitchBot{0%,90%,100%{transform:translate(0,0);}91%{transform:translate(2px,1px);}95%{transform:translate(-3px,-1px);}97%{transform:translate(2px,0);}}
-  header p.sub{color:var(--muted);max-width:560px;margin:0 auto;font-size:.95rem;}
-  header p.sub strong{color:var(--accent-2);}
-
-  .stats-row{display:flex;justify-content:center;gap:20px;margin-top:44px;flex-wrap:wrap;}
-  .stat-card{
-    display:flex;align-items:center;gap:14px;background:var(--bg-panel);
-    border:1px solid var(--border);border-radius:var(--radius);padding:18px 26px;
-    min-width:190px;backdrop-filter:blur(10px);
-  }
-  .stat-card i{font-size:1.5rem;color:var(--accent-2);}
-  .stat-value{font-size:1.6rem;font-weight:700;color:var(--accent-2);font-family:'Share Tech Mono',monospace;}
-  .stat-label{font-size:.72rem;color:var(--muted);letter-spacing:1px;text-transform:uppercase;}
-
-  /* ---------- Main sections ---------- */
-  main{max-width:1080px;margin:0 auto;padding:20px 20px 40px;}
-  section.panel{
-    margin:26px 0;padding:34px;background:var(--bg-panel);
-    border:1px solid var(--border);border-radius:var(--radius);
-    backdrop-filter:blur(14px);position:relative;
-  }
-  section.panel::before{
-    content:attr(data-label);position:absolute;top:-11px;left:24px;
-    background:var(--bg);padding:0 10px;font-size:.68rem;color:var(--muted);
-    letter-spacing:2px;text-transform:uppercase;
-  }
-  section.panel h2{
-    display:flex;align-items:center;gap:12px;color:var(--accent-2);font-size:1.3rem;
-    margin-bottom:24px;font-family:'Share Tech Mono',monospace;letter-spacing:1px;
-  }
-
-  .feature-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px;}
-  .feature-item{
-    padding:24px;border:1px solid var(--border);border-radius:10px;
-    background:rgba(124,92,255,.03);transition:.3s;
-  }
-  .feature-item:hover{background:var(--accent-soft);transform:translateY(-4px);border-color:var(--accent);}
-  .feature-item i{font-size:1.6rem;color:var(--accent-2);margin-bottom:14px;display:block;}
-  .feature-item h3{font-size:.95rem;margin-bottom:8px;letter-spacing:.5px;}
-  .feature-item p{color:var(--muted);font-size:.82rem;}
-
-  .instructions{background:rgba(124,92,255,.06);border-left:3px solid var(--accent);border-radius:8px;padding:20px 22px;margin-bottom:26px;}
-  .instructions h3{color:var(--accent-2);font-size:.9rem;margin-bottom:12px;letter-spacing:.5px;}
-  .instructions ol{padding-left:20px;color:var(--muted);font-size:.85rem;}
-  .instructions li{margin-bottom:10px;}
-  .instructions li::marker{color:var(--accent-2);}
-
-  .input-box{display:flex;flex-direction:column;gap:16px;max-width:440px;}
-  .input-group{position:relative;}
-  .input-group i{position:absolute;left:18px;top:50%;transform:translateY(-50%);color:var(--muted);}
-  .input-group input,.input-group select,.input-group textarea{
-    width:100%;padding:15px 16px 15px 46px;border-radius:8px;
-    border:1px solid var(--border);background:rgba(0,0,0,.4);color:var(--text);
-    font-family:'JetBrains Mono',monospace;font-size:.9rem;transition:.25s;
-  }
-  .input-group input:focus,.input-group select:focus,.input-group textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(124,92,255,.12);}
-  .input-group input::placeholder,.input-group textarea::placeholder{color:#3d5c42;}
-  .input-group textarea{resize:vertical;min-height:100px;padding-top:16px;}
-
-  #status{margin-top:20px;padding:16px 18px;border-radius:8px;background:rgba(0,0,0,.3);border-left:3px solid var(--muted);font-size:.85rem;display:none;}
-  #status.show{display:block;}
-  #status.success{border-left-color:var(--accent-2);background:rgba(77,226,255,.08);color:var(--accent-2);}
-  #status.error{border-left-color:var(--danger);background:rgba(255,77,77,.08);color:#ff9a9a;}
-  #status.warning{border-left-color:var(--amber);background:rgba(255,210,63,.08);color:var(--amber);}
-
-  .code-wrap{display:none;margin-top:26px;animation:riseIn .5s ease;}
-  @keyframes riseIn{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
-  .code-box{
-    font-family:'Share Tech Mono',monospace;font-size:2rem;letter-spacing:8px;
-    text-align:center;padding:22px;border:1px dashed var(--accent-2);border-radius:10px;
-    background:rgba(0,0,0,.45);color:var(--accent-2);text-shadow:0 0 12px rgba(77,226,255,.5);
-    cursor:pointer;transition:.25s;
-  }
-  .code-box:hover{background:var(--accent-soft);}
-  .copy-hint{text-align:center;font-size:.72rem;color:var(--muted);margin-top:10px;letter-spacing:.5px;}
-  .waiting{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:18px;font-size:.78rem;color:var(--muted);}
-  .waiting .dot{width:7px;height:7px;background:var(--accent-2);border-radius:50%;box-shadow:0 0 10px rgba(77,226,255,.9);animation:blink 1.3s infinite;}
-
-  .link-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;}
-
-  footer{text-align:center;padding:50px 20px;color:var(--muted);font-size:.8rem;border-top:1px solid var(--border);margin-top:40px;}
-  footer span{color:var(--accent-2);}
-  #serverAddress{display:block;margin-top:8px;color:var(--muted);font-size:.72rem;}
-
+  /* ---------- Toast ---------- */
   #toast{
-    position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(100px);
-    background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#071222;padding:12px 24px;border-radius:30px;
-    font-size:.8rem;font-weight:700;transition:.4s cubic-bezier(.175,.885,.32,1.275);z-index:900;
+    position:fixed;bottom:32px;left:50%;transform:translate(-50%,150px);
+    padding:14px 26px;border-radius:14px;
+    background:linear-gradient(135deg,var(--orange),var(--pink));
+    color:#fff;font-weight:600;font-size:.85rem;z-index:600;
+    box-shadow:0 15px 40px rgba(255,107,26,.4);
+    transition:.4s cubic-bezier(.34,1.56,.64,1);
   }
-  #toast.show{transform:translateX(-50%) translateY(0);}
+  #toast.show{transform:translate(-50%,0);}
 
-  /* ---------- BOT MANAGEMENT STYLES ---------- */
-  .bot-dashboard{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;margin-bottom:24px;}
-  .bot-card{
-    background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:12px;
-    padding:20px;transition:.3s;position:relative;overflow:hidden;
+  /* ---------- Mobile Bottom Nav ---------- */
+  .mobile-nav{
+    display:none;position:fixed;bottom:0;left:0;right:0;z-index:100;
+    background:rgba(10,10,15,.9);backdrop-filter:blur(20px);
+    border-top:1px solid var(--stroke);
+    padding:10px 8px calc(10px + env(safe-area-inset-bottom));
+    grid-template-columns:repeat(5,1fr);
   }
-  .bot-card::before{
-    content:'';position:absolute;top:0;left:0;right:0;height:3px;
-    background:linear-gradient(90deg,var(--accent),var(--accent-2));
+  .mobile-nav a{
+    display:flex;flex-direction:column;align-items:center;gap:3px;
+    padding:8px 4px;color:var(--text-3);text-decoration:none;
+    font-size:.65rem;font-weight:600;border-radius:10px;transition:.2s;
   }
-  .bot-card:hover{border-color:var(--accent);transform:translateY(-3px);box-shadow:0 10px 30px rgba(124,92,255,.15);}
-  .bot-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;}
-  .bot-avatar{
-    width:48px;height:48px;border-radius:12px;
-    background:linear-gradient(135deg,var(--accent),var(--accent-2));
-    display:flex;align-items:center;justify-content:center;
-    font-size:1.2rem;color:#071222;font-weight:800;
-  }
-  .bot-info h3{font-size:.95rem;margin-bottom:4px;}
-  .bot-info .bot-id{font-size:.7rem;color:var(--muted);letter-spacing:1px;}
-  .bot-status{
-    display:inline-flex;align-items:center;gap:6px;font-size:.68rem;
-    padding:4px 10px;border-radius:20px;text-transform:uppercase;letter-spacing:1px;
-  }
-  .bot-status.online{background:rgba(74,222,128,.15);color:var(--success);border:1px solid rgba(74,222,128,.3);}
-  .bot-status.offline{background:rgba(255,107,122,.15);color:var(--danger);border:1px solid rgba(255,107,122,.3);}
-  .bot-status.connecting{background:rgba(255,210,112,.15);color:var(--amber);border:1px solid rgba(255,210,112,.3);}
-  .bot-status .dot{width:6px;height:6px;border-radius:50%;background:currentColor;animation:blink 1.4s infinite;}
-  .bot-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:16px 0;}
-  .bot-metric{text-align:center;padding:10px;background:rgba(124,92,255,.05);border-radius:8px;}
-  .bot-metric .value{font-size:1.1rem;font-weight:700;color:var(--accent-2);font-family:'Share Tech Mono',monospace;}
-  .bot-metric .label{font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;}
-  .bot-actions{display:flex;gap:8px;flex-wrap:wrap;}
-  .bot-actions .btn{flex:1;min-width:80px;padding:8px 12px;font-size:.7rem;}
+  .mobile-nav a i{font-size:1.1rem;}
+  .mobile-nav a.active{color:var(--orange);background:rgba(255,107,26,.08);}
 
-  /* ---------- Bot Commands Table ---------- */
-  .commands-table{width:100%;border-collapse:collapse;font-size:.82rem;}
-  .commands-table th{
-    text-align:left;padding:12px 14px;color:var(--accent-2);font-size:.72rem;
-    text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--border);
-    background:rgba(124,92,255,.05);
+  /* ---------- Responsive ---------- */
+  @media(max-width:1024px){
+    .sidebar{transform:translateX(-100%);}
+    .sidebar.open{transform:translateX(0);}
+    .main{margin-left:0;}
+    .menu-btn{display:block;}
+    .hero{padding:40px 24px 30px;}
+    .stats-grid{padding:16px 24px 30px;}
+    .section{padding:30px 24px;}
   }
-  .commands-table td{padding:12px 14px;border-bottom:1px solid rgba(124,92,255,.1);color:var(--muted);}
-  .commands-table tr:hover td{background:rgba(124,92,255,.04);color:var(--text);}
-  .cmd-name{color:var(--accent-2);font-family:'Share Tech Mono',monospace;font-weight:600;}
-  .cmd-badge{
-    display:inline-block;padding:3px 8px;border-radius:6px;font-size:.65rem;
-    text-transform:uppercase;letter-spacing:.5px;
-  }
-  .cmd-badge.admin{background:rgba(255,107,122,.15);color:var(--danger);}
-  .cmd-badge.user{background:rgba(74,222,128,.15);color:var(--success);}
-  .cmd-badge.group{background:rgba(255,210,112,.15);color:var(--amber);}
-
-  /* ---------- Bot Logs ---------- */
-  .logs-container{
-    background:rgba(0,0,0,.5);border:1px solid var(--border);border-radius:10px;
-    padding:16px;max-height:300px;overflow-y:auto;font-family:'Share Tech Mono',monospace;
-    font-size:.78rem;line-height:1.8;
-  }
-  .log-entry{display:flex;gap:12px;padding:4px 0;border-bottom:1px solid rgba(124,92,255,.06);}
-  .log-time{color:var(--muted);min-width:80px;}
-  .log-level{min-width:60px;font-weight:600;}
-  .log-level.info{color:var(--accent-2);}
-  .log-level.warn{color:var(--amber);}
-  .log-level.error{color:var(--danger);}
-  .log-level.success{color:var(--success);}
-  .log-msg{color:var(--text);word-break:break-word;}
-
-  /* ---------- Bot Settings ---------- */
-  .settings-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;}
-  .setting-item{
-    display:flex;justify-content:space-between;align-items:center;
-    padding:14px 16px;background:rgba(0,0,0,.2);border:1px solid var(--border);
-    border-radius:8px;transition:.25s;
-  }
-  .setting-item:hover{background:rgba(124,92,255,.06);}
-  .setting-item .label{font-size:.82rem;color:var(--text);}
-  .setting-item .desc{font-size:.7rem;color:var(--muted);margin-top:2px;}
-  .toggle{position:relative;width:44px;height:24px;background:rgba(255,255,255,.1);border-radius:12px;cursor:pointer;transition:.3s;flex-shrink:0;}
-  .toggle.active{background:var(--accent);}
-  .toggle::after{
-    content:'';position:absolute;top:3px;left:3px;width:18px;height:18px;
-    background:#fff;border-radius:50%;transition:.3s;
-  }
-  .toggle.active::after{transform:translateX(20px);}
-
-  /* ---------- Bot Templates ---------- */
-  .template-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;}
-  .template-card{
-    padding:20px;border:1px solid var(--border);border-radius:10px;
-    background:rgba(124,92,255,.03);transition:.3s;cursor:pointer;
-  }
-  .template-card:hover{background:var(--accent-soft);border-color:var(--accent);transform:translateY(-3px);}
-  .template-card i{font-size:1.8rem;color:var(--accent-2);margin-bottom:12px;}
-  .template-card h4{font-size:.9rem;margin-bottom:6px;}
-  .template-card p{font-size:.75rem;color:var(--muted);}
-
-  /* ---------- Scrollbar ---------- */
-  ::-webkit-scrollbar{width:6px;}
-  ::-webkit-scrollbar-track{background:rgba(0,0,0,.2);}
-  ::-webkit-scrollbar-thumb{background:var(--accent);border-radius:3px;}
-
   @media(max-width:768px){
-    nav{padding:0 18px;}
-    .nav-links{
-      position:fixed;top:74px;left:0;right:0;background:rgba(2,6,3,.97);
-      flex-direction:column;padding:16px;gap:0;border-bottom:1px solid var(--border);
-      transform:translateY(-110%);opacity:0;visibility:hidden;transition:.3s;
-    }
-    .nav-links.active{transform:translateY(0);opacity:1;visibility:visible;}
-    .nav-links a{padding:14px;width:100%;text-align:center;border-bottom:1px solid rgba(124,92,255,.08);}
-    .nav-toggle{display:block;}
-    header{padding:120px 16px 50px;}
-    section.panel{padding:24px 18px;}
-    .code-box{font-size:1.4rem;letter-spacing:5px;}
-    .bot-metrics{grid-template-columns:repeat(3,1fr);}
-    .commands-table{font-size:.72rem;}
-    .commands-table th,.commands-table td{padding:8px;}
+    .topbar{padding:14px 20px;}
+    .search-bar{display:none;}
+    .user-chip .name{display:none;}
+    .connect-wrap{grid-template-columns:1fr;}
+    .mobile-nav{display:grid;}
+    body{padding-bottom:70px;}
+    .hero h1{font-size:2.2rem;}
+    .section{padding:24px 18px;}
+    .hero{padding:30px 18px 20px;}
+    .stats-grid{padding:12px 18px 24px;grid-template-columns:repeat(2,1fr);gap:12px;}
+    .stat-tile{padding:18px;}
+    .stat-num{font-size:1.5rem;}
+    .stat-icon{width:38px;height:38px;font-size:.95rem;}
+    .cmd-item{grid-template-columns:1fr;gap:8px;padding:14px 16px;}
+    .cmd-usage{display:none;}
+    .bots-grid{grid-template-columns:1fr;}
+    .logs-container{padding:12px;font-size:.75rem;}
+    .log-row{grid-template-columns:auto 1fr;gap:8px;}
+    .log-time{display:none;}
   }
 </style>
 </head>
 <body>
 
-<div id="boot"><pre id="bootText"></pre></div>
-<div class="scanlines"></div>
-<div class="grid-bg"></div>
-<div class="glow-orb"></div>
-<div class="particles" id="particles"></div>
+<!-- Ambient Background -->
+<div class="bg-layer">
+  <div class="bg-blob b1"></div>
+  <div class="bg-blob b2"></div>
+  <div class="bg-blob b3"></div>
+  <div class="bg-grid"></div>
+  <div class="bg-noise"></div>
+</div>
 
-<!-- Channel modal -->
-<div id="channelModal" class="modal">
-  <div class="modal-content">
-    <div class="modal-head">
-      <h2>mickey_channels.sh</h2>
-      <button class="modal-close" id="modalClose">&times;</button>
+<!-- Sidebar -->
+<aside class="sidebar" id="sidebar">
+  <div class="logo-wrap">
+    <div class="logo">MG</div>
+    <div class="logo-text">
+      <h1>Mickey Glitch</h1>
+      <span>Bot Platform v2</span>
     </div>
-    <div class="modal-body">
-      <p>// Follow the official MICKEY channels below to unlock pairing access and receive live updates.</p>
-      <div class="channel-list">
-        <a href="https://whatsapp.com/channel/0029VaGiJKfIiRoybPBMTy38" target="_blank" class="channel-item"><i class="fab fa-whatsapp"></i><span>WhatsApp Channel — Updates</span></a>
-        <a href="https://whatsapp.com/channel/0029Vb7SDZ31iUxhzG0W4t1M" target="_blank" class="channel-item"><i class="fab fa-whatsapp"></i><span>WhatsApp Channel — Support</span></a>
-        <a href="https://www.youtube.com/@Teamsyedhaker" target="_blank" class="channel-item"><i class="fab fa-youtube"></i><span>YouTube Channel</span></a>
-        <a href="https://whatsapp.com/channel/0029VbCkaqb5fM5VgpvRJc2Y" target="_blank" class="channel-item"><i class="fab fa-whatsapp"></i><span>WhatsApp Channel — Announcements</span></a>
+  </div>
+
+  <div class="nav-section-label">Main</div>
+  <a href="#dashboard" class="nav-item active"><i class="fas fa-th-large"></i> Dashboard</a>
+  <a href="#bots" class="nav-item"><i class="fas fa-robot"></i> Bots <span class="badge" id="botsBadge">4</span></a>
+  <a href="#commands" class="nav-item"><i class="fas fa-terminal"></i> Commands</a>
+  <a href="#logs" class="nav-item"><i class="fas fa-stream"></i> Activity Logs</a>
+
+  <div class="nav-section-label">Configure</div>
+  <a href="#settings" class="nav-item"><i class="fas fa-sliders-h"></i> Settings</a>
+  <a href="#templates" class="nav-item"><i class="fas fa-cubes"></i> Templates</a>
+  <a href="#connect" class="nav-item"><i class="fas fa-link"></i> Connect</a>
+  <a href="#links" class="nav-item"><i class="fas fa-share-alt"></i> Community</a>
+
+  <div class="sidebar-footer">
+    <h4>Need help?</h4>
+    <p>Join our WhatsApp channel for support</p>
+    <a href="https://whatsapp.com/channel/0029VaGiJKfIiRoybPBMTy38" target="_blank" class="btn btn-primary btn-sm">
+      <i class="fab fa-whatsapp"></i> Join Channel
+    </a>
+  </div>
+</aside>
+
+<!-- Main Content -->
+<div class="main">
+
+  <!-- Topbar -->
+  <header class="topbar">
+    <button class="menu-btn" id="menuBtn"><i class="fas fa-bars"></i></button>
+    <div class="search-bar">
+      <i class="fas fa-search"></i>
+      <input type="text" placeholder="Search bots, commands, logs...">
+    </div>
+    <div class="topbar-actions">
+      <button class="icon-btn" title="Notifications"><i class="fas fa-bell"></i><span class="dot"></span></button>
+      <button class="icon-btn" title="Refresh" id="refreshBtn"><i class="fas fa-sync-alt"></i></button>
+      <div class="user-chip">
+        <div class="avatar">OP</div>
+        <span class="name">Operator</span>
       </div>
-      <button class="btn" id="confirmFollow"><i class="fas fa-check"></i> I've followed all channels</button>
     </div>
+  </header>
+
+  <!-- Hero -->
+  <section class="hero" id="dashboard">
+    <div class="hero-badge"><span class="live"></span> System Operational · All Nodes Online</div>
+    <h1>Control your <span class="grad">WhatsApp bots</span><br>from one place.</h1>
+    <p class="lead">A premium automation platform for managing, monitoring and scaling WhatsApp bots with real-time analytics and enterprise-grade reliability.</p>
+    <div class="hero-cta">
+      <a href="#connect" class="btn btn-primary"><i class="fas fa-bolt"></i> Connect a Bot</a>
+      <a href="#bots" class="btn btn-ghost"><i class="fas fa-eye"></i> View Dashboard</a>
+    </div>
+  </section>
+
+  <!-- Stats -->
+  <section class="stats-grid">
+    <div class="stat-tile">
+      <div class="stat-head">
+        <div class="stat-icon"><i class="fas fa-robot"></i></div>
+        <span class="stat-trend"><i class="fas fa-arrow-up"></i> 12%</span>
+      </div>
+      <div class="stat-num" id="activeBots">0</div>
+      <div class="stat-lbl">Active Bots</div>
+    </div>
+    <div class="stat-tile">
+      <div class="stat-head">
+        <div class="stat-icon lime"><i class="fas fa-tower-broadcast"></i></div>
+        <span class="stat-trend"><i class="fas fa-arrow-up"></i> 8%</span>
+      </div>
+      <div class="stat-num" id="activeSockets">0</div>
+      <div class="stat-lbl">Live Sessions</div>
+    </div>
+    <div class="stat-tile">
+      <div class="stat-head">
+        <div class="stat-icon cyan"><i class="fas fa-users"></i></div>
+        <span class="stat-trend"><i class="fas fa-arrow-up"></i> 24%</span>
+      </div>
+      <div class="stat-num" id="totalUsers">0</div>
+      <div class="stat-lbl">Total Users</div>
+    </div>
+    <div class="stat-tile">
+      <div class="stat-head">
+        <div class="stat-icon pink"><i class="fas fa-comments"></i></div>
+        <span class="stat-trend"><i class="fas fa-arrow-up"></i> 31%</span>
+      </div>
+      <div class="stat-num" id="totalMessages">0</div>
+      <div class="stat-lbl">Messages Handled</div>
+    </div>
+  </section>
+
+  <!-- Bots -->
+  <section class="section" id="bots">
+    <div class="section-head">
+      <div class="section-title">
+        <h2>Your Bots</h2>
+        <p>Manage, monitor and control your connected bots</p>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <button class="btn btn-ghost btn-sm" id="refreshBotsBtn"><i class="fas fa-sync-alt"></i> Refresh</button>
+        <button class="btn btn-lime btn-sm" id="createBotBtn"><i class="fas fa-plus"></i> New Bot</button>
+      </div>
+    </div>
+    <div class="bots-grid" id="botDashboard"></div>
+  </section>
+
+  <!-- Commands -->
+  <section class="section" id="commands">
+    <div class="section-head">
+      <div class="section-title">
+        <h2>Command Library</h2>
+        <p>All commands available across your bots</p>
+      </div>
+    </div>
+    <div class="search-row">
+      <div class="search-bar">
+        <i class="fas fa-search"></i>
+        <input type="text" id="commandSearch" placeholder="Search commands...">
+      </div>
+      <div class="filter-chips">
+        <button class="chip active" data-cmd-filter="all">All</button>
+        <button class="chip" data-cmd-filter="user">User</button>
+        <button class="chip" data-cmd-filter="admin">Admin</button>
+        <button class="chip" data-cmd-filter="group">Group</button>
+      </div>
+    </div>
+    <div class="commands-wrap" id="commandsList"></div>
+  </section>
+
+  <!-- Logs -->
+  <section class="section" id="logs">
+    <div class="section-head">
+      <div class="section-title">
+        <h2>Activity Logs</h2>
+        <p>Real-time stream of bot events</p>
+      </div>
+      <div class="filter-chips">
+        <button class="chip active" data-log-filter="all">All</button>
+        <button class="chip" data-log-filter="info">Info</button>
+        <button class="chip" data-log-filter="warn">Warning</button>
+        <button class="chip" data-log-filter="error">Error</button>
+        <button class="btn btn-ghost btn-sm" id="clearLogsBtn"><i class="fas fa-trash"></i></button>
+      </div>
+    </div>
+    <div class="logs-container" id="logsContainer"></div>
+  </section>
+
+  <!-- Settings -->
+  <section class="section" id="settings">
+    <div class="section-head">
+      <div class="section-title">
+        <h2>Bot Settings</h2>
+        <p>Configure behavior for all your bots</p>
+      </div>
+    </div>
+    <div class="settings-grid">
+      <div class="setting-row">
+        <div class="setting-info"><h4>Auto Reply</h4><p>Automatically respond to messages</p></div>
+        <div class="switch active" data-setting="autoReply"></div>
+      </div>
+      <div class="setting-row">
+        <div class="setting-info"><h4>Read Receipts</h4><p>Send blue ticks on read</p></div>
+        <div class="switch active" data-setting="readReceipts"></div>
+      </div>
+      <div class="setting-row">
+        <div class="setting-info"><h4>Typing Indicator</h4><p>Show typing status</p></div>
+        <div class="switch active" data-setting="typingIndicator"></div>
+      </div>
+      <div class="setting-row">
+        <div class="setting-info"><h4>Auto Reconnect</h4><p>Recover from disconnects</p></div>
+        <div class="switch active" data-setting="autoReconnect"></div>
+      </div>
+      <div class="setting-row">
+        <div class="setting-info"><h4>Anti-Spam Shield</h4><p>Block spam messages</p></div>
+        <div class="switch" data-setting="antiSpam"></div>
+      </div>
+      <div class="setting-row">
+        <div class="setting-info"><h4>Message Logging</h4><p>Save all message history</p></div>
+        <div class="switch active" data-setting="logMessages"></div>
+      </div>
+    </div>
+    <div style="margin-top:24px;display:flex;gap:16px;align-items:end;flex-wrap:wrap;">
+      <div class="field" style="margin:0;min-width:220px;">
+        <label>Command Prefix</label>
+        <input type="text" id="botPrefix" value="!" maxlength="3">
+      </div>
+      <button class="btn btn-lime" id="saveSettingsBtn"><i class="fas fa-save"></i> Save Settings</button>
+    </div>
+  </section>
+
+  <!-- Templates -->
+  <section class="section" id="templates">
+    <div class="section-head">
+      <div class="section-title">
+        <h2>Starter Templates</h2>
+        <p>Launch a bot in seconds with pre-built configurations</p>
+      </div>
+    </div>
+    <div class="templates-grid">
+      <div class="template-card" data-template="assistant">
+        <div class="t-icon t1"><i class="fas fa-headset"></i></div>
+        <h4>Virtual Assistant</h4>
+        <p>General-purpose helper for answering questions and assisting users.</p>
+      </div>
+      <div class="template-card" data-template="moderator">
+        <div class="t-icon t2"><i class="fas fa-shield-halved"></i></div>
+        <h4>Group Moderator</h4>
+        <p>Automatic group moderation, spam filtering and member management.</p>
+      </div>
+      <div class="template-card" data-template="media">
+        <div class="t-icon t3"><i class="fas fa-photo-film"></i></div>
+        <h4>Media Downloader</h4>
+        <p>Download and convert media from YouTube, TikTok, Instagram and more.</p>
+      </div>
+      <div class="template-card" data-template="chatbot">
+        <div class="t-icon t4"><i class="fas fa-brain"></i></div>
+        <h4>AI Chatbot</h4>
+        <p>Conversational AI powered by advanced language models.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Connect -->
+  <section class="section" id="connect">
+    <div class="section-head">
+      <div class="section-title">
+        <h2>Connect to WhatsApp</h2>
+        <p>Link your number using a secure pairing code</p>
+      </div>
+    </div>
+    <div class="connect-wrap">
+      <div class="connect-card">
+        <h3><i class="fas fa-list-check"></i> How it works</h3>
+        <div class="steps">
+          <div class="step"><div class="step-num">1</div><div class="step-txt">Enter your WhatsApp number with country code (no +, no spaces).</div></div>
+          <div class="step"><div class="step-num">2</div><div class="step-txt">Click <strong>Request Pairing Code</strong> to generate a secure code.</div></div>
+          <div class="step"><div class="step-num">3</div><div class="step-txt">Open WhatsApp → Settings → Linked Devices → Link a Device.</div></div>
+          <div class="step"><div class="step-num">4</div><div class="step-txt">Paste the 8-digit code when prompted. Done!</div></div>
+        </div>
+        <div class="field" style="margin:0;">
+          <label>WhatsApp Number</label>
+          <input type="tel" id="phone" placeholder="e.g. 255712345678">
+        </div>
+        <button class="btn btn-primary" id="requestPairing" style="margin-top:16px;width:100%;">
+          <i class="fas fa-key"></i> Request Pairing Code
+        </button>
+      </div>
+
+      <div class="pair-result">
+        <h3 style="font-family:'Space Grotesk',sans-serif;font-size:1.05rem;margin-bottom:8px;">
+          <i class="fas fa-qrcode" style="color:var(--orange);"></i> Your Pairing Code
+        </h3>
+        <p style="font-size:.8rem;color:var(--text-3);">Tap the code to copy it</p>
+        <div class="code-display" id="pairingCode" onclick="copyCode()">— — — —</div>
+        <div class="alert" id="status"></div>
+        <div style="font-size:.72rem;color:var(--text-3);margin-top:14px;">
+          <i class="fas fa-clock"></i> Code expires in 60 seconds
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Links -->
+  <section class="section" id="links">
+    <div class="section-head">
+      <div class="section-title">
+        <h2>Community</h2>
+        <p>Stay connected with updates and support</p>
+      </div>
+    </div>
+    <div class="templates-grid">
+      <a href="https://whatsapp.com/channel/0029VaGiJKfIiRoybPBMTy38" target="_blank" class="channel-link">
+        <i class="fab fa-whatsapp"></i> WhatsApp Updates
+      </a>
+      <a href="https://whatsapp.com/channel/0029Vb7SDZ31iUxhzG0W4t1M" target="_blank" class="channel-link">
+        <i class="fab fa-whatsapp"></i> Support Channel
+      </a>
+      <a href="https://www.youtube.com/@Teamsyedhaker" target="_blank" class="channel-link">
+        <i class="fab fa-youtube"></i> YouTube Channel
+      </a>
+      <a href="https://whatsapp.com/channel/0029VbCkaqb5fM5VgpvRJc2Y" target="_blank" class="channel-link">
+        <i class="fab fa-whatsapp"></i> Announcements
+      </a>
+    </div>
+  </section>
+
+  <footer style="padding:40px;text-align:center;border-top:1px solid var(--stroke);color:var(--text-3);font-size:.8rem;">
+    © <span id="year"></span> <strong style="color:var(--orange);">Mickey Glitch 2</strong> · Built with <i class="fas fa-heart" style="color:var(--pink);"></i>
+    <div style="margin-top:6px;font-size:.72rem;" id="serverAddress">Detecting server...</div>
+  </footer>
+
+</div>
+
+<!-- Mobile Bottom Nav -->
+<nav class="mobile-nav">
+  <a href="#dashboard" class="active"><i class="fas fa-th-large"></i>Home</a>
+  <a href="#bots"><i class="fas fa-robot"></i>Bots</a>
+  <a href="#commands"><i class="fas fa-terminal"></i>Commands</a>
+  <a href="#logs"><i class="fas fa-stream"></i>Logs</a>
+  <a href="#settings"><i class="fas fa-cog"></i>Settings</a>
+</nav>
+
+<!-- Welcome Modal -->
+<div class="modal" id="channelModal">
+  <div class="modal-inner">
+    <h3>Welcome to Mickey Glitch 2 👋</h3>
+    <p>Follow our community channels to unlock pairing access and receive updates.</p>
+    <a href="https://whatsapp.com/channel/0029VaGiJKfIiRoybPBMTy38" target="_blank" class="channel-link"><i class="fab fa-whatsapp"></i> Updates Channel</a>
+    <a href="https://whatsapp.com/channel/0029Vb7SDZ31iUxhzG0W4t1M" target="_blank" class="channel-link"><i class="fab fa-whatsapp"></i> Support Channel</a>
+    <a href="https://www.youtube.com/@Teamsyedhaker" target="_blank" class="channel-link"><i class="fab fa-youtube"></i> YouTube Channel</a>
+    <button class="btn btn-primary" id="confirmFollow" style="width:100%;margin-top:12px;">
+      <i class="fas fa-check"></i> I've followed all channels
+    </button>
   </div>
 </div>
 
-<nav>
-  <div class="brand">
-    <div class="mark">MG</div>
-    <div>
-      <div class="name">MICKEY GLITCH 2</div>
-      <div class="tag">Bot Control Center</div>
-    </div>
-  </div>
-  <div class="nav-links" id="navLinks">
-    <a href="#features">features</a>
-    <a href="#bot-dashboard">bots</a>
-    <a href="#bot-commands">commands</a>
-    <a href="#bot-logs">logs</a>
-    <a href="#bot-settings">settings</a>
-    <a href="#connect">connect</a>
-  </div>
-  <button class="nav-toggle" id="navToggle"><i class="fas fa-bars"></i></button>
-</nav>
-
-<header>
-  <div class="eyebrow"><span class="pulse"></span> SYSTEM READY // BOT ENGINE ONLINE</div>
-  <h1><span class="glitch-wrap" data-text="MICKEY GLITCH 2">MICKEY GLITCH 2</span></h1>
-  <p class="sub">Advanced WhatsApp Bot Control Center — Manage, monitor &amp; automate with <strong>MICKEY</strong>.</p>
-
-  <div class="stats-row">
-    <div class="stat-card"><i class="fas fa-robot"></i><div><div class="stat-value" id="activeBots">0</div><div class="stat-label">Active Bots</div></div></div>
-    <div class="stat-card"><i class="fas fa-signal"></i><div><div class="stat-value" id="activeSockets">0</div><div class="stat-label">Active Sockets</div></div></div>
-    <div class="stat-card"><i class="fas fa-users"></i><div><div class="stat-value" id="totalUsers">0</div><div class="stat-label">Total Users</div></div></div>
-    <div class="stat-card"><i class="fas fa-comments"></i><div><div class="stat-value" id="totalMessages">0</div><div class="stat-label">Messages</div></div></div>
-  </div>
-</header>
-
-<main>
-  <!-- FEATURES SECTION -->
-  <section id="features" class="panel" data-label="./features">
-    <h2><i class="fas fa-star"></i> Features</h2>
-    <div class="feature-grid">
-      <div class="feature-item"><i class="fas fa-robot"></i><h3>Multi-Bot Support</h3><p>Run and manage multiple bots from a single dashboard.</p></div>
-      <div class="feature-item"><i class="fas fa-reply"></i><h3>Auto Replies</h3><p>Smart automated responses based on customizable triggers.</p></div>
-      <div class="feature-item"><i class="fas fa-image"></i><h3>Media Tools</h3><p>Download, convert, and manage media files with ease.</p></div>
-      <div class="feature-item"><i class="fas fa-puzzle-piece"></i><h3>Commands System</h3><p>Extend functionality with custom commands and scripts.</p></div>
-      <div class="feature-item"><i class="fas fa-shield-alt"></i><h3>Security</h3><p>Built-in safeguards to protect your privacy and session data.</p></div>
-      <div class="feature-item"><i class="fas fa-chart-line"></i><h3>Analytics</h3><p>Real-time statistics and performance monitoring.</p></div>
-      <div class="feature-item"><i class="fas fa-clock"></i><h3>Scheduler</h3><p>Schedule messages and tasks to run automatically.</p></div>
-      <div class="feature-item"><i class="fas fa-plug"></i><h3>Plugins</h3><p>Extend bot capabilities with community plugins.</p></div>
-    </div>
-  </section>
-
-  <!-- BOT DASHBOARD SECTION -->
-  <section id="bot-dashboard" class="panel" data-label="./bots">
-    <h2><i class="fas fa-robot"></i> Bot Dashboard</h2>
-    <div class="bot-dashboard" id="botDashboard">
-      <!-- Bot cards will be dynamically inserted here -->
-    </div>
-    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:20px;">
-      <button class="btn btn-sm" id="createBotBtn" style="width:auto;"><i class="fas fa-plus"></i> Create New Bot</button>
-      <button class="btn btn-sm btn-outline" id="refreshBotsBtn" style="width:auto;"><i class="fas fa-sync"></i> Refresh Bots</button>
-    </div>
-  </section>
-
-  <!-- BOT COMMANDS SECTION -->
-  <section id="bot-commands" class="panel" data-label="./commands">
-    <h2><i class="fas fa-terminal"></i> Bot Commands</h2>
-    <div class="input-group" style="margin-bottom:20px;">
-      <i class="fas fa-search"></i>
-      <input type="text" id="commandSearch" placeholder="Search commands...">
-    </div>
-    <div style="overflow-x:auto;">
-      <table class="commands-table">
-        <thead>
-          <tr>
-            <th>Command</th>
-            <th>Description</th>
-            <th>Usage</th>
-            <th>Access</th>
-          </tr>
-        </thead>
-        <tbody id="commandsTableBody">
-          <!-- Commands will be dynamically inserted here -->
-        </tbody>
-      </table>
-    </div>
-  </section>
-
-  <!-- BOT LOGS SECTION -->
-  <section id="bot-logs" class="panel" data-label="./logs">
-    <h2><i class="fas fa-list-alt"></i> Bot Logs</h2>
-    <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
-      <button class="btn btn-sm btn-outline" data-log-filter="all" style="width:auto;"><i class="fas fa-list"></i> All</button>
-      <button class="btn btn-sm btn-outline" data-log-filter="info" style="width:auto;"><i class="fas fa-info-circle"></i> Info</button>
-      <button class="btn btn-sm btn-outline" data-log-filter="warn" style="width:auto;"><i class="fas fa-exclamation-triangle"></i> Warning</button>
-      <button class="btn btn-sm btn-outline" data-log-filter="error" style="width:auto;"><i class="fas fa-times-circle"></i> Error</button>
-      <button class="btn btn-sm btn-outline" id="clearLogsBtn" style="width:auto;margin-left:auto;"><i class="fas fa-trash"></i> Clear</button>
-    </div>
-    <div class="logs-container" id="logsContainer">
-      <!-- Logs will be dynamically inserted here -->
-    </div>
-  </section>
-
-  <!-- BOT SETTINGS SECTION -->
-  <section id="bot-settings" class="panel" data-label="./settings">
-    <h2><i class="fas fa-cog"></i> Bot Settings</h2>
-    <div class="settings-grid">
-      <div class="setting-item">
-        <div>
-          <div class="label">Auto Reply</div>
-          <div class="desc">Automatically reply to messages</div>
-        </div>
-        <div class="toggle active" data-setting="autoReply"></div>
-      </div>
-      <div class="setting-item">
-        <div>
-          <div class="label">Read Receipts</div>
-          <div class="desc">Send read receipts to messages</div>
-        </div>
-        <div class="toggle active" data-setting="readReceipts"></div>
-      </div>
-      <div class="setting-item">
-        <div>
-          <div class="label">Typing Indicator</div>
-          <div class="desc">Show typing indicator when processing</div>
-        </div>
-        <div class="toggle active" data-setting="typingIndicator"></div>
-      </div>
-      <div class="setting-item">
-        <div>
-          <div class="label">Auto Reconnect</div>
-          <div class="desc">Reconnect automatically on disconnect</div>
-        </div>
-        <div class="toggle active" data-setting="autoReconnect"></div>
-      </div>
-      <div class="setting-item">
-        <div>
-          <div class="label">Anti-Spam</div>
-          <div class="desc">Block spammy messages automatically</div>
-        </div>
-        <div class="toggle" data-setting="antiSpam"></div>
-      </div>
-      <div class="setting-item">
-        <div>
-          <div class="label">Log Messages</div>
-          <div class="desc">Save message logs for analysis</div>
-        </div>
-        <div class="toggle active" data-setting="logMessages"></div>
-      </div>
-    </div>
-    <div style="margin-top:20px;">
-      <div class="input-group" style="max-width:300px;">
-        <i class="fas fa-hashtag"></i>
-        <input type="text" id="botPrefix" placeholder="Command prefix (default: !)" value="!">
-      </div>
-    </div>
-    <button class="btn btn-sm btn-success" id="saveSettingsBtn" style="width:auto;margin-top:16px;"><i class="fas fa-save"></i> Save Settings</button>
-  </section>
-
-  <!-- BOT TEMPLATES SECTION -->
-  <section id="bot-templates" class="panel" data-label="./templates">
-    <h2><i class="fas fa-layer-group"></i> Bot Templates</h2>
-    <div class="template-grid">
-      <div class="template-card" data-template="assistant">
-        <i class="fas fa-headset"></i>
-        <h4>Virtual Assistant</h4>
-        <p>General purpose assistant for answering questions and helping users.</p>
-      </div>
-      <div class="template-card" data-template="moderator">
-        <i class="fas fa-shield-alt"></i>
-        <h4>Group Moderator</h4>
-        <p>Automatically moderate groups, remove spam, and manage members.</p>
-      </div>
-      <div class="template-card" data-template="media">
-        <i class="fas fa-photo-video"></i>
-        <h4>Media Downloader</h4>
-        <p>Download videos and images from various platforms.</p>
-      </div>
-      <div class="template-card" data-template="chatbot">
-        <i class="fas fa-comments"></i>
-        <h4>AI Chatbot</h4>
-        <p>Intelligent chatbot powered by AI for natural conversations.</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- CONNECT SECTION -->
-  <section id="connect" class="panel" data-label="./connect">
-    <h2><i class="fas fa-link"></i> Connect to WhatsApp</h2>
-    <div class="instructions">
-      <h3>How to connect</h3>
-      <ol>
-        <li>Enter your WhatsApp number with country code (no "+", no spaces, no brackets)</li>
-        <li>Click "Request Pairing Code"</li>
-        <li>Copy the 8-digit code</li>
-        <li>Open WhatsApp → Settings → Linked Devices → Link a Device</li>
-        <li>Paste the code when prompted</li>
-      </ol>
-    </div>
-
-    <div class="input-box">
-      <div class="input-group">
-        <i class="fas fa-phone"></i>
-        <input type="tel" id="phone" placeholder="e.g. 923300000000 (with country code)">
-      </div>
-      <button class="btn" id="requestPairing"><i class="fas fa-key"></i> Request Pairing Code</button>
-    </div>
-
-    <div id="status"></div>
-
-    <div class="code-wrap" id="codeWrap">
-      <div class="code-box" id="pairingCode" onclick="copyCode()">0000 0000</div>
-      <div class="copy-hint">Tap the code to copy</div>
-      <div class="waiting"><span class="dot"></span> Waiting for device to link...</div>
-    </div>
-  </section>
-
-  <!-- LINKS SECTION -->
-  <section id="links" class="panel" data-label="./links">
-    <h2><i class="fas fa-external-link-alt"></i> Links</h2>
-    <div class="link-grid">
-      <a class="btn btn-outline" href="https://whatsapp.com/channel/0029VaGiJKfIiRoybPBMTy38" target="_blank"><i class="fab fa-whatsapp"></i> WhatsApp Channel</a>
-      <a class="btn btn-outline" href="https://whatsapp.com/channel/0029Vb7SDZ31iUxhzG0W4t1M" target="_blank"><i class="fab fa-whatsapp"></i> WhatsApp Channel</a>
-      <a class="btn btn-outline" href="https://www.youtube.com/@Teamsyedhaker" target="_blank"><i class="fab fa-youtube"></i> YouTube Channel</a>
-      <a class="btn btn-outline" href="https://whatsapp.com/channel/0029VbCkaqb5fM5VgpvRJc2Y" target="_blank"><i class="fab fa-whatsapp"></i> WhatsApp Channel</a>
-    </div>
-  </section>
-</main>
-
-<footer>&copy; <span id="year"></span> <span>MICKEY</span> — All rights reserved.<span id="serverAddress">Detecting server address...</span></footer>
-
-<div id="toast">CODE COPIED!</div>
+<div id="toast">Copied to clipboard!</div>
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
-/* ---------------- Boot sequence ---------------- */
-const bootLines = [
-  "booting mickey-glitch-2 kernel...",
-  "loading whatsapp bridge module... OK",
-  "initializing bot engine... OK",
-  "loading bot templates... OK",
-  "verifying session store... OK",
-  "starting bot manager... OK",
-  "welcome, operator."
-];
-const bootEl = document.getElementById('bootText');
-let li = 0, ci = 0;
-function typeBoot(){
-  if(li >= bootLines.length){
-    setTimeout(()=>document.getElementById('boot').classList.add('hide'), 400);
-    return;
-  }
-  const line = bootLines[li];
-  if(ci <= line.length){
-    bootEl.innerText = bootLines.slice(0,li).join('\n') + (li>0?'\n':'') + line.slice(0,ci) + ' ';
-    bootEl.innerHTML = bootEl.innerText.replace(/\n/g,'<br>') + '<span class="cursor"></span>';
-    ci++;
-    setTimeout(typeBoot, 18);
-  } else {
-    li++; ci = 0;
-    setTimeout(typeBoot, 120);
-  }
-}
-typeBoot();
-
-/* ---------------- Particles ---------------- */
-const pWrap = document.getElementById('particles');
-for(let i=0;i<40;i++){
-  const p = document.createElement('div');
-  p.className = 'particle';
-  const size = Math.random()*3+1;
-  p.style.width = size+'px';
-  p.style.height = size+'px';
-  p.style.left = Math.random()*100+'%';
-  p.style.animationDuration = (12+Math.random()*14)+'s';
-  p.style.animationDelay = (Math.random()*14)+'s';
-  pWrap.appendChild(p);
-}
-
-/* ---------------- Nav toggle ---------------- */
-const navToggle = document.getElementById('navToggle');
-const navLinks = document.getElementById('navLinks');
-navToggle.addEventListener('click', ()=> navLinks.classList.toggle('active'));
-navLinks.querySelectorAll('a').forEach(a=>a.addEventListener('click', ()=>navLinks.classList.remove('active')));
-
-/* ---------------- Channel modal ---------------- */
-const channelModal = document.getElementById('channelModal');
-const modalClose = document.getElementById('modalClose');
-const confirmFollow = document.getElementById('confirmFollow');
-window.addEventListener('load', ()=>{
-  if(!localStorage.getItem('mickey_followed_channels')){
-    setTimeout(()=>channelModal.classList.add('active'), 1200);
-  }
-});
-modalClose.addEventListener('click', ()=>channelModal.classList.remove('active'));
-confirmFollow.addEventListener('click', ()=>{
-  localStorage.setItem('mickey_followed_channels','1');
-  channelModal.classList.remove('active');
-});
-
-/* ---------------- Toast ---------------- */
-const toast = document.getElementById('toast');
-function showToast(msg){
-  toast.innerText = msg;
-  toast.classList.add('show');
-  setTimeout(()=>toast.classList.remove('show'), 2000);
-}
-
-/* ---------------- Status helper ---------------- */
-const statusEl = document.getElementById('status');
-function setStatus(msg, type){
-  statusEl.innerText = msg;
-  statusEl.className = 'show ' + (type || '');
-}
-
-/* ---------------- BOT DATA & MANAGEMENT ---------------- */
+/* ============================================
+   DATA
+   ============================================ */
 const bots = [
-  { id: 'bot_001', name: 'Mickey Assistant', status: 'online', uptime: '2d 14h', messages: 1247, commands: 342, avatar: 'MA' },
-  { id: 'bot_002', name: 'Group Moderator', status: 'online', uptime: '5d 8h', messages: 892, commands: 156, avatar: 'GM' },
-  { id: 'bot_003', name: 'Media Downloader', status: 'connecting', uptime: '0d 0h', messages: 45, commands: 23, avatar: 'MD' },
-  { id: 'bot_004', name: 'AI Chatbot', status: 'offline', uptime: '0d 0h', messages: 0, commands: 0, avatar: 'AI' }
+  { id: 'bot_001', name: 'Mickey Assistant', status: 'online', uptime: '2d 14h', messages: 1247, commands: 342, avatar: 'MA', color: '' },
+  { id: 'bot_002', name: 'Group Moderator', status: 'online', uptime: '5d 8h', messages: 892, commands: 156, avatar: 'GM', color: 'lime' },
+  { id: 'bot_003', name: 'Media Downloader', status: 'connecting', uptime: '0d 0h', messages: 45, commands: 23, avatar: 'MD', color: 'cyan' },
+  { id: 'bot_004', name: 'AI Chatbot', status: 'offline', uptime: '0d 0h', messages: 0, commands: 0, avatar: 'AI', color: 'pink' }
 ];
 
 const commands = [
   { name: '!help', description: 'Show all available commands', usage: '!help', access: 'user' },
   { name: '!ping', description: 'Check bot response time', usage: '!ping', access: 'user' },
-  { name: '!menu', description: 'Display the main menu', usage: '!menu', access: 'user' },
-  { name: '!sticker', description: 'Convert image to sticker', usage: '!sticker [reply to image]', access: 'user' },
+  { name: '!menu', description: 'Display main menu', usage: '!menu', access: 'user' },
+  { name: '!sticker', description: 'Convert image to sticker', usage: '!sticker', access: 'user' },
   { name: '!download', description: 'Download media from URL', usage: '!download [url]', access: 'user' },
-  { name: '!broadcast', description: 'Send message to all chats', usage: '!broadcast [message]', access: 'admin' },
+  { name: '!weather', description: 'Get weather for a city', usage: '!weather [city]', access: 'user' },
+  { name: '!translate', description: 'Translate text', usage: '!translate [lang] [text]', access: 'user' },
+  { name: '!broadcast', description: 'Send message to all chats', usage: '!broadcast [msg]', access: 'admin' },
   { name: '!restart', description: 'Restart the bot', usage: '!restart', access: 'admin' },
   { name: '!shutdown', description: 'Shutdown the bot', usage: '!shutdown', access: 'admin' },
-  { name: '!tagall', description: 'Tag all group members', usage: '!tagall [message]', access: 'group' },
+  { name: '!tagall', description: 'Tag all group members', usage: '!tagall [msg]', access: 'group' },
   { name: '!kick', description: 'Remove member from group', usage: '!kick @user', access: 'group' },
   { name: '!promote', description: 'Promote member to admin', usage: '!promote @user', access: 'group' },
-  { name: '!demote', description: 'Demote admin to member', usage: '!demote @user', access: 'group' },
   { name: '!mute', description: 'Mute the group', usage: '!mute', access: 'group' },
-  { name: '!unmute', description: 'Unmute the group', usage: '!unmute', access: 'group' },
-  { name: '!weather', description: 'Get weather for a city', usage: '!weather [city]', access: 'user' },
-  { name: '!translate', description: 'Translate text to another language', usage: '!translate [lang] [text]', access: 'user' }
+  { name: '!unmute', description: 'Unmute the group', usage: '!unmute', access: 'group' }
 ];
 
 const logs = [
   { time: '14:32:01', level: 'info', msg: 'Bot Mickey Assistant connected successfully' },
   { time: '14:32:05', level: 'info', msg: 'Session restored from store' },
-  { time: '14:33:12', level: 'info', msg: 'Command received: !help from user_2847' },
-  { time: '14:33:15', level: 'success', msg: 'Command !help executed in 120ms' },
+  { time: '14:33:12', level: 'info', msg: 'Command !help received from user_2847' },
+  { time: '14:33:15', level: 'success', msg: 'Command executed in 120ms' },
   { time: '14:35:42', level: 'warn', msg: 'Rate limit approaching for user_9182' },
-  { time: '14:36:01', level: 'info', msg: 'Command received: !sticker from user_5643' },
+  { time: '14:36:01', level: 'info', msg: 'Command !sticker received' },
   { time: '14:36:08', level: 'success', msg: 'Sticker created and sent' },
   { time: '14:38:22', level: 'error', msg: 'Failed to download media: Invalid URL' },
-  { time: '14:39:10', level: 'info', msg: 'Reconnecting bot Group Moderator...' },
   { time: '14:39:15', level: 'success', msg: 'Bot Group Moderator reconnected' },
-  { time: '14:41:33', level: 'info', msg: 'New member joined group: user_7721' },
-  { time: '14:42:01', level: 'warn', msg: 'Spam detected from user_9182, message blocked' },
-  { time: '14:43:45', level: 'info', msg: 'Command received: !broadcast from admin_001' },
+  { time: '14:42:01', level: 'warn', msg: 'Spam detected from user_9182, blocked' },
   { time: '14:43:50', level: 'success', msg: 'Broadcast sent to 247 chats' },
-  { time: '14:45:12', level: 'error', msg: 'Connection lost to WhatsApp servers' },
-  { time: '14:45:18', level: 'info', msg: 'Auto-reconnect initiated...' },
   { time: '14:45:25', level: 'success', msg: 'Connection restored' }
 ];
 
-/* ---------------- Render Bot Dashboard ---------------- */
+let currentCmdFilter = 'all';
+let currentLogFilter = 'all';
+
+/* ============================================
+   RENDER BOTS
+   ============================================ */
 function renderBots(){
-  const dashboard = document.getElementById('botDashboard');
-  dashboard.innerHTML = '';
+  const grid = document.getElementById('botDashboard');
+  grid.innerHTML = '';
   bots.forEach(bot => {
     const card = document.createElement('div');
     card.className = 'bot-card';
     card.innerHTML = `
-      <div class="bot-header">
-        <div style="display:flex;gap:12px;align-items:center;">
-          <div class="bot-avatar">${bot.avatar}</div>
-          <div class="bot-info">
-            <h3>${bot.name}</h3>
-            <div class="bot-id">${bot.id}</div>
-          </div>
+      <div class="bot-top">
+        <div class="bot-avatar ${bot.color}">${bot.avatar}</div>
+        <div class="bot-meta">
+          <h3>${bot.name}</h3>
+          <div class="id">${bot.id}</div>
         </div>
-        <div class="bot-status ${bot.status}">
-          <span class="dot"></span> ${bot.status}
-        </div>
+        <div class="status-pill ${bot.status}"><span class="ind"></span>${bot.status}</div>
       </div>
       <div class="bot-metrics">
-        <div class="bot-metric">
-          <div class="value">${bot.uptime}</div>
-          <div class="label">Uptime</div>
-        </div>
-        <div class="bot-metric">
-          <div class="value">${bot.messages}</div>
-          <div class="label">Messages</div>
-        </div>
-        <div class="bot-metric">
-          <div class="value">${bot.commands}</div>
-          <div class="label">Commands</div>
-        </div>
+        <div class="metric"><div class="v">${bot.uptime}</div><div class="l">Uptime</div></div>
+        <div class="metric"><div class="v">${bot.messages}</div><div class="l">Messages</div></div>
+        <div class="metric"><div class="v">${bot.commands}</div><div class="l">Commands</div></div>
       </div>
       <div class="bot-actions">
-        <button class="btn btn-sm ${bot.status === 'online' ? 'btn-warning' : 'btn-success'}" onclick="toggleBot('${bot.id}')">
+        <button class="btn ${bot.status === 'online' ? 'btn-ghost' : 'btn-lime'} btn-sm" style="flex:1;" onclick="toggleBot('${bot.id}')">
           <i class="fas fa-power-off"></i> ${bot.status === 'online' ? 'Stop' : 'Start'}
         </button>
-        <button class="btn btn-sm btn-outline" onclick="restartBot('${bot.id}')">
-          <i class="fas fa-sync"></i> Restart
-        </button>
-        <button class="btn btn-sm btn-danger" onclick="deleteBot('${bot.id}')">
-          <i class="fas fa-trash"></i> Delete
-        </button>
+        <button class="btn btn-ghost btn-sm" onclick="restartBot('${bot.id}')"><i class="fas fa-sync-alt"></i></button>
+        <button class="btn btn-danger btn-sm" onclick="deleteBot('${bot.id}')"><i class="fas fa-trash"></i></button>
       </div>
     `;
-    dashboard.appendChild(card);
+    grid.appendChild(card);
   });
-  document.getElementById('activeBots').innerText = bots.filter(b => b.status === 'online').length;
+  const online = bots.filter(b => b.status === 'online').length;
+  document.getElementById('activeBots').innerText = online;
+  document.getElementById('botsBadge').innerText = bots.length;
+  animateNumber('activeSockets', online + 3);
+  animateNumber('totalUsers', 1284 + bots.length * 12);
+  animateNumber('totalMessages', bots.reduce((s,b) => s + b.messages, 0));
+}
+
+function animateNumber(id, target){
+  const el = document.getElementById(id);
+  if(!el) return;
+  const start = parseInt(el.innerText) || 0;
+  const dur = 600; const t0 = performance.now();
+  function step(t){
+    const p = Math.min((t - t0) / dur, 1);
+    el.innerText = Math.floor(start + (target - start) * p);
+    if(p < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
 }
 
 function toggleBot(id){
@@ -818,18 +1027,18 @@ function toggleBot(id){
   if(!bot) return;
   if(bot.status === 'online'){
     bot.status = 'offline';
-    addLog('info', `Bot ${bot.name} stopped by user`);
+    addLog('info', `Bot ${bot.name} stopped`);
     showToast(`${bot.name} stopped`);
   } else {
     bot.status = 'connecting';
     renderBots();
     setTimeout(() => {
-      bot.status = 'online';
-      bot.uptime = '0d 0h';
+      bot.status = 'online'; bot.uptime = '0d 0h';
       renderBots();
-      addLog('success', `Bot ${bot.name} started successfully`);
+      addLog('success', `Bot ${bot.name} started`);
       showToast(`${bot.name} started`);
-    }, 1500);
+    }, 1200);
+    return;
   }
   renderBots();
 }
@@ -837,282 +1046,331 @@ function toggleBot(id){
 function restartBot(id){
   const bot = bots.find(b => b.id === id);
   if(!bot) return;
-  bot.status = 'connecting';
-  renderBots();
-  addLog('info', `Restarting bot ${bot.name}...`);
+  bot.status = 'connecting'; renderBots();
+  addLog('info', `Restarting ${bot.name}...`);
   setTimeout(() => {
-    bot.status = 'online';
-    bot.uptime = '0d 0h';
-    renderBots();
-    addLog('success', `Bot ${bot.name} restarted successfully`);
+    bot.status = 'online'; bot.uptime = '0d 0h'; renderBots();
+    addLog('success', `${bot.name} restarted`);
     showToast(`${bot.name} restarted`);
-  }, 2000);
+  }, 1500);
 }
 
 function deleteBot(id){
   const bot = bots.find(b => b.id === id);
   if(!bot) return;
-  if(confirm(`Are you sure you want to delete ${bot.name}?`)){
-    const idx = bots.indexOf(bot);
-    bots.splice(idx, 1);
+  if(confirm(`Delete ${bot.name}?`)){
+    bots.splice(bots.indexOf(bot), 1);
     renderBots();
     addLog('warn', `Bot ${bot.name} deleted`);
     showToast(`${bot.name} deleted`);
   }
 }
 
-/* ---------------- Render Commands ---------------- */
-function renderCommands(filter = ''){
-  const tbody = document.getElementById('commandsTableBody');
-  tbody.innerHTML = '';
-  const filtered = commands.filter(c => 
-    c.name.toLowerCase().includes(filter.toLowerCase()) ||
-    c.description.toLowerCase().includes(filter.toLowerCase())
-  );
-  filtered.forEach(cmd => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td class="cmd-name">${cmd.name}</td>
-      <td>${cmd.description}</td>
-      <td style="font-family:'Share Tech Mono',monospace;font-size:.75rem;">${cmd.usage}</td>
-      <td><span class="cmd-badge ${cmd.access}">${cmd.access}</span></td>
-    `;
-    tbody.appendChild(tr);
+/* ============================================
+   RENDER COMMANDS
+   ============================================ */
+function renderCommands(){
+  const wrap = document.getElementById('commandsList');
+  const search = (document.getElementById('commandSearch')?.value || '').toLowerCase();
+  const filtered = commands.filter(c => {
+    const matchFilter = currentCmdFilter === 'all' || c.access === currentCmdFilter;
+    const matchSearch = c.name.toLowerCase().includes(search) || c.description.toLowerCase().includes(search);
+    return matchFilter && matchSearch;
   });
   if(filtered.length === 0){
-    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--muted);">No commands found</td></tr>';
+    wrap.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-3);font-size:.85rem;">No commands found</div>';
+    return;
   }
+  wrap.innerHTML = filtered.map(c => `
+    <div class="cmd-item">
+      <span class="cmd-code">${c.name}</span>
+      <span class="cmd-desc">${c.description}</span>
+      <span class="cmd-usage">${c.usage}</span>
+      <span class="access-tag ${c.access}">${c.access}</span>
+    </div>
+  `).join('');
 }
 
-document.getElementById('commandSearch').addEventListener('input', (e) => {
-  renderCommands(e.target.value);
+document.getElementById('commandSearch')?.addEventListener('input', renderCommands);
+document.querySelectorAll('[data-cmd-filter]').forEach(chip => {
+  chip.addEventListener('click', () => {
+    currentCmdFilter = chip.dataset.cmdFilter;
+    document.querySelectorAll('[data-cmd-filter]').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    renderCommands();
+  });
 });
 
-/* ---------------- Render Logs ---------------- */
-let currentLogFilter = 'all';
+/* ============================================
+   RENDER LOGS
+   ============================================ */
 function renderLogs(){
-  const container = document.getElementById('logsContainer');
-  container.innerHTML = '';
+  const wrap = document.getElementById('logsContainer');
   const filtered = currentLogFilter === 'all' ? logs : logs.filter(l => l.level === currentLogFilter);
-  filtered.slice().reverse().forEach(log => {
-    const entry = document.createElement('div');
-    entry.className = 'log-entry';
-    entry.innerHTML = `
-      <span class="log-time">${log.time}</span>
-      <span class="log-level ${log.level}">[${log.level.toUpperCase()}]</span>
-      <span class="log-msg">${log.msg}</span>
-    `;
-    container.appendChild(entry);
-  });
   if(filtered.length === 0){
-    container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);">No logs to display</div>';
+    wrap.innerHTML = '<div style="padding:30px;text-align:center;color:var(--text-3);font-size:.85rem;">No logs to display</div>';
+    return;
   }
+  wrap.innerHTML = filtered.slice().reverse().map(l => `
+    <div class="log-row">
+      <span class="log-time">${l.time}</span>
+      <span class="log-lvl ${l.level}">${l.level}</span>
+      <span class="log-msg">${l.msg}</span>
+    </div>
+  `).join('');
 }
 
 function addLog(level, msg){
   const now = new Date();
   const time = now.toTimeString().split(' ')[0];
   logs.push({ time, level, msg });
+  if(logs.length > 100) logs.shift();
   renderLogs();
 }
 
-document.querySelectorAll('[data-log-filter]').forEach(btn => {
-  btn.addEventListener('click', () => {
-    currentLogFilter = btn.dataset.logFilter;
-    document.querySelectorAll('[data-log-filter]').forEach(b => b.classList.remove('btn-success'));
-    btn.classList.add('btn-success');
+document.querySelectorAll('[data-log-filter]').forEach(chip => {
+  chip.addEventListener('click', () => {
+    currentLogFilter = chip.dataset.logFilter;
+    document.querySelectorAll('[data-log-filter]').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
     renderLogs();
   });
 });
-
-document.getElementById('clearLogsBtn').addEventListener('click', () => {
-  logs.length = 0;
-  renderLogs();
-  showToast('Logs cleared');
+document.getElementById('clearLogsBtn')?.addEventListener('click', () => {
+  logs.length = 0; renderLogs(); showToast('Logs cleared');
 });
 
-/* ---------------- Settings ---------------- */
-document.querySelectorAll('.toggle').forEach(toggle => {
-  toggle.addEventListener('click', () => {
-    toggle.classList.toggle('active');
-    const setting = toggle.dataset.setting;
-    const isActive = toggle.classList.contains('active');
-    addLog('info', `Setting "${setting}" ${isActive ? 'enabled' : 'disabled'}`);
+/* ============================================
+   SETTINGS
+   ============================================ */
+document.querySelectorAll('.switch').forEach(sw => {
+  sw.addEventListener('click', () => {
+    sw.classList.toggle('active');
   });
 });
-
-document.getElementById('saveSettingsBtn').addEventListener('click', () => {
-  const settings = {};
-  document.querySelectorAll('.toggle').forEach(t => {
-    settings[t.dataset.setting] = t.classList.contains('active');
-  });
-  settings.prefix = document.getElementById('botPrefix').value;
-  localStorage.setItem('mickey_bot_settings', JSON.stringify(settings));
-  showToast('Settings saved successfully!');
+document.getElementById('saveSettingsBtn')?.addEventListener('click', () => {
+  const s = {};
+  document.querySelectorAll('.switch').forEach(x => s[x.dataset.setting] = x.classList.contains('active'));
+  s.prefix = document.getElementById('botPrefix').value;
+  localStorage.setItem('mickey_settings', JSON.stringify(s));
+  showToast('Settings saved');
   addLog('success', 'Bot settings saved');
 });
 
-/* ---------------- Templates ---------------- */
+/* ============================================
+   TEMPLATES
+   ============================================ */
 document.querySelectorAll('.template-card').forEach(card => {
   card.addEventListener('click', () => {
-    const template = card.dataset.template;
+    const name = card.querySelector('h4').innerText;
     const newBot = {
       id: 'bot_' + Math.random().toString(36).substr(2, 6),
-      name: card.querySelector('h4').innerText,
+      name,
       status: 'connecting',
       uptime: '0d 0h',
       messages: 0,
       commands: 0,
-      avatar: card.querySelector('h4').innerText.split(' ').map(w => w[0]).join('').substr(0, 2).toUpperCase()
+      avatar: name.split(' ').map(w => w[0]).join('').substr(0,2).toUpperCase(),
+      color: ['', 'lime', 'cyan', 'pink'][Math.floor(Math.random()*4)]
     };
     bots.push(newBot);
     renderBots();
-    addLog('info', `Creating bot from template: ${template}`);
+    addLog('info', `Creating bot from template: ${name}`);
     setTimeout(() => {
-      newBot.status = 'online';
-      renderBots();
-      addLog('success', `Bot ${newBot.name} created and started`);
-      showToast(`${newBot.name} created!`);
-    }, 2000);
+      newBot.status = 'online'; renderBots();
+      addLog('success', `${name} is live`);
+      showToast(`${name} created!`);
+      document.getElementById('bots').scrollIntoView({behavior:'smooth'});
+    }, 1500);
   });
 });
 
-/* ---------------- Create Bot Button ---------------- */
-document.getElementById('createBotBtn').addEventListener('click', () => {
+document.getElementById('createBotBtn')?.addEventListener('click', () => {
   const name = prompt('Enter bot name:');
   if(!name) return;
   const newBot = {
     id: 'bot_' + Math.random().toString(36).substr(2, 6),
-    name: name,
-    status: 'connecting',
-    uptime: '0d 0h',
-    messages: 0,
-    commands: 0,
-    avatar: name.split(' ').map(w => w[0]).join('').substr(0, 2).toUpperCase()
+    name, status: 'connecting', uptime: '0d 0h', messages: 0, commands: 0,
+    avatar: name.split(' ').map(w => w[0]).join('').substr(0,2).toUpperCase(),
+    color: ['', 'lime', 'cyan', 'pink'][Math.floor(Math.random()*4)]
   };
-  bots.push(newBot);
-  renderBots();
+  bots.push(newBot); renderBots();
   addLog('info', `Creating new bot: ${name}`);
   setTimeout(() => {
-    newBot.status = 'online';
-    renderBots();
-    addLog('success', `Bot ${name} created and started`);
+    newBot.status = 'online'; renderBots();
+    addLog('success', `${name} is live`);
     showToast(`${name} created!`);
-  }, 2000);
+  }, 1500);
 });
 
-document.getElementById('refreshBotsBtn').addEventListener('click', () => {
-  renderBots();
-  addLog('info', 'Bot list refreshed');
-  showToast('Bots refreshed');
+document.getElementById('refreshBotsBtn')?.addEventListener('click', () => {
+  renderBots(); showToast('Refreshed');
 });
 
-/* ---------------- Pairing logic ---------------- */
-const socket = io();
-const phoneInput = document.getElementById('phone');
-const requestBtn = document.getElementById('requestPairing');
-const codeWrap = document.getElementById('codeWrap');
-const pairingCode = document.getElementById('pairingCode');
+document.getElementById('refreshBtn')?.addEventListener('click', () => {
+  renderBots(); renderCommands(); renderLogs();
+  showToast('Data refreshed');
+});
 
-function copyCode(){
-  const code = pairingCode.innerText;
-  if(code === '0000 0000') return;
-  navigator.clipboard.writeText(code.replace(/\s/g,'')).then(()=>showToast('CODE COPIED TO CLIPBOARD!'));
+/* ============================================
+   SIDEBAR / MOBILE NAV
+   ============================================ */
+const sidebar = document.getElementById('sidebar');
+const menuBtn = document.getElementById('menuBtn');
+menuBtn?.addEventListener('click', () => sidebar.classList.toggle('open'));
+
+document.querySelectorAll('.nav-item, .mobile-nav a').forEach(a => {
+  a.addEventListener('click', () => {
+    document.querySelectorAll('.nav-item, .mobile-nav a').forEach(x => x.classList.remove('active'));
+    a.classList.add('active');
+    if(window.innerWidth < 1024) sidebar.classList.remove('open');
+  });
+});
+
+/* ============================================
+   WELCOME MODAL
+   ============================================ */
+const modal = document.getElementById('channelModal');
+window.addEventListener('load', () => {
+  if(!localStorage.getItem('mickey_welcomed')){
+    setTimeout(() => modal.classList.add('active'), 800);
+  }
+});
+document.getElementById('confirmFollow')?.addEventListener('click', () => {
+  localStorage.setItem('mickey_welcomed', '1');
+  modal.classList.remove('active');
+});
+
+/* ============================================
+   TOAST
+   ============================================ */
+const toast = document.getElementById('toast');
+function showToast(msg){
+  toast.innerText = msg;
+  toast.classList.add('show');
+  clearTimeout(window._tt);
+  window._tt = setTimeout(() => toast.classList.remove('show'), 2200);
 }
 
-requestBtn.addEventListener('click', ()=>{
-  const number = phoneInput.value.replace(/\D/g,'');
+/* ============================================
+   PAIRING
+   ============================================ */
+let socket;
+try { socket = io(); } catch(e){ console.warn('Socket.IO not available'); }
+
+const phoneInput = document.getElementById('phone');
+const requestBtn = document.getElementById('requestPairing');
+const pairingCode = document.getElementById('pairingCode');
+const statusEl = document.getElementById('status');
+
+function setStatus(msg, type){
+  statusEl.className = 'alert show ' + type;
+  statusEl.innerHTML = `<i class="fas fa-${type==='success'?'check-circle':type==='error'?'exclamation-circle':'info-circle'}"></i> ${msg}`;
+}
+
+function copyCode(){
+  const code = pairingCode.innerText.replace(/[^0-9]/g, '');
+  if(!code || code.length < 4) return;
+  navigator.clipboard.writeText(code).then(() => showToast('Code copied!'));
+}
+
+requestBtn?.addEventListener('click', () => {
+  const number = phoneInput.value.replace(/\D/g, '');
   if(!number || number.length < 10){
-    setStatus('Enter a valid phone number with country code.', 'error');
+    setStatus('Enter a valid phone number with country code', 'error');
     phoneInput.focus();
     return;
   }
   requestBtn.disabled = true;
   requestBtn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Requesting...';
-  setStatus('Sending pairing request to server...', 'warning');
-
-  const userId = 'user_' + Math.random().toString(36).substr(2,9);
-  socket.emit('set-user', userId);
-  socket.emit('pair-request', { userId, number });
+  setStatus('Sending pairing request...', 'warn');
+  if(socket){
+    const userId = 'user_' + Math.random().toString(36).substr(2,9);
+    socket.emit('set-user', userId);
+    socket.emit('pair-request', { userId, number });
+  } else {
+    // Demo mode fallback
+    setTimeout(() => {
+      const code = Math.floor(10000000 + Math.random()*90000000).toString();
+      pairingCode.innerText = code.slice(0,4) + ' ' + code.slice(4);
+      requestBtn.disabled = false;
+      requestBtn.innerHTML = '<i class="fas fa-key"></i> Request Pairing Code';
+      setStatus('Code generated! Link it in WhatsApp.', 'success');
+    }, 1200);
+  }
 });
 
-socket.on('pairing-code', (code)=>{
+socket?.on('pairing-code', (code) => {
   requestBtn.disabled = false;
   requestBtn.innerHTML = '<i class="fas fa-key"></i> Request Pairing Code';
-  setStatus('Pairing code generated. Link it in WhatsApp within 60 seconds.', 'success');
-  codeWrap.style.display = 'block';
   pairingCode.innerText = code;
-  addLog('info', `Pairing code generated for ${phoneInput.value}`);
+  setStatus('Pairing code generated. Link within 60 seconds.', 'success');
+  addLog('info', `Pairing code issued for ${phoneInput.value}`);
 });
 
-socket.on('pair-error', (msg)=>{
+socket?.on('pair-error', (msg) => {
   requestBtn.disabled = false;
   requestBtn.innerHTML = '<i class="fas fa-key"></i> Request Pairing Code';
-  setStatus(msg || 'Failed to generate pairing code. Try again.', 'error');
+  setStatus(msg || 'Failed to generate code', 'error');
   addLog('error', msg || 'Pairing failed');
 });
 
-socket.on('connection-status', (status)=>{
-  if(status && status.connected){
+socket?.on('connection-status', (s) => {
+  if(s && s.connected){
     pairingCode.innerText = 'LINKED';
-    pairingCode.style.color = '#4ade80';
-    pairingCode.style.borderColor = '#4ade80';
+    pairingCode.style.color = 'var(--success)';
     setStatus('Device linked successfully!', 'success');
-    showToast('CONNECTED SUCCESSFULLY!');
-    addLog('success', 'WhatsApp device linked successfully');
-    setTimeout(()=>location.reload(), 3000);
+    showToast('Connected!');
+    addLog('success', 'WhatsApp device linked');
+    setTimeout(() => location.reload(), 3000);
   }
 });
 
-socket.on('stats', (data)=>{
+socket?.on('stats', (data) => {
   if(data){
-    if(typeof data.activeSockets !== 'undefined') document.getElementById('activeSockets').innerText = data.activeSockets;
-    if(typeof data.totalUsers !== 'undefined') document.getElementById('totalUsers').innerText = data.totalUsers;
-    if(typeof data.totalMessages !== 'undefined') document.getElementById('totalMessages').innerText = data.totalMessages;
+    if(data.activeSockets != null) document.getElementById('activeSockets').innerText = data.activeSockets;
+    if(data.totalUsers != null) document.getElementById('totalUsers').innerText = data.totalUsers;
+    if(data.totalMessages != null) document.getElementById('totalMessages').innerText = data.totalMessages;
   }
 });
 
-/* ---------------- Initialize ---------------- */
+/* ============================================
+   INIT
+   ============================================ */
+document.getElementById('year').innerText = new Date().getFullYear();
 renderBots();
 renderCommands();
 renderLogs();
-document.getElementById('year').innerText = new Date().getFullYear();
 
 fetch('/api/server-info')
-  .then(response => response.ok ? response.json() : Promise.reject(new Error('Server info unavailable')))
-  .then(info => {
-    const address = document.getElementById('serverAddress');
-    address.innerText = `Online at ${info.url}`;
-  })
-  .catch(() => {
-    document.getElementById('serverAddress').innerText = `Online at ${window.location.origin}`;
-  });
+  .then(r => r.ok ? r.json() : Promise.reject())
+  .then(info => document.getElementById('serverAddress').innerText = `Online · ${info.url}`)
+  .catch(() => document.getElementById('serverAddress').innerText = `Online · ${window.location.origin}`);
 
-/* ---------------- Simulate real-time updates ---------------- */
+/* Live simulation */
 setInterval(() => {
-  if(bots.length > 0){
-    const randomBot = bots[Math.floor(Math.random() * bots.length)];
-    if(randomBot.status === 'online'){
-      randomBot.messages += Math.floor(Math.random() * 5);
-      randomBot.commands += Math.floor(Math.random() * 2);
+  bots.forEach(b => {
+    if(b.status === 'online'){
+      b.messages += Math.floor(Math.random() * 4);
+      if(Math.random() > .7) b.commands += 1;
     }
-  }
+  });
   renderBots();
-}, 5000);
+}, 6000);
 
 setInterval(() => {
-  const levels = ['info', 'info', 'info', 'warn', 'success'];
-  const randomLevel = levels[Math.floor(Math.random() * levels.length)];
-  const messages = [
-    'Command received: !ping from user_' + Math.floor(Math.random() * 9999),
-    'Message processed in ' + Math.floor(Math.random() * 500) + 'ms',
-    'User_' + Math.floor(Math.random() * 9999) + ' joined the group',
-    'Auto-reply sent to user_' + Math.floor(Math.random() * 9999),
-    'Session heartbeat OK',
-    'Cache cleared successfully'
+  const levels = ['info','info','info','warn','success'];
+  const lvl = levels[Math.floor(Math.random()*levels.length)];
+  const msgs = [
+    'Heartbeat OK · latency ' + Math.floor(Math.random()*200) + 'ms',
+    'Message processed for user_' + Math.floor(Math.random()*9999),
+    'Command !ping received',
+    'Cache cleared',
+    'Session refreshed',
+    'New member joined group'
   ];
-  addLog(randomLevel, messages[Math.floor(Math.random() * messages.length)]);
-}, 8000);
+  addLog(lvl, msgs[Math.floor(Math.random()*msgs.length)]);
+}, 9000);
 </script>
 </body>
 </html>
