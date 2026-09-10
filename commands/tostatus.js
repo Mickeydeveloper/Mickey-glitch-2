@@ -19,18 +19,16 @@ async function getGroupAudience(sock, groupJid) {
     return audience;
 }
 
-const groupStatusCommand = async (sock, chatId, msg, args = []) => {
+const tostatusCommand = async (sock, chatId, senderId, text, msg) => {
     try {
-        const normalizedArgs = Array.isArray(args)
-            ? args.filter((arg) => typeof arg === 'string')
-            : typeof args === 'string'
-                ? args.trim().split(/\s+/).filter(Boolean)
-                : [];
+        const normalizedArgs = typeof text === 'string'
+            ? text.trim().split(/\s+/).filter(Boolean)
+            : [];
         const ctx = createCtx(sock, chatId, msg, { args: normalizedArgs });
         const target = ctx.chatId || chatId || msg?.key?.remoteJid;
 
         if (!sock || !target) {
-            console.error('[groupstatus] No target or sock');
+            console.error('[tostatus] No target or sock');
             return false;
         }
 
@@ -48,7 +46,7 @@ const groupStatusCommand = async (sock, chatId, msg, args = []) => {
         
         // Check args
         if (normalizedArgs.length > 0) {
-            input = normalizedArgs.join(' ');
+            input = normalizedArgs.join(' ').replace(/^\.?(?:tostatus|groupstatus)\s*/i, '').trim();
         }
 
         // If no args, check quoted message
@@ -97,9 +95,9 @@ const groupStatusCommand = async (sock, chatId, msg, args = []) => {
                     mediaType = 'image';
                     mediaMimetype = quoted.imageMessage.mimetype;
                     hasMedia = true;
-                    console.log('[groupstatus] Image downloaded');
+                    console.log('[tostatus] Image downloaded');
                 } catch (e) {
-                    console.error('[groupstatus] Image download failed:', e);
+                    console.error('[tostatus] Image download failed:', e);
                 }
             }
             // Check for video
@@ -109,9 +107,9 @@ const groupStatusCommand = async (sock, chatId, msg, args = []) => {
                     mediaType = 'video';
                     mediaMimetype = quoted.videoMessage.mimetype;
                     hasMedia = true;
-                    console.log('[groupstatus] Video downloaded');
+                    console.log('[tostatus] Video downloaded');
                 } catch (e) {
-                    console.error('[groupstatus] Video download failed:', e);
+                    console.error('[tostatus] Video download failed:', e);
                 }
             }
             // Check for document
@@ -121,9 +119,9 @@ const groupStatusCommand = async (sock, chatId, msg, args = []) => {
                     mediaType = 'document';
                     mediaMimetype = quoted.documentMessage.mimetype;
                     hasMedia = true;
-                    console.log('[groupstatus] Document downloaded');
+                    console.log('[tostatus] Document downloaded');
                 } catch (e) {
-                    console.error('[groupstatus] Document download failed:', e);
+                    console.error('[tostatus] Document download failed:', e);
                 }
             }
             // Check for audio or voice note
@@ -133,9 +131,9 @@ const groupStatusCommand = async (sock, chatId, msg, args = []) => {
                     mediaType = 'audio';
                     mediaMimetype = quoted.audioMessage.mimetype || 'audio/ogg; codecs=opus';
                     hasMedia = true;
-                    console.log('[groupstatus] Audio downloaded');
+                    console.log('[tostatus] Audio downloaded');
                 } catch (e) {
-                    console.error('[groupstatus] Audio download failed:', e);
+                    console.error('[tostatus] Audio download failed:', e);
                 }
             }
         }
@@ -143,7 +141,7 @@ const groupStatusCommand = async (sock, chatId, msg, args = []) => {
         // A replied media message can be posted without a caption.
         if (!input && !hasMedia) {
             await sock.sendMessage(target, {
-                text: `📝 GROUP STATUS\n━━━━━━━━━━━━━━━━━━━\n⚠️ Please provide a message or reply to media!\n━━━━━━━━━━━━━━━━━━━\n📌 Examples:\n.groupstatus Hello everyone!\n━━━━━━━━━━━━━━━━━━━\n📎 Reply to a picture, video, or audio`
+                text: `📤 TO STATUS\n━━━━━━━━━━━━━━━━━━━\n⚠️ Tuma message au reply picha, video, au audio!\n━━━━━━━━━━━━━━━━━━━\n📌 Example:\n.tostatus Hello everyone!\n━━━━━━━━━━━━━━━━━━━\n📎 Au reply media`
             }, { quoted: msg });
             return true;
         }
@@ -187,21 +185,21 @@ const groupStatusCommand = async (sock, chatId, msg, args = []) => {
         const statusAudience = await getGroupAudience(sock, target);
 
         // Publish to WhatsApp Status and restrict the audience to this group.
-        console.log('[groupstatus] Sending status:', input);
+        console.log('[tostatus] Sending group audience status:', input);
         await sock.sendMessage(STATUS_JID, content, {
             statusJidList: statusAudience
         });
 
         // Send confirmation
         await sock.sendMessage(target, {
-            text: `✅ Group status sent successfully!\n━━━━━━━━━━━━━━━━━━━\n📝 "${input}"`
+            text: `✅ Status imewekwa kwa members wa group!\n━━━━━━━━━━━━━━━━━━━\n📝 "${input}"`
         }, { quoted: msg });
 
-        console.log('[groupstatus] Status sent successfully');
+        console.log('[tostatus] Status sent successfully');
         return true;
 
     } catch (error) {
-        console.error('[groupstatus] Error:', error?.message || error);
+        console.error('[tostatus] Error:', error?.message || error);
         
         try {
             const target = chatId || msg?.key?.remoteJid;
@@ -211,20 +209,20 @@ const groupStatusCommand = async (sock, chatId, msg, args = []) => {
                 }, { quoted: msg });
             }
         } catch (sendErr) {
-            console.error('[groupstatus] Fallback failed:', sendErr?.message || sendErr);
+            console.error('[tostatus] Fallback failed:', sendErr?.message || sendErr);
         }
         return false;
     }
 };
 
 // Export command
-groupStatusCommand.name = 'groupstatus';
-groupStatusCommand.aliases = ['gcsw', 'swgc', 'upgcsw', 'upswgc', 'gs'];
-groupStatusCommand.category = 'group';
-groupStatusCommand.description = '📝 Send group status with text or media';
-groupStatusCommand.permissions = {
+ tostatusCommand.name = 'tostatus';
+tostatusCommand.aliases = ['tostatus', 'gcsw', 'swgc', 'upgcsw', 'upswgc', 'gs'];
+tostatusCommand.category = 'group';
+tostatusCommand.description = '📤 Send text or media to status for this group';
+tostatusCommand.permissions = {
     admin: false,
     group: true
 };
 
-module.exports = groupStatusCommand;
+module.exports = tostatusCommand;

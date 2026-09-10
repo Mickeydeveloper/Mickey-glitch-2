@@ -13,6 +13,39 @@ const { OpenAI } = require('openai');
 const os = require('os');
 const { isSudo } = require('./lib');
 const { isSessionRepairableError, backupSignalState } = require('./lib/sessionRecovery');
+const { createCtx } = require('./lib/messageBuilder');
+
+function adaptContextCommand(commandModule) {
+    if (!commandModule || typeof commandModule.code !== 'function') return null;
+
+    return async function objectCommandAdapter(sock, chatId, senderId, text, message) {
+        const args = String(text || '').trim().split(/\s+/).filter(Boolean);
+        const ctx = createCtx(sock, chatId, message, { args, text, command: commandModule.name });
+        const quotedMessage = message?.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+        const quoted = message?.quoted || message?.msg?.contextInfo?.quotedMessage || (quotedMessage ? {
+            message: quotedMessage,
+            body: quotedMessage.conversation || quotedMessage.extendedTextMessage?.text || quotedMessage.imageMessage?.caption || quotedMessage.videoMessage?.caption || '',
+        } : null);
+
+        ctx.quoted = quoted;
+        ctx.sender = { pushName: message?.pushName || message?.key?.pushName || '' };
+        ctx.isMedia = (types = []) => {
+            const source = message?.message || {};
+            const quotedSource = quoted?.message || quoted || {};
+            if (types.includes('image') && (source.imageMessage || quotedSource.imageMessage)) return 'image';
+            if (types.includes('video') && (source.videoMessage || quotedSource.videoMessage)) return 'video';
+            if (types.includes('audio') && (source.audioMessage || quotedSource.audioMessage)) return 'audio';
+            return null;
+        };
+        ctx.format = {
+            generateInstruction: () => 'Tuma message au reply media',
+            generateCmdExample: (_used, example) => `Mfano: .${commandModule.name} ${example}`,
+            info: (value) => `✅ ${value}`
+        };
+        ctx.helper = { handleError: async (_ctx, error) => ctx.reply(`❌ ${error?.message || error}`) };
+        return commandModule.code(ctx);
+    };
+}
 
 function loadCommandRegistry() {
     const registry = {};
@@ -39,6 +72,10 @@ function loadCommandRegistry() {
 
             let handler = null;
 
+            if (mod && typeof mod === 'object' && typeof mod.code === 'function') {
+                handler = adaptContextCommand(mod);
+            }
+
             if (typeof mod === 'function') {
                 const modName = (mod.name || '').toLowerCase();
                 if (modName.includes(commandName.toLowerCase()) || modName.includes('command') || modName.includes('handler')) {
@@ -57,6 +94,11 @@ function loadCommandRegistry() {
 
             if (handler) {
                 registry[commandName] = handler;
+                if (mod?.aliases && Array.isArray(mod.aliases)) {
+                    for (const alias of mod.aliases) {
+                        registry[String(alias).replace(/^\./, '').toLowerCase()] = handler;
+                    }
+                }
             }
 
             if (mod && typeof mod === 'object') {

@@ -55,22 +55,21 @@ async function addCommand(sock, a2, a3, a4, a5) {
             return;
         }
 
-        // Extract phone number from text
-        let phoneNumber = (text || '').trim();
-        if (/^[.!#$%^&*+=\-/]\S+\s+/.test(phoneNumber)) {
-            phoneNumber = phoneNumber.replace(/^[.!#$%^&*+=\-/]\S+\s+/, '').trim();
-        }
-        if (/^add\s+/i.test(phoneNumber)) {
-            phoneNumber = phoneNumber.replace(/^add\s+/i, '').trim();
-        }
+        // Extract phone number from text. The dispatcher may pass the full command,
+        // while some callers pass a WhatsApp JID instead of a plain number.
+        let phoneNumber = String(text || '').trim();
+        phoneNumber = phoneNumber.replace(/^[.!#$%^&*+=\-/]?add\b\s*/i, '').trim();
+        phoneNumber = phoneNumber.trim();
         if (!phoneNumber) {
             await sock.sendMessage(chatId, { text: '❌ Usage: .add <phone_number>\n\n📝 Example: .add 255612130873' }, { quoted: message });
             return;
         }
 
         // Clean & Validate Phone Number
-        const cleanNumber = phoneNumber.replace(/[\s\-\(\)]/g, '').replace(/^\+/, '');
-        if (!/^\d+$/.test(cleanNumber)) {
+        const cleanNumber = phoneNumber
+            .replace(/@s\.whatsapp\.net$/i, '')
+            .replace(/\D/g, '');
+        if (!cleanNumber) {
             await sock.sendMessage(chatId, { text: '❌ Invalid phone number format. Please provide a valid number.\n\n📝 Example: .add 255612130873' }, { quoted: message });
             return;
         }
