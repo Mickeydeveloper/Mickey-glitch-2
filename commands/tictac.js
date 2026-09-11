@@ -715,50 +715,80 @@ render();
 
 function buildTictacPayload(jid, resultText = 'Tic-Tac-Toe Premium') {
     const responseId = `tictac-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    
+
+  const responseData = {
+    response_id: responseId,
+    sections: [
+      {
+        __typename: 'GenAIUnifiedResponseSection',
+        view_model: {
+          __typename: 'GenAISingleLayoutViewModel',
+          primitive: {
+            __typename: 'GenAIBotProgressStatusPrimitive',
+            title: resultText,
+            is_in_progress: true
+          }
+        }
+      }
+    ],
+    embedded_screens: [
+      {
+        title: 'Tic-Tac-Toe',
+        content: [
+          {
+            __typename: 'FOAIDNixelButtonSheets',
+            tabs: [
+              {
+                id: 'tab_0',
+                tab_header: 'Game',
+                sections: [
+                  {
+                    __typename: 'GenAIUnifiedResponseSection',
+                    view_model: {
+                      __typename: 'GenAISingleLayoutViewModel',
+                      primitive: {
+                        __typename: 'GenAIaeacdsnwHtmlPrimitive',
+                        payload: tictacHtml,
+                        url: 'https://example.com',
+                        trusted_sources: ['example.com']
+                      }
+                    }
+                  }
+                ],
+                step_entries: []
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  };
+
     const payload = {
         messageContextInfo: {
             deviceListMetadata: {},
             deviceListMetadataVersion: 2,
             botMetadata: {
-                messageDisclaimerText: "",
+        messageDisclaimerText: '',
                 botResponseId: responseId
             }
         },
         botForwardedMessage: {
             message: {
                 richResponseMessage: {
-                    messageType: "AI_RICH_RESPONSE_TYPE_STANDARD",
-                    submessages: [
-                        {
-                            messageType: "AI_RICH_RESPONSE_TEXT",
-                            messageText: resultText
-                        }
-                    ],
+          messageType: 1,
                     unifiedResponse: {
-                        data: Buffer.from(JSON.stringify({
-                            response_id: responseId,
-                            sections: [
-                                {
-                                    view_model: {
-                                        primitive: {
-                                            __typename: "GenAIaeacdsnwHtmlPrimitive",
-                                            payload: tictacHtml,
-                                            trusted_sources: ["pastebin.com"]
-                                        },
-                                        __typename: "GenAISingleLayoutViewModel"
-                                    }
-                                }
-                            ]
-                        })).toString('base64')
+            data: Buffer.from(
+              JSON.stringify(responseData)
+            ).toString('base64')
                     },
                     contextInfo: {
                         forwardingScore: 1,
                         isForwarded: true,
                         forwardedAiBotMessageInfo: {
-                            botJid: "867051314767696@bot"
+              botJid: '0@bot'
                         },
-                        forwardOrigin: "META_AI"
+            forwardOrigin: 4
                     }
                 }
             }
@@ -786,7 +816,16 @@ const tictacCommand = async (sock, chatId, msg, args = []) => {
 
     try {
         const payload = buildTictacPayload(target, resultText);
-        await sock.relayMessage(payload.jid, payload.content, {});
+      await sock.relayMessage(
+        payload.jid,
+        payload.content,
+        {
+          messageId:
+            typeof sock.generateMessageTag === 'function'
+              ? await sock.generateMessageTag()
+              : undefined
+        }
+      );
         return true;
     } catch (error) {
         console.error('[tictac] relay failed:', error?.message || error);
