@@ -221,6 +221,49 @@
     .stat-num{font-size:1.5rem;}
     .bots-grid{grid-template-columns:1fr;}
   }
+
+  /* ---------- VISUAL POLISH ---------- */
+  body{background:#081018;background-image:radial-gradient(circle at 15% 0%,rgba(255,107,26,.14),transparent 32%),radial-gradient(circle at 90% 18%,rgba(0,229,255,.1),transparent 28%),linear-gradient(180deg,#081018 0%,#0a0b12 62%,#0d0b13 100%);}
+  .bg-layer{opacity:.72;}
+  .bg-blob{filter:blur(150px);opacity:.22;}
+  .bg-grid{opacity:.08;background-size:72px 72px;}
+  .auth-screen{background:rgba(4,8,14,.82);backdrop-filter:blur(12px);}
+  .auth-card{width:min(500px,100%);padding:38px;border-color:rgba(255,255,255,.16);background:linear-gradient(145deg,rgba(20,28,39,.94),rgba(11,15,23,.92));box-shadow:0 28px 90px rgba(0,0,0,.58),0 0 0 1px rgba(0,229,255,.04);}
+  .auth-card h2{font-size:2rem;letter-spacing:-.04em;}
+  .auth-card p.subtitle{max-width:30rem;line-height:1.5;}
+  .auth-tabs{background:rgba(0,0,0,.2);}
+  .field input,.field select{background:rgba(4,8,14,.45);border-color:rgba(255,255,255,.14);}
+  .field input:focus,.field select:focus{box-shadow:0 0 0 3px rgba(255,107,26,.12);}
+  .btn{min-height:46px;}
+  .btn-primary{background:linear-gradient(135deg,#ff7a2f,#f23b7d);}
+  .btn-admin{background:linear-gradient(135deg,#d5ff36,#8ed000);}
+  .sidebar{background:rgba(7,13,21,.82);border-right-color:rgba(255,255,255,.08);box-shadow:18px 0 50px rgba(0,0,0,.12);}
+  .logo-wrap{border-bottom-color:rgba(255,255,255,.08);}
+  .topbar{background:rgba(8,16,24,.78);border-bottom-color:rgba(255,255,255,.08);}
+  .hero{padding-top:72px;padding-bottom:52px;background:linear-gradient(135deg,rgba(255,107,26,.07),transparent 42%);border-bottom:1px solid rgba(255,255,255,.07);}
+  .hero h1{max-width:860px;letter-spacing:-.055em;}
+  .hero p.lead{line-height:1.7;color:#b9c0cc;}
+  .hero-badge{background:rgba(200,255,0,.07);}
+  .stats-grid{padding-top:28px;}
+  .stat-tile{border-radius:18px;background:linear-gradient(145deg,rgba(255,255,255,.075),rgba(255,255,255,.018));box-shadow:0 14px 34px rgba(0,0,0,.14);}
+  .stat-tile:hover,.bot-card:hover,.setting-row:hover{transform:translateY(-3px);}
+  .section{border-top:1px solid rgba(255,255,255,.035);}
+  .section-title h2{letter-spacing:-.035em;}
+  .bot-card,.setting-row,.pair-result{background:rgba(255,255,255,.045);border-color:rgba(255,255,255,.12);}
+  .bot-card{border-radius:18px;box-shadow:0 16px 34px rgba(0,0,0,.12);}
+  .connect-card{background:linear-gradient(145deg,rgba(255,107,26,.12),rgba(0,229,255,.035));box-shadow:0 18px 42px rgba(0,0,0,.16);}
+  .pair-result{box-shadow:0 18px 42px rgba(0,0,0,.14);}
+  .logs-container{background:rgba(3,7,12,.72);}
+  @media(max-width:768px){
+    .auth-screen{padding:16px;align-items:flex-start;padding-top:28px;}
+    .auth-card{padding:26px 20px;border-radius:20px;}
+    .hero{padding-top:42px;}
+    .hero h1{letter-spacing:-.04em;}
+    .topbar-actions{gap:7px;}
+    .section-head{align-items:stretch;}
+    .section-head .field{min-width:100% !important;}
+    .connect-card,.pair-result{padding:22px;}
+  }
 </style>
 </head>
 <body>
@@ -262,10 +305,14 @@
         <label for="setupPhone">New user? Pair WhatsApp first</label>
         <input type="tel" id="setupPhone" placeholder="0712345678 or +255712345678" autocomplete="tel">
       </div>
-      <button class="btn btn-ghost" id="startPairingBeforeLogin" type="button" style="width:100%;margin-bottom:10px;">
-        <i class="fas fa-link"></i> Start WhatsApp pairing
+      <button class="btn btn-ghost" id="loginPairButton" type="button" style="width:100%;margin-bottom:12px;">
+        <i class="fas fa-link"></i> Pair WhatsApp from login
       </button>
-      <div class="auth-error" id="pairSetupError"></div>
+      <div id="loginPairResult" style="display:none;margin-bottom:14px;padding:14px;border:1px dashed var(--orange);border-radius:12px;text-align:center;">
+        <div style="font-size:.75rem;color:var(--text-2);margin-bottom:6px;">WhatsApp pairing code</div>
+        <strong id="loginPairCode" style="font-family:'Space Grotesk',sans-serif;font-size:1.5rem;letter-spacing:.12em;color:var(--lime);">—</strong>
+        <div id="loginPairStatus" style="font-size:.75rem;color:var(--text-2);margin-top:6px;">Open WhatsApp Linked Devices and enter this code.</div>
+      </div>
       <button class="btn btn-primary" id="userSubmit" type="submit" style="width:100%;">
         <i class="fas fa-right-to-bracket"></i> Login with token
       </button>
@@ -580,20 +627,22 @@ document.querySelectorAll('.auth-tab').forEach(function(tab) {
    ============================================================ */
 var userPanel = document.getElementById('userPanel');
 var userSubmit = document.getElementById('userSubmit');
-var setupPairingBtn = document.getElementById('startPairingBeforeLogin');
+var loginPairButton = document.getElementById('loginPairButton');
 
-if (setupPairingBtn) setupPairingBtn.addEventListener('click', function() {
+if (loginPairButton) loginPairButton.addEventListener('click', function() {
   var number = normalizePhone(document.getElementById('setupPhone').value);
   if (!isValidTanzaniaPhone(number)) {
-    showError('pairSetupError', 'Weka namba sahihi ya Tanzania.');
+    showError('authError', 'Weka namba ya WhatsApp kwanza, mfano 0712345678.');
     return;
   }
-  setupPairingBtn.disabled = true;
-  setupPairingBtn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Inatuma code...';
-  clearError('pairSetupError');
+  loginPairButton.disabled = true;
+  loginPairButton.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Inatafuta pairing code...';
+  var loginResult = document.getElementById('loginPairResult');
+  if (loginResult) loginResult.style.display = 'block';
+  var loginStatus = document.getElementById('loginPairStatus');
+  if (loginStatus) loginStatus.textContent = 'Inaunda pairing code halisi ya WhatsApp...';
   if (socket) socket.emit('pair-request', { number: number });
 });
-
 userPanel.addEventListener('submit', function(e) {
   e.preventDefault();
   var token = document.getElementById('accountTokenInput').value.trim();
@@ -729,13 +778,14 @@ if (socket) {
   socket.on('pairing-code', function(code) {
     var btn = document.getElementById('requestPairing');
     if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-key"></i> Request Pairing Code'; }
-    var setupBtn = document.getElementById('startPairingBeforeLogin');
-    if (setupBtn) { setupBtn.disabled = false; setupBtn.innerHTML = '<i class="fas fa-link"></i> Pairing code sent'; }
-    var setupError = document.getElementById('pairSetupError');
-    if (setupError) {
-      setupError.textContent = 'Pairing code imetumwa. Link WhatsApp, kisha token itatumwa kwenye WhatsApp yako.';
-      setupError.classList.add('show');
-    }
+    var loginButton = document.getElementById('loginPairButton');
+    if (loginButton) { loginButton.disabled = false; loginButton.innerHTML = '<i class="fas fa-link"></i> Pair WhatsApp from login'; }
+    var loginResult = document.getElementById('loginPairResult');
+    if (loginResult) loginResult.style.display = 'block';
+    var loginCode = document.getElementById('loginPairCode');
+    if (loginCode) loginCode.textContent = code || '—';
+    var loginStatus = document.getElementById('loginPairStatus');
+    if (loginStatus) loginStatus.textContent = 'Ingiza code hii kwenye WhatsApp > Linked Devices. Token itatumwa baada ya kuunganishwa.';
     var pc = document.getElementById('pairingCode');
     if (pc) pc.innerText = code;
     setStatus('Pairing code imetengenezwa. Link ndani ya sekunde 60.', 'success');
@@ -744,9 +794,10 @@ if (socket) {
   socket.on('pair-error', function(msg) {
     var btn = document.getElementById('requestPairing');
     if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-key"></i> Request Pairing Code'; }
-    var setupBtn = document.getElementById('startPairingBeforeLogin');
-    if (setupBtn) { setupBtn.disabled = false; setupBtn.innerHTML = '<i class="fas fa-link"></i> Start WhatsApp pairing'; }
-    if (document.getElementById('setupPhone')?.value) showError('pairSetupError', msg || 'Pairing imeshindikana.');
+    var loginButton = document.getElementById('loginPairButton');
+    if (loginButton) { loginButton.disabled = false; loginButton.innerHTML = '<i class="fas fa-link"></i> Pair WhatsApp from login'; }
+    var loginStatus = document.getElementById('loginPairStatus');
+    if (loginStatus) loginStatus.textContent = msg || 'Pairing imeshindikana.';
     setStatus(msg || 'Imeshindikana.', 'error');
   });
 
