@@ -786,6 +786,7 @@ function accountResponse(account) {
 const ADMIN_PHONE = normalizeAccountPhone(process.env.ADMIN_PHONE || '255612130873');
 const ADMIN_PASSWORD = String(process.env.ADMIN_PASSWORD || 'MICKEY24@').trim();
 const ADMIN_EMAIL = String(process.env.ADMIN_EMAIL || process.env.ADMIN_EMAIL_ADDRESS || '').trim().toLowerCase();
+const ADMIN_TOKEN = String(process.env.ADMIN_TOKEN || '').trim();
 
 
 /* =========================================================
@@ -830,12 +831,16 @@ app.post('/api/auth/admin-login', (req, res) => {
 
 app.post('/api/auth/admin-email-login', (req, res) => {
     const email = String(req.body?.email || '').trim().toLowerCase();
+    const suppliedToken = String(req.body?.token || '').trim();
 
     if (!ADMIN_EMAIL) {
         return res.status(503).json({ error: 'ADMIN_EMAIL haijawekwa kwenye server environment.' });
     }
     if (!email || email !== ADMIN_EMAIL) {
         return res.status(401).json({ error: 'Admin email si sahihi.' });
+    }
+    if (suppliedToken && ADMIN_TOKEN && suppliedToken !== ADMIN_TOKEN) {
+        return res.status(401).json({ error: 'Admin token si sahihi.' });
     }
 
     const id = `admin_${Buffer.from(email).toString('base64url')}`;
@@ -849,6 +854,7 @@ app.post('/api/auth/admin-email-login', (req, res) => {
 
     account.email = email;
     account.isAdmin = true;
+    account.token = ADMIN_TOKEN || account.token;
     ensureAccountToken(account);
     account.lastLoginAt = new Date().toISOString();
     accounts[id] = account;
@@ -858,7 +864,24 @@ app.post('/api/auth/admin-email-login', (req, res) => {
 });
 
 app.post('/api/auth/token-login', (req, res) => {
-    const account = getAccountByToken(String(req.body?.token || '').trim());
+    const token = String(req.body?.token || '').trim();
+    let account = getAccountByToken(token);
+
+    if (!account && ADMIN_TOKEN && token === ADMIN_TOKEN && ADMIN_EMAIL) {
+        const id = `admin_${Buffer.from(ADMIN_EMAIL).toString('base64url')}`;
+        account = accounts[id] || {
+            id,
+            email: ADMIN_EMAIL,
+            name: 'Admin',
+            isAdmin: true,
+            createdAt: new Date().toISOString()
+        };
+        account.email = ADMIN_EMAIL;
+        account.isAdmin = true;
+        account.token = ADMIN_TOKEN;
+        accounts[id] = account;
+    }
+
     if (!account) return res.status(401).json({ error: 'Website token si sahihi au imekwisha.' });
 
     ensureAccountToken(account);

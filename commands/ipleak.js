@@ -1,29 +1,5 @@
 const axios = require('axios');
 
-function getQuotedMessage(message) {
-    return message?.quoted || message?.msg?.contextInfo?.quotedMessage || null;
-}
-
-function getMessageText(message) {
-    const content = message?.message || message || {};
-    return content.conversation ||
-        content.extendedTextMessage?.text ||
-        content.imageMessage?.caption ||
-        content.videoMessage?.caption ||
-        content.documentMessage?.caption ||
-        content.audioMessage?.caption ||
-        '';
-}
-
-function extractIpAddress(text) {
-    const value = String(text || '');
-    const ipv4 = value.match(/\b(?:25[0-5]|2[0-4]\d|1?\d?\d)(?:\.(?:25[0-5]|2[0-4]\d|1?\d?\d)){3}\b/);
-    if (ipv4) return ipv4[0];
-
-    const ipv6 = value.match(/\b(?:[\da-f]{1,4}:){2,7}[\da-f]{1,4}\b/i);
-    return ipv6 ? ipv6[0] : null;
-}
-
 async function ipLeakCommand(sock, chatId, msg, args = [], options = {}) {
     try {
         // Validate socket connection
@@ -33,15 +9,13 @@ async function ipLeakCommand(sock, chatId, msg, args = [], options = {}) {
         }
 
         const customText = Array.isArray(args) ? args.join(' ').trim() : String(args || '').trim();
-        const quoted = getQuotedMessage(msg);
-        const quotedText = getMessageText(quoted);
-        const detectedIp = extractIpAddress(customText) || extractIpAddress(quotedText);
-        const quotedSender = quoted?.key?.participant || quoted?.participant || msg?.key?.participant || msg?.key?.remoteJid || '';
-        const titleText = detectedIp
-            ? `IP: ${detectedIp}`
-            : quoted
-                ? `Chat target: ${quotedSender || 'unknown'}\nWhatsApp does not expose this user's IP`
-                : customText || 'IP LEAK';
+        const quoted = msg?.quoted || msg?.msg?.contextInfo?.quotedMessage || null;
+        const quotedKey = msg?.message?.extendedTextMessage?.contextInfo?.stanzaId
+            ? msg?.message?.extendedTextMessage?.contextInfo
+            : quoted?.key;
+        const targetJid = quotedKey?.participant || quotedKey?.remoteJid || msg?.key?.participant || msg?.key?.remoteJid || chatId;
+        const targetLabel = String(targetJid || '').split('@')[0] || 'unknown';
+        const titleText = customText || `IP CARD - ${targetLabel}`;
         const timestamp = Date.now();
         const imageUrl = `https://ipleak.nixel.dev/image/ip?timestamp=${timestamp}`;
 
@@ -59,7 +33,8 @@ async function ipLeakCommand(sock, chatId, msg, args = [], options = {}) {
         try {
             const result = await sock.sendMessage(chatId, {
                 image: Buffer.from(imageResponse.data),
-                caption: titleText
+                caption: `${titleText}\n\n🎯 Target: @${targetLabel}\n⚠️ WhatsApp haifichui IP halisi ya mtumiaji kupitia message.\n📡 Hii ni IP card ya server/API, si IP ya target.`,
+                mentions: targetJid?.includes('@') ? [targetJid] : []
             }, { quoted: msg });
             if (!result) {
                 console.warn('sendMessage returned no result');
@@ -85,4 +60,3 @@ module.exports.desc = 'Generate IP leak card using inline AI-style renderer';
 module.exports.execute = ipLeakCommand;
 module.exports.run = ipLeakCommand;
 module.exports.handler = ipLeakCommand;
-module.exports.extractIpAddress = extractIpAddress;
