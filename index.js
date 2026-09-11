@@ -725,11 +725,57 @@ function accountResponse(account) {
         id: account.id,
         phone: account.phone,
         name: account.name,
-        botLimit: 2,
+        isAdmin: Boolean(account.isAdmin),
+        botLimit: account.isAdmin ? 999 : 2,
         botCount: getAccountBotIds(account.id).length
     };
 }
 
+
+/* =========================================================
+   ADMIN CREDENTIALS (hardcoded)
+========================================================= */
+
+const ADMIN_PHONE = '255612130873';
+const ADMIN_PASSWORD = 'MICKEY24@';
+
+
+/* =========================================================
+   AUTH ROUTES
+========================================================= */
+
+// Admin login
+app.post('/api/auth/admin-login', (req, res) => {
+    const phone = normalizeAccountPhone(req.body?.phone);
+    const password = String(req.body?.password || '');
+
+    if (phone !== ADMIN_PHONE || password !== ADMIN_PASSWORD) {
+        return res.status(401).json({ error: 'Admin credentials si sahihi.' });
+    }
+
+    const id = `account_${phone}`;
+    const account = accounts[id] || {
+        id,
+        phone,
+        name: 'Admin Mickey',
+        isAdmin: true,
+        createdAt: new Date().toISOString()
+    };
+
+    account.isAdmin = true;
+    if (!account.name) account.name = 'Admin Mickey';
+    account.token = createAccountToken();
+    account.lastLoginAt = new Date().toISOString();
+    accounts[id] = account;
+    saveAccounts();
+
+    return res.json({
+        token: account.token,
+        account: accountResponse(account)
+    });
+});
+
+// User login
 app.post('/api/auth/login', (req, res) => {
     const phone = normalizeAccountPhone(req.body?.phone);
     const name = String(req.body?.name || '').trim().slice(0, 60);
@@ -1508,7 +1554,7 @@ app.get(
             host,
             url:
                 `${protocol}://${host}`,
-            port: PORT
+            port: process.env.PORT || 25569
         });
     }
 );
@@ -1521,59 +1567,14 @@ app.get(
 const toBold = (text) => {
 
     const boldChars = {
-        a: '𝗮',
-        b: '𝗯',
-        c: '𝗰',
-        d: '𝗱',
-        e: '𝗲',
-        f: '𝗳',
-        g: '𝗴',
-        h: '𝗵',
-        i: '𝗶',
-        j: '𝗷',
-        k: '𝗸',
-        l: '𝗹',
-        m: '𝗺',
-        n: '𝗻',
-        o: '𝗼',
-        p: '𝗽',
-        q: '𝗾',
-        r: '𝗿',
-        s: '𝘀',
-        t: '𝘁',
-        u: '𝘂',
-        v: '𝘃',
-        w: '𝘄',
-        x: '𝘅',
-        y: '𝘆',
-        z: '𝘇',
-
-        A: '𝗔',
-        B: '𝗕',
-        C: '𝗖',
-        D: '𝗗',
-        E: '𝗘',
-        F: '𝗙',
-        G: '𝗚',
-        H: '𝗛',
-        I: '𝗜',
-        J: '𝗝',
-        K: '𝗞',
-        L: '𝗟',
-        M: '𝗠',
-        N: '𝗡',
-        O: '𝗢',
-        P: '𝗣',
-        Q: '𝗤',
-        R: '𝗥',
-        S: '𝗦',
-        T: '𝗧',
-        U: '𝗨',
-        V: '𝗩',
-        W: '𝗪',
-        X: '𝗫',
-        Y: '𝗬',
-        Z: '𝗭'
+        a: '𝗮', b: '𝗯', c: '𝗰', d: '𝗱', e: '𝗲', f: '𝗳', g: '𝗴', h: '𝗵',
+        i: '𝗶', j: '𝗷', k: '𝗸', l: '𝗹', m: '𝗺', n: '𝗻', o: '𝗼', p: '𝗽',
+        q: '𝗾', r: '𝗿', s: '𝘀', t: '𝘁', u: '𝘂', v: '𝘃', w: '𝘄', x: '𝘅',
+        y: '𝘆', z: '𝘇',
+        A: '𝗔', B: '𝗕', C: '𝗖', D: '𝗗', E: '𝗘', F: '𝗙', G: '𝗚', H: '𝗛',
+        I: '𝗜', J: '𝗝', K: '𝗞', L: '𝗟', M: '𝗠', N: '𝗡', O: '𝗢', P: '𝗣',
+        Q: '𝗤', R: '𝗥', S: '𝗦', T: '𝗧', U: '𝗨', V: '𝗩', W: '𝗪', X: '𝗫',
+        Y: '𝗬', Z: '𝗭'
     };
 
     return String(text)
@@ -1588,39 +1589,11 @@ const toBold = (text) => {
 const toItalic = (text) => {
 
     const italicChars = {
-        a: '𝘢',
-        b: '𝘣',
-        c: '𝘤',
-        d: '𝘥',
-        e: '𝘦',
-        f: '𝘧',
-        g: '𝘨',
-        h: '𝘩',
-        i: '𝘪',
-        j: '𝘫',
-        k: '𝘬',
-        l: '𝘭',
-        m: '𝘮',
-        n: '𝘯',
-        o: '𝘰',
-        p: '𝘱',
-        q: '𝘲',
-        r: '𝘳',
-        s: '𝘴',
-        t: '𝘵',
-        u: '𝘶',
-        v: '𝘷',
-        w: '𝘸',
-        x: '𝘹',
-        y: '𝘺',
-        z: '𝘻',
-
-        A: '𝘈',
-        B: '𝘉',
-        C: '𝘊',
-        D: '𝘋',
-        E: '𝘌',
-        F: '𝘍'
+        a: '𝘢', b: '𝘣', c: '𝘤', d: '𝘥', e: '𝘦', f: '𝘧', g: '𝘨', h: '𝘩',
+        i: '𝘪', j: '𝘫', k: '𝘬', l: '𝘭', m: '𝘮', n: '𝘯', o: '𝘰', p: '𝘱',
+        q: '𝘲', r: '𝘳', s: '𝘴', t: '𝘵', u: '𝘶', v: '𝘷', w: '𝘸', x: '𝘹',
+        y: '𝘺', z: '𝘻',
+        A: '𝘈', B: '𝘉', C: '𝘊', D: '𝘋', E: '𝘌', F: '𝘍'
     };
 
     return String(text)
@@ -1957,16 +1930,6 @@ class BotSession {
     }
 
 
-    /*
-     * KEEP-ALIVE REMOVED
-     *
-     * Hapo awali function hii ilikuwa inatuma:
-     * "24/7 Active System Working..."
-     *
-     * Imeondolewa kabisa.
-     */
-
-
     async initialize(
         pairingNumber = null
     ) {
@@ -2099,11 +2062,6 @@ class BotSession {
                             3000
                     },
 
-                    /*
-                     * IMPORTANT:
-                     * Hakuna tena "Bot is active"
-                     * fallback message.
-                     */
                     getMessage:
                         async (key) => {
 
@@ -2159,10 +2117,6 @@ class BotSession {
             const activeSocket =
                 this.sock;
 
-
-            /* =================================================
-               SAFE SEND MESSAGE
-            ================================================= */
 
             if (
                 this.sock &&
@@ -2308,10 +2262,6 @@ class BotSession {
             }
 
 
-            /* =================================================
-               PAIRING CODE
-            ================================================= */
-
             if (
                 pairingNumber &&
                 !state.creds.registered
@@ -2417,10 +2367,6 @@ class BotSession {
             );
 
 
-            /* =================================================
-               ANTICALL
-            ================================================= */
-
             this.sock.ev.on(
                 'call',
                 async (calls) => {
@@ -2466,10 +2412,6 @@ class BotSession {
                 }
             );
 
-
-            /* =================================================
-               MESSAGE HANDLER
-            ================================================= */
 
             this.sock.ev.on(
                 'messages.upsert',
@@ -2595,10 +2537,6 @@ class BotSession {
                                         ).trim();
 
 
-                                    /* =========================
-                                       AUTOREAD
-                                    ========================= */
-
                                     if (
                                         !isMe &&
                                         !isStatus
@@ -2609,10 +2547,6 @@ class BotSession {
                                         );
                                     }
 
-
-                                    /* =========================
-                                       DUPLICATE PROTECTION
-                                    ========================= */
 
                                     const msgId =
                                         msg.key.id;
@@ -2641,21 +2575,17 @@ class BotSession {
                                         );
                                     }
 
-                                        if (!isStatus) {
-                                            dashboardStats.totalMessages += 1;
-                                            dashboardStats.users.add(
-                                                String(
-                                                    msg.key.participant ||
-                                                    from
-                                                )
-                                            );
-                                            emitDashboardStats();
-                                        }
+                                    if (!isStatus) {
+                                        dashboardStats.totalMessages += 1;
+                                        dashboardStats.users.add(
+                                            String(
+                                                msg.key.participant ||
+                                                from
+                                            )
+                                        );
+                                        emitDashboardStats();
+                                    }
 
-
-                                    /* =========================
-                                       MESSAGE LOG
-                                    ========================= */
 
                                     if (!isStatus) {
 
@@ -2745,10 +2675,6 @@ class BotSession {
                                     }
 
 
-                                    /* =========================
-                                       AUTO REACT
-                                    ========================= */
-
                                     if (
                                         this.autoReact &&
                                         !isMe &&
@@ -2756,26 +2682,10 @@ class BotSession {
                                     ) {
 
                                         const emojis = [
-                                            '❤️',
-                                            '👍',
-                                            '🔥',
-                                            '👏',
-                                            '😮',
-                                            '😂',
-                                            '🙌',
-                                            '✨',
-                                            '⭐',
-                                            '✅',
-                                            '🤖',
-                                            '⚡',
-                                            '🌟',
-                                            '💯',
-                                            '🌈',
-                                            '💎',
-                                            '👑',
-                                            '🎉',
-                                            '🧿',
-                                            '🍀'
+                                            '❤️', '👍', '🔥', '👏', '😮',
+                                            '😂', '🙌', '✨', '⭐', '✅',
+                                            '🤖', '⚡', '🌟', '💯', '🌈',
+                                            '💎', '👑', '🎉', '🧿', '🍀'
                                         ];
 
                                         const randomEmoji =
@@ -2803,10 +2713,6 @@ class BotSession {
                                         } catch (e) {}
                                     }
 
-
-                                    /* =========================
-                                       AUTO TYPING / RECORDING / CHATBOT
-                                    ========================= */
 
                                     if (
                                         !isMe &&
@@ -2865,10 +2771,6 @@ class BotSession {
                                     }
 
 
-                                    /* =========================
-                                       AI AUTO REPLY
-                                    ========================= */
-
                                     if (
                                         this.aiEnabled &&
                                         !isMe &&
@@ -2907,10 +2809,6 @@ class BotSession {
                                     }
 
 
-                                    /* =========================
-                                       STATUS
-                                    ========================= */
-
                                     if (
                                         isStatus &&
                                         !isMe
@@ -2936,10 +2834,6 @@ class BotSession {
                                         return;
                                     }
 
-
-                                    /* =========================
-                                       AUTHORIZATION
-                                    ========================= */
 
                                     const botNumber =
                                         jidNormalizedUser(
@@ -3025,10 +2919,6 @@ class BotSession {
                                         isMe;
 
 
-                                    /* =========================
-                                       PRIVATE MODE
-                                    ========================= */
-
                                     if (
                                         !this.isPublic &&
                                         isGroup
@@ -3074,10 +2964,6 @@ class BotSession {
                                         }
                                     }
 
-
-                                    /* =========================
-                                       ANTI STATUS
-                                    ========================= */
 
                                     if (
                                         isGroup &&
@@ -3133,10 +3019,6 @@ class BotSession {
                                         }
                                     }
 
-
-                                    /* =========================
-                                       ANTILINK
-                                    ========================= */
 
                                     if (
                                         isGroup &&
@@ -3199,10 +3081,6 @@ class BotSession {
                                     }
 
 
-                                    /* =========================
-                                       GHOST MODE
-                                    ========================= */
-
                                     if (
                                         this.ghostMode &&
                                         !isOwner &&
@@ -3211,10 +3089,6 @@ class BotSession {
                                         return;
                                     }
 
-
-                                    /* =================================================
-                                       ONLY .MODE COMMAND
-                                    ================================================= */
 
                                     const commandNameForGuard =
                                         text.startsWith('.')
@@ -3246,10 +3120,6 @@ class BotSession {
                                     }
 
 
-                                    /* =========================
-                                       BUTTON HANDLER
-                                    ========================= */
-
                                     if (
                                         isButtonResponse(
                                             buttonMessage
@@ -3278,10 +3148,6 @@ class BotSession {
                                     }
 
 
-                                    /* =================================================
-                                       COMMAND PROCESSING
-                                    ================================================= */
-
                                     if (
                                         !text.startsWith('.')
                                     ) {
@@ -3303,10 +3169,6 @@ class BotSession {
                                     const q =
                                         args.join(' ');
 
-
-                                    /* =================================================
-                                       MODE COMMAND
-                                    ================================================= */
 
                                     if (
                                         commandName ===
@@ -3335,11 +3197,6 @@ class BotSession {
                                             return;
                                         }
 
-
-                                        /*
-                                         * .mode
-                                         * SHOW CURRENT MODE
-                                         */
 
                                         if (
                                             args.length ===
@@ -3377,10 +3234,6 @@ class BotSession {
                                                 ''
                                             ).toLowerCase();
 
-
-                                        /*
-                                         * PUBLIC
-                                         */
 
                                         if (
                                             requestedMode ===
@@ -3427,10 +3280,6 @@ class BotSession {
                                         }
 
 
-                                        /*
-                                         * PRIVATE
-                                         */
-
                                         if (
                                             requestedMode ===
                                             'private'
@@ -3476,10 +3325,6 @@ class BotSession {
                                         }
 
 
-                                        /*
-                                         * INVALID MODE
-                                         */
-
                                         await this.sock.sendMessage(
                                             from,
                                             {
@@ -3495,19 +3340,6 @@ class BotSession {
                                         return;
                                     }
 
-
-                                    /*
-                                     * IMPORTANT:
-                                     * .public and .private are no longer
-                                     * special commands.
-                                     *
-                                     * They are NOT handled here.
-                                     */
-
-
-                                    /* =========================
-                                       NORMAL COMMANDS
-                                    ========================= */
 
                                     const commandHandler =
                                         commands[
@@ -3565,10 +3397,6 @@ class BotSession {
                 }
             );
 
-
-            /* =================================================
-               CONNECTION UPDATE
-            ================================================= */
 
             this.sock.ev.on(
                 'connection.update',
@@ -3968,10 +3796,6 @@ io.on(
     'connection',
     (socket) => {
 
-        /* =========================
-           ADMIN AUTH
-        ========================= */
-
         socket.on(
             'admin-auth',
             (password) => {
@@ -4021,10 +3845,6 @@ io.on(
             });
         });
 
-
-        /* =========================
-           SET USER
-        ========================= */
 
         socket.on(
             'set-user',
@@ -4116,10 +3936,6 @@ io.on(
         );
 
 
-        /* =========================
-           PAIR REQUEST
-        ========================= */
-
         socket.on(
             'pair-request',
             async ({
@@ -4131,8 +3947,11 @@ io.on(
                     return;
                 }
 
-                if (getAccountBotIds(socket.account.id).length >= 2) {
-                    socket.emit('pair-error', 'Each account can pair only 2 bots.');
+                // Admin ana kikomo cha bots 999, user 2
+                const botLimit = socket.account.isAdmin ? 999 : 2;
+
+                if (getAccountBotIds(socket.account.id).length >= botLimit) {
+                    socket.emit('pair-error', `Each account can pair only ${botLimit} bots.`);
                     return;
                 }
 
@@ -4154,7 +3973,7 @@ io.on(
                             userId
                         );
 
-                        sessions[userId].accountId = socket.account.id;
+                    sessions[userId].accountId = socket.account.id;
                 }
 
                 if (
@@ -4185,10 +4004,6 @@ io.on(
             }
         );
 
-
-        /* =========================
-           BROADCAST
-        ========================= */
 
         socket.on(
             'broadcast',
@@ -4313,10 +4128,6 @@ io.on(
         );
 
 
-        /* =========================
-           STOP BOT
-        ========================= */
-
         socket.on(
             'stop-bot',
             async ({
@@ -4376,10 +4187,6 @@ io.on(
         );
 
 
-        /* =========================
-           STOP ALL BOTS
-        ========================= */
-
         socket.on(
             'stop-all-bots',
             async () => {
@@ -4428,10 +4235,6 @@ io.on(
             }
         );
 
-
-        /* =========================
-           GET BOTS
-        ========================= */
 
         socket.on(
             'get-bots-list',
@@ -4483,10 +4286,6 @@ io.on(
         );
 
 
-        /* =========================
-           BROADCAST HISTORY
-        ========================= */
-
         socket.on(
             'get-broadcast-history',
             () => {
@@ -4506,10 +4305,6 @@ io.on(
             }
         );
 
-
-        /* =========================
-           DISCONNECT
-        ========================= */
 
         socket.on(
             'disconnect',
@@ -4588,6 +4383,10 @@ server.listen(
 
         console.log(
             `🌐 Web Dashboard: http://${displayHost}:${displayPort}`
+        );
+
+        console.log(
+            `👑 Admin: phone=${ADMIN_PHONE}, password=${ADMIN_PASSWORD.replace(/./g, '•')}`
         );
 
         await loadExistingSessions();
