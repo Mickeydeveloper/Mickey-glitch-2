@@ -636,16 +636,16 @@ function addBotRelayNodes(options = {}) {
    GLOBAL DATA
 ========================================================= */
 
-const AUTH_DIR = './auth_info';
-const DATA_FILE = './data/bot_data.json';
-const ACCOUNTS_FILE = './data/accounts.json';
+const AUTH_DIR = path.join(__dirname, 'auth_info');
+const DATA_FILE = path.join(__dirname, 'data', 'bot_data.json');
+const ACCOUNTS_FILE = path.join(__dirname, 'data', 'accounts.json');
 const MONGODB_URI = String(process.env.MONGODB_URI || process.env.MONGO_URI || '').trim();
 const MONGODB_DB = String(process.env.MONGODB_DB || 'mickey_glitch').trim();
 const MONGODB_SESSION_SECRET = String(process.env.MONGODB_SESSION_SECRET || process.env.SESSION_SECRET || '').trim();
 let mongoStore = null;
 
 fs.ensureDirSync(AUTH_DIR);
-fs.ensureDirSync('./data');
+fs.ensureDirSync(path.dirname(DATA_FILE));
 
 let botData = {
     antilinkGroups: {},
@@ -745,7 +745,9 @@ function createAccountToken() {
 }
 
 function ensureAccountToken(account) {
-    if (!account || !/^Mickey-\d{6}$/.test(String(account.token || ''))) {
+    const isConfiguredAdminToken = typeof ADMIN_TOKEN === 'string' &&
+        ADMIN_TOKEN && account?.token === ADMIN_TOKEN;
+    if (!account || (!isConfiguredAdminToken && !/^Mickey-\d{6}$/.test(String(account.token || '')))) {
         account.token = createAccountToken();
     }
     return account.token;
