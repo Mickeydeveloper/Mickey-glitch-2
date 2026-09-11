@@ -685,6 +685,48 @@ const sessions = {};
 const userSockets = {};
 const messageLogs = {};
 
+function getDashboardBotState() {
+    const authEntries = fs.existsSync(AUTH_DIR)
+        ? fs.readdirSync(AUTH_DIR)
+        : [];
+    const ids = new Set([
+        ...authEntries.filter((entry) => {
+            const entryPath = path.join(AUTH_DIR, entry);
+            return fs.existsSync(entryPath) &&
+                fs.statSync(entryPath).isDirectory() &&
+                fs.existsSync(path.join(entryPath, 'creds.json'));
+        }),
+        ...Object.keys(sessions)
+    ]);
+
+    return [...ids].map((userId) => {
+        const session = sessions[userId];
+        const settingsForBot = botData.statusSettings?.[userId] || {};
+        const phoneNumber = session?.phoneNumber ||
+            session?.sock?.user?.id?.split(':')?.[0] || '';
+        const name = botData.userNames?.[userId] ||
+            session?.sock?.user?.name ||
+            (phoneNumber ? `Bot ${phoneNumber}` : userId);
+
+        return {
+            id: userId,
+            name,
+            phoneNumber,
+            paired: fs.existsSync(path.join(AUTH_DIR, userId, 'creds.json')),
+            running: Boolean(session?.isConnected),
+            connecting: Boolean(session?.isInitializing),
+            settings: settingsForBot
+        };
+    });
+}
+
+function emitDashboardBotState() {
+    io.emit('bot-state', {
+        bots: getDashboardBotState(),
+        active: Object.values(sessions).filter((session) => session.isConnected).length
+    });
+}
+
 
 /* =========================================================
    HELPER FUNCTIONS
@@ -1596,6 +1638,8 @@ class BotSession {
                 s => s.isConnected
             ).length
         );
+
+        emitDashboardBotState();
     }
 
 
@@ -3858,6 +3902,61 @@ io.on(
 
                 sessions[userId]
                     .sendConnectionStatus();
+
+                socket.emit('bot-state', {
+                    bots: getDashboardBotState(),
+                    active: Object.values(sessions).filter((session) => session.isConnected).length
+                });
+            }
+        );
+
+        socket.on(
+            'request-bot-state',
+            () => {
+                socket.emit('bot-state', {
+                    bots: getDashboardBotState(),
+                    active: Object.values(sessions).filter((session) => session.isConnected).length
+                });
+            }
+        );
+
+        socket.on(
+            'update-bot-settings',
+            ({ userId, settings: incomingSettings } = {}) => {
+                if (!userId || !incomingSettings || typeof incomingSettings !== 'object') {
+                    return;
+                }
+
+                if (!botData.statusSettings[userId]) {
+                    botData.statusSettings[userId] = {};
+                }
+
+                const allowedKeys = [
+                    'autoReply',
+                    'readReceipts',
+                    'typingIndicator',
+                    'autoReconnect',
+                    'antiSpam',
+                    'logMessages',
+                    'prefix',
+                    'isPublic'
+                ];
+
+                for (const key of allowedKeys) {
+                    if (Object.prototype.hasOwnProperty.call(incomingSettings, key)) {
+                        botData.statusSettings[userId][key] =
+                            key === 'prefix'
+                                ? String(incomingSettings[key] || '.').slice(0, 3)
+                                : Boolean(incomingSettings[key]);
+                    }
+                }
+
+                saveBotData();
+                socket.emit('bot-settings-saved', {
+                    userId,
+                    settings: botData.statusSettings[userId]
+                });
+                emitDashboardBotState();
             }
         );
 

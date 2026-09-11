@@ -756,6 +756,10 @@
         <h2>Bot Settings</h2>
         <p>Configure behavior for all your bots</p>
       </div>
+      <div class="field" style="margin:0;min-width:260px;">
+        <label for="settingsBot">Bot to configure</label>
+        <select id="settingsBot"></select>
+      </div>
     </div>
     <div class="settings-grid">
       <div class="setting-row">
@@ -925,12 +929,8 @@
 /* ============================================
    DATA
    ============================================ */
-const bots = [
-  { id: 'bot_001', name: 'Mickey Assistant', status: 'online', uptime: '2d 14h', messages: 1247, commands: 342, avatar: 'MA', color: '' },
-  { id: 'bot_002', name: 'Group Moderator', status: 'online', uptime: '5d 8h', messages: 892, commands: 156, avatar: 'GM', color: 'lime' },
-  { id: 'bot_003', name: 'Media Downloader', status: 'connecting', uptime: '0d 0h', messages: 45, commands: 23, avatar: 'MD', color: 'cyan' },
-  { id: 'bot_004', name: 'AI Chatbot', status: 'offline', uptime: '0d 0h', messages: 0, commands: 0, avatar: 'AI', color: 'pink' }
-];
+const bots = [];
+let selectedBotId = '';
 
 const commands = [
   { name: '!help', description: 'Show all available commands', usage: '!help', access: 'user' },
@@ -974,39 +974,69 @@ let currentLogFilter = 'all';
 function renderBots(){
   const grid = document.getElementById('botDashboard');
   grid.innerHTML = '';
+  if(!bots.length){
+    grid.innerHTML = '<div style="grid-column:1/-1;padding:36px;text-align:center;color:var(--text-3);">No paired bots found. Pair a WhatsApp bot to see it here.</div>';
+    document.getElementById('activeBots').innerText = '0';
+    document.getElementById('botsBadge').innerText = '0';
+    renderSettingsBot();
+    return;
+  }
   bots.forEach(bot => {
     const card = document.createElement('div');
     card.className = 'bot-card';
+    const status = bot.running ? 'online' : bot.connecting ? 'connecting' : 'offline';
+    const avatar = (bot.name || bot.id || 'BT')
+      .split(/\s+/)
+      .map(part => part[0])
+      .join('')
+      .slice(0, 2)
+      .toUpperCase();
     card.innerHTML = `
       <div class="bot-top">
-        <div class="bot-avatar ${bot.color}">${bot.avatar}</div>
+        <div class="bot-avatar">${avatar}</div>
         <div class="bot-meta">
           <h3>${bot.name}</h3>
           <div class="id">${bot.id}</div>
         </div>
-        <div class="status-pill ${bot.status}"><span class="ind"></span>${bot.status}</div>
+        <div class="status-pill ${status}"><span class="ind"></span>${bot.paired ? (bot.running ? 'running' : status) : 'not paired'}</div>
       </div>
       <div class="bot-metrics">
-        <div class="metric"><div class="v">${bot.uptime}</div><div class="l">Uptime</div></div>
-        <div class="metric"><div class="v">${bot.messages}</div><div class="l">Messages</div></div>
-        <div class="metric"><div class="v">${bot.commands}</div><div class="l">Commands</div></div>
+        <div class="metric"><div class="v">${bot.phoneNumber || '—'}</div><div class="l">Number</div></div>
+        <div class="metric"><div class="v">${bot.paired ? 'Yes' : 'No'}</div><div class="l">Paired</div></div>
+        <div class="metric"><div class="v">${bot.running ? 'Live' : 'Idle'}</div><div class="l">Runtime</div></div>
       </div>
       <div class="bot-actions">
-        <button class="btn ${bot.status === 'online' ? 'btn-ghost' : 'btn-lime'} btn-sm" style="flex:1;" onclick="toggleBot('${bot.id}')">
-          <i class="fas fa-power-off"></i> ${bot.status === 'online' ? 'Stop' : 'Start'}
+        <button class="btn btn-ghost btn-sm" style="flex:1;" onclick="selectBotForSettings('${bot.id}')">
+          <i class="fas fa-sliders-h"></i> Configure
         </button>
-        <button class="btn btn-ghost btn-sm" onclick="restartBot('${bot.id}')"><i class="fas fa-sync-alt"></i></button>
-        <button class="btn btn-danger btn-sm" onclick="deleteBot('${bot.id}')"><i class="fas fa-trash"></i></button>
       </div>
     `;
     grid.appendChild(card);
   });
-  const online = bots.filter(b => b.status === 'online').length;
+  const online = bots.filter(b => b.running).length;
   document.getElementById('activeBots').innerText = online;
   document.getElementById('botsBadge').innerText = bots.length;
-  animateNumber('activeSockets', online + 3);
-  animateNumber('totalUsers', 1284 + bots.length * 12);
-  animateNumber('totalMessages', bots.reduce((s,b) => s + b.messages, 0));
+  animateNumber('activeSockets', online);
+  renderSettingsBot();
+}
+
+function renderSettingsBot(){
+  const select = document.getElementById('settingsBot');
+  if(!select) return;
+  const previous = selectedBotId;
+  select.innerHTML = bots.length
+    ? bots.map(bot => `<option value="${bot.id}">${bot.name} · ${bot.running ? 'Running' : 'Offline'}</option>`).join('')
+    : '<option value="">No paired bots</option>';
+  selectedBotId = bots.some(bot => bot.id === previous) ? previous : (bots[0]?.id || '');
+  select.value = selectedBotId;
+  loadSettingsForBot();
+}
+
+function selectBotForSettings(id){
+  selectedBotId = id;
+  document.getElementById('settingsBot').value = id;
+  loadSettingsForBot();
+  document.getElementById('settings').scrollIntoView({behavior:'smooth'});
 }
 
 function animateNumber(id, target){
@@ -1148,13 +1178,38 @@ document.querySelectorAll('.switch').forEach(sw => {
     sw.classList.toggle('active');
   });
 });
+document.getElementById('settingsBot')?.addEventListener('change', (event) => {
+  selectedBotId = event.target.value;
+  loadSettingsForBot();
+});
+
+function loadSettingsForBot(){
+  const bot = bots.find(item => item.id === selectedBotId);
+  const settings = {
+    autoReply: true,
+    readReceipts: true,
+    typingIndicator: true,
+    autoReconnect: true,
+    antiSpam: false,
+    logMessages: true,
+    ...(bot?.settings || {})
+  };
+  document.querySelectorAll('.switch').forEach(sw => {
+    sw.classList.toggle('active', settings[sw.dataset.setting] !== false);
+  });
+  document.getElementById('botPrefix').value = settings.prefix || '.';
+}
+
 document.getElementById('saveSettingsBtn')?.addEventListener('click', () => {
+  const bot = bots.find(item => item.id === selectedBotId);
+  if(!bot || !socket){
+    showToast('Pair a bot before saving settings');
+    return;
+  }
   const s = {};
   document.querySelectorAll('.switch').forEach(x => s[x.dataset.setting] = x.classList.contains('active'));
   s.prefix = document.getElementById('botPrefix').value;
-  localStorage.setItem('mickey_settings', JSON.stringify(s));
-  showToast('Settings saved');
-  addLog('success', 'Bot settings saved');
+  socket.emit('update-bot-settings', {userId: bot.id, settings: s});
 });
 
 /* ============================================
@@ -1162,49 +1217,19 @@ document.getElementById('saveSettingsBtn')?.addEventListener('click', () => {
    ============================================ */
 document.querySelectorAll('.template-card').forEach(card => {
   card.addEventListener('click', () => {
-    const name = card.querySelector('h4').innerText;
-    const newBot = {
-      id: 'bot_' + Math.random().toString(36).substr(2, 6),
-      name,
-      status: 'connecting',
-      uptime: '0d 0h',
-      messages: 0,
-      commands: 0,
-      avatar: name.split(' ').map(w => w[0]).join('').substr(0,2).toUpperCase(),
-      color: ['', 'lime', 'cyan', 'pink'][Math.floor(Math.random()*4)]
-    };
-    bots.push(newBot);
-    renderBots();
-    addLog('info', `Creating bot from template: ${name}`);
-    setTimeout(() => {
-      newBot.status = 'online'; renderBots();
-      addLog('success', `${name} is live`);
-      showToast(`${name} created!`);
-      document.getElementById('bots').scrollIntoView({behavior:'smooth'});
-    }, 1500);
+    showToast('Pair a WhatsApp number to create a real bot');
+    document.getElementById('pairing')?.scrollIntoView({behavior:'smooth'});
   });
 });
 
 document.getElementById('createBotBtn')?.addEventListener('click', () => {
-  const name = prompt('Enter bot name:');
-  if(!name) return;
-  const newBot = {
-    id: 'bot_' + Math.random().toString(36).substr(2, 6),
-    name, status: 'connecting', uptime: '0d 0h', messages: 0, commands: 0,
-    avatar: name.split(' ').map(w => w[0]).join('').substr(0,2).toUpperCase(),
-    color: ['', 'lime', 'cyan', 'pink'][Math.floor(Math.random()*4)]
-  };
-  bots.push(newBot); renderBots();
-  addLog('info', `Creating new bot: ${name}`);
-  setTimeout(() => {
-    newBot.status = 'online'; renderBots();
-    addLog('success', `${name} is live`);
-    showToast(`${name} created!`);
-  }, 1500);
+  document.getElementById('pairing')?.scrollIntoView({behavior:'smooth'});
+  showToast('Use Pair WhatsApp to add a real bot');
 });
 
 document.getElementById('refreshBotsBtn')?.addEventListener('click', () => {
-  renderBots(); showToast('Refreshed');
+  socket?.emit('request-bot-state');
+  showToast('Refreshing bots');
 });
 
 document.getElementById('refreshBtn')?.addEventListener('click', () => {
@@ -1326,6 +1351,19 @@ socket?.on('connection-status', (s) => {
   }
 });
 
+socket?.on('bot-state', (state) => {
+  bots.splice(0, bots.length, ...(state?.bots || []));
+  renderBots();
+  if(state?.active != null) document.getElementById('activeSockets').innerText = state.active;
+});
+
+socket?.on('bot-settings-saved', ({userId, settings}) => {
+  const bot = bots.find(item => item.id === userId);
+  if(bot) bot.settings = settings || {};
+  showToast('Bot settings saved');
+  addLog('success', `Settings saved for ${bot?.name || userId}`);
+});
+
 socket?.on('stats', (data) => {
   if(data){
     if(data.activeSockets != null) document.getElementById('activeSockets').innerText = data.activeSockets;
@@ -1341,22 +1379,12 @@ document.getElementById('year').innerText = new Date().getFullYear();
 renderBots();
 renderCommands();
 renderLogs();
+socket?.emit('request-bot-state');
 
 fetch('/api/server-info')
   .then(r => r.ok ? r.json() : Promise.reject())
   .then(info => document.getElementById('serverAddress').innerText = `Online · ${info.url}`)
   .catch(() => document.getElementById('serverAddress').innerText = `Online · ${window.location.origin}`);
-
-/* Live simulation */
-setInterval(() => {
-  bots.forEach(b => {
-    if(b.status === 'online'){
-      b.messages += Math.floor(Math.random() * 4);
-      if(Math.random() > .7) b.commands += 1;
-    }
-  });
-  renderBots();
-}, 6000);
 
 setInterval(() => {
   const levels = ['info','info','info','warn','success'];
