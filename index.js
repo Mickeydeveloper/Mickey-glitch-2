@@ -1,5 +1,21 @@
 require('dotenv').config();
 
+const nativeConsoleLog = console.log.bind(console);
+const nativeConsoleInfo = console.info.bind(console);
+const isSignalSessionDump = (args) => {
+    const firstValue = args[0];
+    return typeof firstValue === 'string' &&
+        firstValue.startsWith('Closing session:');
+};
+
+console.log = (...args) => {
+    if (!isSignalSessionDump(args)) nativeConsoleLog(...args);
+};
+
+console.info = (...args) => {
+    if (!isSignalSessionDump(args)) nativeConsoleInfo(...args);
+};
+
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
@@ -1878,7 +1894,7 @@ class BotSession {
                                 state.keys,
                                 P({
                                     level:
-                                        'fatal'
+                                        'silent'
                                 })
                             )
                     },
@@ -1889,7 +1905,7 @@ class BotSession {
                     logger:
                         P({
                             level:
-                                'fatal'
+                                'silent'
                         }),
 
                     browser:
