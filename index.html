@@ -1213,16 +1213,24 @@ function showAuthError(message){
   authError.classList.add('show');
 }
 
+function normalizePhone(value){
+  let phone = String(value || '').trim().replace(/\D/g, '');
+  if(phone.startsWith('00')) phone = phone.slice(2);
+  if(phone.startsWith('0')) phone = '255' + phone.slice(1);
+  if(phone.length === 9) phone = '255' + phone;
+  return phone;
+}
+
 function authenticateSocket(){
   if(socket && accountToken) socket.emit('account-auth', accountToken);
 }
 
 authForm?.addEventListener('submit', async (event) => {
   event.preventDefault();
-  const phone = document.getElementById('accountPhone').value.replace(/\D/g, '');
+  const phone = normalizePhone(document.getElementById('accountPhone').value);
   const name = document.getElementById('accountName').value.trim();
-  if(phone.length < 10){
-    showAuthError('Enter a valid phone number with country code.');
+  if(phone.length < 10 || phone.length > 15){
+    showAuthError('Enter a valid phone number, for example 255712345678.');
     return;
   }
 
@@ -1290,9 +1298,9 @@ requestBtn?.addEventListener('click', () => {
     setStatus('Login first to pair a bot.', 'error');
     return;
   }
-  const number = phoneInput.value.replace(/\D/g, '');
-  if(!number || number.length < 10){
-    setStatus('Enter a valid phone number with country code', 'error');
+  const number = normalizePhone(phoneInput.value);
+  if(!number || number.length < 10 || number.length > 15){
+    setStatus('Enter a valid phone number, for example 255712345678.', 'error');
     phoneInput.focus();
     return;
   }

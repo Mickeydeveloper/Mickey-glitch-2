@@ -695,7 +695,11 @@ function saveAccounts() {
 }
 
 function normalizeAccountPhone(value) {
-    return String(value || '').replace(/\D/g, '');
+    let phone = String(value || '').trim().replace(/\D/g, '');
+    if (phone.startsWith('00')) phone = phone.slice(2);
+    if (phone.startsWith('0')) phone = `255${phone.slice(1)}`;
+    if (phone.length === 9) phone = `255${phone}`;
+    return phone;
 }
 
 function createAccountToken() {
@@ -726,7 +730,7 @@ app.post('/api/auth/login', (req, res) => {
     const phone = normalizeAccountPhone(req.body?.phone);
     const name = String(req.body?.name || '').trim().slice(0, 60);
 
-    if (phone.length < 10) {
+    if (phone.length < 10 || phone.length > 15) {
         return res.status(400).json({ error: 'Enter a valid phone number with country code.' });
     }
 
