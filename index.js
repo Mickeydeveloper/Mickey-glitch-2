@@ -702,6 +702,10 @@ function normalizeAccountPhone(value) {
     return phone;
 }
 
+function isValidTanzaniaPhone(phone) {
+    return /^255[67]\d{8}$/.test(phone);
+}
+
 function createAccountToken() {
     return crypto.randomBytes(32).toString('hex');
 }
@@ -730,7 +734,7 @@ app.post('/api/auth/login', (req, res) => {
     const phone = normalizeAccountPhone(req.body?.phone);
     const name = String(req.body?.name || '').trim().slice(0, 60);
 
-    if (phone.length < 10 || phone.length > 15) {
+    if (!isValidTanzaniaPhone(phone)) {
         return res.status(400).json({ error: 'Enter a valid phone number with country code.' });
     }
 

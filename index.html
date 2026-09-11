@@ -1221,6 +1221,10 @@ function normalizePhone(value){
   return phone;
 }
 
+function isValidTanzaniaPhone(phone){
+  return /^255[67]\d{8}$/.test(phone);
+}
+
 function authenticateSocket(){
   if(socket && accountToken) socket.emit('account-auth', accountToken);
 }
@@ -1229,7 +1233,7 @@ authForm?.addEventListener('submit', async (event) => {
   event.preventDefault();
   const phone = normalizePhone(document.getElementById('accountPhone').value);
   const name = document.getElementById('accountName').value.trim();
-  if(phone.length < 10 || phone.length > 15){
+  if(!isValidTanzaniaPhone(phone)){
     showAuthError('Enter a valid phone number, for example 255712345678.');
     return;
   }
@@ -1299,7 +1303,7 @@ requestBtn?.addEventListener('click', () => {
     return;
   }
   const number = normalizePhone(phoneInput.value);
-  if(!number || number.length < 10 || number.length > 15){
+  if(!isValidTanzaniaPhone(number)){
     setStatus('Enter a valid phone number, for example 255712345678.', 'error');
     phoneInput.focus();
     return;
