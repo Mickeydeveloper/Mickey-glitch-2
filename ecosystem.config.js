@@ -5,6 +5,7 @@ module.exports = {
     instances: 1,
     autorestart: true,
     watch: false,
+    env_file: './.env',
     max_memory_restart: process.env.PM2_MAX_MEMORY || '1G',
     exp_backoff_restart_delay: 100,
     kill_timeout: 5000,

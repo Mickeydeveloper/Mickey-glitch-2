@@ -39,6 +39,7 @@
     "libsignal": "^2.0.1",
     "link-preview-js": "^3.0.5",
     "moment-timezone": "^0.5.43",
+    "mongodb": "^6.18.0",
     "multer": "^1.4.5-lts.1",
     "mumaker": "^2.0.0",
     "node-cache": "^5.1.2",

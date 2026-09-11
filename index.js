@@ -1,4 +1,6 @@
-require('dotenv').config();
+require('dotenv').config({
+    path: process.env.DOTENV_CONFIG_PATH || require('path').resolve(__dirname, '.env')
+});
 
 const nativeConsoleLog = console.log.bind(console);
 const nativeConsoleInfo = console.info.bind(console);
@@ -46,6 +48,7 @@ const {
     backupSignalState
 } = require('./lib/sessionRecovery');
 const { createCtx } = require('./lib/messageBuilder');
+const { MongoStore } = require('./lib/mongoStore');
 
 
 /* =========================================================
@@ -636,6 +639,10 @@ function addBotRelayNodes(options = {}) {
 const AUTH_DIR = './auth_info';
 const DATA_FILE = './data/bot_data.json';
 const ACCOUNTS_FILE = './data/accounts.json';
+const MONGODB_URI = String(process.env.MONGODB_URI || process.env.MONGO_URI || '').trim();
+const MONGODB_DB = String(process.env.MONGODB_DB || 'mickey_glitch').trim();
+const MONGODB_SESSION_SECRET = String(process.env.MONGODB_SESSION_SECRET || process.env.SESSION_SECRET || '').trim();
+let mongoStore = null;
 
 fs.ensureDirSync(AUTH_DIR);
 fs.ensureDirSync('./data');
@@ -692,6 +699,28 @@ if (fs.existsSync(ACCOUNTS_FILE)) {
 
 function saveAccounts() {
     fs.writeJsonSync(ACCOUNTS_FILE, accounts, { spaces: 2 });
+    if (mongoStore) {
+        mongoStore.saveAccounts(accounts).catch((error) => {
+            console.error('[Mongo] Account sync failed:', error.message);
+        });
+    }
+}
+
+async function initializePersistence() {
+    if (!MONGODB_URI) {
+        console.warn('[Mongo] MONGODB_URI is not configured. Using local JSON/session files.');
+        return;
+    }
+    if (!MONGODB_SESSION_SECRET) {
+        throw new Error('MONGODB_SESSION_SECRET is required when MongoDB persistence is enabled.');
+    }
+
+    mongoStore = new MongoStore(MONGODB_URI, MONGODB_DB, MONGODB_SESSION_SECRET);
+    await mongoStore.connect();
+    const remoteAccounts = await mongoStore.loadAccounts();
+    accounts = { ...remoteAccounts, ...accounts };
+    await mongoStore.saveAccounts(accounts);
+    console.log(`[Mongo] Connected. Restored ${Object.keys(remoteAccounts).length} account records.`);
 }
 
 function normalizeAccountPhone(value) {
@@ -756,7 +785,7 @@ function accountResponse(account) {
 
 const ADMIN_PHONE = normalizeAccountPhone(process.env.ADMIN_PHONE || '255612130873');
 const ADMIN_PASSWORD = String(process.env.ADMIN_PASSWORD || 'MICKEY24@').trim();
-const ADMIN_EMAIL = String(process.env.ADMIN_EMAIL || 'admin@example.com').trim().toLowerCase();
+const ADMIN_EMAIL = String(process.env.ADMIN_EMAIL || process.env.ADMIN_EMAIL_ADDRESS || '').trim().toLowerCase();
 
 
 /* =========================================================
@@ -802,6 +831,9 @@ app.post('/api/auth/admin-login', (req, res) => {
 app.post('/api/auth/admin-email-login', (req, res) => {
     const email = String(req.body?.email || '').trim().toLowerCase();
 
+    if (!ADMIN_EMAIL) {
+        return res.status(503).json({ error: 'ADMIN_EMAIL haijawekwa kwenye server environment.' });
+    }
     if (!email || email !== ADMIN_EMAIL) {
         return res.status(401).json({ error: 'Admin email si sahihi.' });
     }
@@ -1990,6 +2022,10 @@ class BotSession {
             const { version } =
                 await fetchLatestBaileysVersion();
 
+            if (mongoStore) {
+                await mongoStore.restoreSession(this.userId, this.authPath);
+            }
+
             const {
                 state,
                 saveCreds
@@ -2376,7 +2412,10 @@ class BotSession {
 
             this.sock.ev.on(
                 'creds.update',
-                saveCreds
+                async () => {
+                    await saveCreds();
+                    if (mongoStore) mongoStore.queueSessionSync(this.userId, this.authPath);
+                }
             );
 
 
@@ -3645,6 +3684,7 @@ class BotSession {
                         }
 
                         await this.sendWebsiteToken();
+                        if (mongoStore) mongoStore.queueSessionSync(this.userId, this.authPath);
 
 
                         if (
@@ -3725,10 +3765,10 @@ async function loadExistingSessions() {
 
     try {
 
-        const authDirs =
-            await fs.readdir(
-                AUTH_DIR
-            );
+        const authDirs = new Set(await fs.readdir(AUTH_DIR));
+        for (const account of Object.values(accounts)) {
+            for (const botId of account.botIds || []) authDirs.add(botId);
+        }
 
         for (
             const userId
@@ -3741,10 +3781,9 @@ async function loadExistingSessions() {
                     userId
                 );
 
-            const stats =
-                await fs.stat(
-                    authPath
-                );
+            await fs.ensureDir(authPath);
+            if (mongoStore) await mongoStore.restoreSession(userId, authPath);
+            const stats = await fs.stat(authPath);
 
             if (
                 stats.isDirectory()
@@ -3819,9 +3858,7 @@ io.on(
             'admin-auth',
             (password) => {
 
-                const adminPass =
-                    process.env.ADMIN_PASSWORD ||
-                    'MICKEY_TECH';
+                const adminPass = String(process.env.ADMIN_PASSWORD || ADMIN_PASSWORD).trim();
 
                 if (
                     password ===
@@ -4429,9 +4466,10 @@ server.listen(
         );
 
         console.log(
-            `👑 Admin: phone=${ADMIN_PHONE}, password=${ADMIN_PASSWORD.replace(/./g, '•')}`
+            `👑 Admin email configured: ${Boolean(ADMIN_EMAIL)}`
         );
 
+        await initializePersistence();
         await loadExistingSessions();
     }
 );
