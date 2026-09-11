@@ -857,6 +857,14 @@
 <script src="/socket.io/socket.io.js"></script>
 <script>
 /* ============================================
+   GLOBAL STATE (Hizi zinapaswa kuwa juu kabla ya matumizi yoyote)
+   ============================================ */
+let accountToken = localStorage.getItem('mickey_account_token') || '';
+let accountReady = false;
+let socket = null;
+try { socket = io(); } catch(e){ console.warn('Socket.IO not available'); }
+
+/* ============================================
    DATA
    ============================================ */
 const bots = [];
@@ -1151,13 +1159,13 @@ document.getElementById('saveSettingsBtn')?.addEventListener('click', () => {
 document.querySelectorAll('.template-card').forEach(card => {
   card.addEventListener('click', () => {
     showToast('Pair a WhatsApp number to create a real bot');
-    document.getElementById('pairing')?.scrollIntoView({behavior:'smooth'});
+    document.getElementById('connect')?.scrollIntoView({behavior:'smooth'});
   });
 });
 
 document.getElementById('createBotBtn')?.addEventListener('click', () => {
-  document.getElementById('pairing')?.scrollIntoView({behavior:'smooth'});
-  showToast('Use Pair WhatsApp to add a real bot');
+  document.getElementById('connect')?.scrollIntoView({behavior:'smooth'});
+  showToast('Use Connect to add a real bot');
 });
 
 document.getElementById('refreshBotsBtn')?.addEventListener('click', () => {
@@ -1197,13 +1205,8 @@ function showToast(msg){
 }
 
 /* ============================================
-   PAIRING
+   AUTH & PAIRING
    ============================================ */
-let socket;
-try { socket = io(); } catch(e){ console.warn('Socket.IO not available'); }
-
-let accountToken = localStorage.getItem('mickey_account_token') || '';
-let accountReady = false;
 const authForm = document.getElementById('authForm');
 const authSubmit = document.getElementById('authSubmit');
 const authError = document.getElementById('authError');
@@ -1226,13 +1229,16 @@ function isValidTanzaniaPhone(phone){
 }
 
 function authenticateSocket(){
-  if(socket && accountToken) socket.emit('account-auth', accountToken);
+  if(socket && accountToken){
+    socket.emit('account-auth', accountToken);
+  }
 }
 
 authForm?.addEventListener('submit', async (event) => {
   event.preventDefault();
   const phone = normalizePhone(document.getElementById('accountPhone').value);
   const name = document.getElementById('accountName').value.trim();
+  
   if(!isValidTanzaniaPhone(phone)){
     showAuthError('Enter a valid phone number, for example 255712345678.');
     return;
@@ -1241,6 +1247,7 @@ authForm?.addEventListener('submit', async (event) => {
   authSubmit.disabled = true;
   authSubmit.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Signing in...';
   authError.classList.remove('show');
+
   try {
     const response = await fetch('/api/auth/login', {
       method: 'POST',
@@ -1249,10 +1256,15 @@ authForm?.addEventListener('submit', async (event) => {
     });
     const data = await response.json();
     if(!response.ok) throw new Error(data.error || 'Login failed.');
+    
     accountToken = data.token;
     localStorage.setItem('mickey_account_token', accountToken);
-    if(socket) authenticateSocket();
-    else throw new Error('Live connection unavailable. Refresh and try again.');
+    
+    if(socket) {
+      authenticateSocket();
+    } else {
+      throw new Error('Live connection unavailable. Refresh and try again.');
+    }
   } catch(error){
     showAuthError(error.message);
     authSubmit.disabled = false;
@@ -1292,7 +1304,7 @@ function setStatus(msg, type){
 }
 
 function copyCode(){
-  const code = pairingCode.innerText.replace(/[^0-9]/g, '');
+  const code = pairingCode.innerText.replace(/[^0-9A-Za-z]/g, '');
   if(!code || code.length < 4) return;
   navigator.clipboard.writeText(code).then(() => showToast('Code copied!'));
 }
@@ -1311,10 +1323,10 @@ requestBtn?.addEventListener('click', () => {
   requestBtn.disabled = true;
   requestBtn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Requesting...';
   setStatus('Sending pairing request...', 'warn');
+  
   if(socket){
     socket.emit('pair-request', { number });
   } else {
-    // Demo mode fallback
     setTimeout(() => {
       const code = Math.floor(10000000 + Math.random()*90000000).toString();
       pairingCode.innerText = code.slice(0,4) + ' ' + code.slice(4);
@@ -1388,7 +1400,10 @@ document.getElementById('year').innerText = new Date().getFullYear();
 renderBots();
 renderCommands();
 renderLogs();
-socket?.emit('request-bot-state');
+
+if(socket && accountToken){
+  socket.emit('request-bot-state');
+}
 
 fetch('/api/server-info')
   .then(r => r.ok ? r.json() : Promise.reject())
