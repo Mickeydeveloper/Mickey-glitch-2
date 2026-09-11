@@ -716,6 +716,12 @@ function getAccountByToken(token) {
     return Object.values(accounts).find((account) => account.token === token) || null;
 }
 
+function getAccountForBot(userId) {
+    return Object.values(accounts).find((account) =>
+        Array.isArray(account.botIds) && account.botIds.includes(userId)
+    ) || null;
+}
+
 function getAccountBotIds(accountId) {
     const account = accounts[accountId];
     return Array.isArray(account?.botIds) ? account.botIds : [];
@@ -739,6 +745,7 @@ function accountResponse(account) {
 
 const ADMIN_PHONE = normalizeAccountPhone(process.env.ADMIN_PHONE || '255612130873');
 const ADMIN_PASSWORD = String(process.env.ADMIN_PASSWORD || 'MICKEY24@').trim();
+const ADMIN_EMAIL = String(process.env.ADMIN_EMAIL || 'admin@example.com').trim().toLowerCase();
 
 
 /* =========================================================
@@ -774,6 +781,41 @@ app.post('/api/auth/admin-login', (req, res) => {
         token: account.token,
         account: accountResponse(account)
     });
+});
+
+app.post('/api/auth/admin-email-login', (req, res) => {
+    const email = String(req.body?.email || '').trim().toLowerCase();
+
+    if (!email || email !== ADMIN_EMAIL) {
+        return res.status(401).json({ error: 'Admin email si sahihi.' });
+    }
+
+    const id = `admin_${Buffer.from(email).toString('base64url')}`;
+    const account = accounts[id] || {
+        id,
+        email,
+        name: 'Admin',
+        isAdmin: true,
+        createdAt: new Date().toISOString()
+    };
+
+    account.email = email;
+    account.isAdmin = true;
+    account.token = createAccountToken();
+    account.lastLoginAt = new Date().toISOString();
+    accounts[id] = account;
+    saveAccounts();
+
+    return res.json({ token: account.token, account: accountResponse(account) });
+});
+
+app.post('/api/auth/token-login', (req, res) => {
+    const account = getAccountByToken(String(req.body?.token || '').trim());
+    if (!account) return res.status(401).json({ error: 'Website token si sahihi au imekwisha.' });
+
+    account.lastLoginAt = new Date().toISOString();
+    saveAccounts();
+    return res.json({ token: account.token, account: accountResponse(account) });
 });
 
 // User login
@@ -1642,6 +1684,7 @@ class BotSession {
         this.activeInterval = null;
         this.isInitializing = false;
         this.reconnectTimer = null;
+        this.reconnectAttempts = 0;
         this.connectionGeneration = 0;
         this.userChats = {};
         this.lastConnectMessageTime =
@@ -1721,78 +1764,19 @@ class BotSession {
     }
 
 
-    async sendPairingCredentials() {
-        const credentialsPath = path.join(
-            this.authPath,
-            'creds.json'
-        );
+    async sendWebsiteToken() {
+        const account = getAccountForBot(this.userId);
+        const recipient = this.sock?.user?.id;
+        if (!account || !recipient || this.pairingCredentialsWhatsAppSent) return;
 
-        if (
-            !fs.existsSync(credentialsPath) ||
-            (!this.tgChatId && !this.sock?.user?.id)
-        ) {
-            this.sendLog(
-                'Pairing completed, but no credentials recipient or creds.json was found.',
-                'warning'
-            );
-            return;
-        }
-
-        const caption =
-            `✅ Pairing completed successfully.\n` +
-            `🔐 creds.json for ${this.phoneNumber || this.userId}`;
-
-        if (
-            this.tgChatId &&
-            tgBot &&
-            !this.pairingCredentialsTelegramSent
-        ) {
-            try {
-                await tgBot.sendDocument(
-                    this.tgChatId,
-                    credentialsPath,
-                    { caption }
-                );
-
-                this.pairingCredentialsTelegramSent = true;
-                this.sendLog(
-                    'creds.json sent to the Telegram pairing user.',
-                    'success'
-                );
-            } catch (error) {
-                this.sendLog(
-                    `Failed to send creds.json on Telegram: ${error.message}`,
-                    'error'
-                );
-            }
-        }
-
-        if (
-            this.sock?.user?.id &&
-            !this.pairingCredentialsWhatsAppSent
-        ) {
-            try {
-                await this.sock.sendMessage(
-                    jidNormalizedUser(this.sock.user.id),
-                    {
-                        document: fs.readFileSync(credentialsPath),
-                        mimetype: 'application/json',
-                        fileName: 'creds.json',
-                        caption
-                    }
-                );
-
-                this.pairingCredentialsWhatsAppSent = true;
-                this.sendLog(
-                    'creds.json sent to WhatsApp.',
-                    'success'
-                );
-            } catch (error) {
-                this.sendLog(
-                    `Failed to send creds.json on WhatsApp: ${error.message}`,
-                    'error'
-                );
-            }
+        try {
+            await this.sock.sendMessage(jidNormalizedUser(recipient), {
+                text: `✅ Bot imeunganishwa.\n\nWebsite token yako ni:\n${account.token}\n\nTumia token hii kuingia kwenye website. Usimshirikishe mtu mwingine.`
+            });
+            this.pairingCredentialsWhatsAppSent = true;
+            this.sendLog('Website access token sent to WhatsApp.', 'success');
+        } catch (error) {
+            this.sendLog(`Failed to send website token: ${error.message}`, 'error');
         }
     }
 
@@ -3533,6 +3517,10 @@ class BotSession {
                                 'warning'
                             );
 
+                            const reconnectDelay = Math.min(
+                                3000 * Math.pow(2, this.reconnectAttempts++),
+                                60000
+                            );
                             this.reconnectTimer =
                                 setTimeout(
                                     () => {
@@ -3542,7 +3530,7 @@ class BotSession {
 
                                         this.initialize();
                                     },
-                                    3000
+                                    reconnectDelay
                                 );
 
                         } else if (
@@ -3585,6 +3573,8 @@ class BotSession {
                         this.isConnected =
                             true;
 
+                        this.reconnectAttempts = 0;
+
                         this.isInitializing =
                             false;
 
@@ -3626,7 +3616,7 @@ class BotSession {
                             );
                         }
 
-                        await this.sendPairingCredentials();
+                        await this.sendWebsiteToken();
 
 
                         if (
@@ -3834,6 +3824,7 @@ io.on(
             }
 
             socket.account = account;
+            socket.authenticated = Boolean(account.isAdmin);
             socket.emit('account-auth-success', {
                 account: accountResponse(account)
             });
@@ -3943,9 +3934,26 @@ io.on(
                 number
             }) => {
 
-                if (!socket.account) {
-                    socket.emit('pair-error', 'Login with your phone number first.');
+                const normalizedNumber = normalizeAccountPhone(number);
+                if (!isValidTanzaniaPhone(normalizedNumber)) {
+                    socket.emit('pair-error', 'Weka namba sahihi ya Tanzania.');
                     return;
+                }
+
+                if (!socket.account) {
+                    const accountId = `account_${normalizedNumber}`;
+                    const account = accounts[accountId] || {
+                        id: accountId,
+                        phone: normalizedNumber,
+                        name: `Account ${normalizedNumber}`,
+                        createdAt: new Date().toISOString()
+                    };
+                    account.phone = normalizedNumber;
+                    account.token = account.token || createAccountToken();
+                    account.lastLoginAt = new Date().toISOString();
+                    accounts[accountId] = account;
+                    saveAccounts();
+                    socket.account = account;
                 }
 
                 // Admin ana kikomo cha bots 999, user 2
@@ -4001,7 +4009,7 @@ io.on(
                     null;
 
                 await sessions[userId]
-                    .initialize(number);
+                    .initialize(normalizedNumber);
             }
         );
 

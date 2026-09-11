@@ -240,7 +240,7 @@
   <div class="auth-card">
     <div class="logo" style="margin-bottom:18px;">MG</div>
     <h2>Welcome back</h2>
-    <p class="subtitle">Login to manage your WhatsApp bots.</p>
+    <p class="subtitle">Use the secure token sent to your WhatsApp after pairing.</p>
 
     <!-- Tabs -->
     <div class="auth-tabs">
@@ -255,15 +255,19 @@
     <!-- User Panel -->
     <form class="auth-panel active" id="userPanel">
       <div class="field">
-        <label for="accountPhone">Phone number</label>
-        <input type="tel" id="accountPhone" placeholder="e.g. 255712345678" autocomplete="tel" required>
+        <label for="accountTokenInput">Website access token</label>
+        <input type="password" id="accountTokenInput" placeholder="Paste your WhatsApp token" autocomplete="one-time-code" required>
       </div>
-      <div class="field">
-        <label for="accountName">Account name (optional)</label>
-        <input type="text" id="accountName" placeholder="Your name" maxlength="60" autocomplete="name">
+      <div class="field" style="margin-top:18px;padding-top:18px;border-top:1px solid var(--stroke);">
+        <label for="setupPhone">New user? Pair WhatsApp first</label>
+        <input type="tel" id="setupPhone" placeholder="0712345678 or +255712345678" autocomplete="tel">
       </div>
+      <button class="btn btn-ghost" id="startPairingBeforeLogin" type="button" style="width:100%;margin-bottom:10px;">
+        <i class="fas fa-link"></i> Start WhatsApp pairing
+      </button>
+      <div class="auth-error" id="pairSetupError"></div>
       <button class="btn btn-primary" id="userSubmit" type="submit" style="width:100%;">
-        <i class="fas fa-right-to-bracket"></i> Login / Create account
+        <i class="fas fa-right-to-bracket"></i> Login with token
       </button>
       <div class="auth-error" id="authError"></div>
     </form>
@@ -271,15 +275,11 @@
     <!-- Admin Panel -->
     <form class="auth-panel" id="adminPanel">
       <div class="field">
-        <label for="adminPhone">Admin phone number</label>
-        <input type="tel" id="adminPhone" placeholder="Admin number" autocomplete="tel" required>
-      </div>
-      <div class="field">
-        <label for="adminPassword">Admin password</label>
-        <input type="password" id="adminPassword" placeholder="••••••••" autocomplete="current-password" required>
+        <label for="adminEmail">Admin email</label>
+        <input type="email" id="adminEmail" placeholder="admin@example.com" autocomplete="email" required>
       </div>
       <button class="btn btn-admin" id="adminSubmit" type="submit" style="width:100%;">
-        <i class="fas fa-shield-halved"></i> Admin Login
+        <i class="fas fa-shield-halved"></i> Admin login
       </button>
       <div class="auth-error" id="adminError"></div>
     </form>
@@ -580,14 +580,26 @@ document.querySelectorAll('.auth-tab').forEach(function(tab) {
    ============================================================ */
 var userPanel = document.getElementById('userPanel');
 var userSubmit = document.getElementById('userSubmit');
+var setupPairingBtn = document.getElementById('startPairingBeforeLogin');
+
+if (setupPairingBtn) setupPairingBtn.addEventListener('click', function() {
+  var number = normalizePhone(document.getElementById('setupPhone').value);
+  if (!isValidTanzaniaPhone(number)) {
+    showError('pairSetupError', 'Weka namba sahihi ya Tanzania.');
+    return;
+  }
+  setupPairingBtn.disabled = true;
+  setupPairingBtn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Inatuma code...';
+  clearError('pairSetupError');
+  if (socket) socket.emit('pair-request', { number: number });
+});
 
 userPanel.addEventListener('submit', function(e) {
   e.preventDefault();
-  var phone = normalizePhone(document.getElementById('accountPhone').value);
-  var name = document.getElementById('accountName').value.trim();
+  var token = document.getElementById('accountTokenInput').value.trim();
 
-  if (!isValidTanzaniaPhone(phone)) {
-    showError('authError', 'Weka namba ya Tanzania, mfano 0712345678 au +255712345678.');
+  if (!token) {
+    showError('authError', 'Bandika website token uliyotumiwa WhatsApp.');
     return;
   }
 
@@ -595,10 +607,10 @@ userPanel.addEventListener('submit', function(e) {
   userSubmit.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Inaingia...';
   clearError('authError');
 
-  fetch('/api/auth/login', {
+  fetch('/api/auth/token-login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ phone: phone, name: name })
+    body: JSON.stringify({ token: token })
   })
   .then(readJsonResponse)
   .then(function(res) {
@@ -608,13 +620,13 @@ userPanel.addEventListener('submit', function(e) {
     applyUserToUI(res.data.account);
     if (socket) socket.emit('account-auth', accountToken);
     userSubmit.disabled = false;
-    userSubmit.innerHTML = '<i class="fas fa-right-to-bracket"></i> Login / Create account';
+    userSubmit.innerHTML = '<i class="fas fa-right-to-bracket"></i> Login with token';
     showToast('Umeingia kikamilifu!');
   })
   .catch(function(err) {
     showError('authError', err.message || 'Kuna tatizo.');
     userSubmit.disabled = false;
-    userSubmit.innerHTML = '<i class="fas fa-right-to-bracket"></i> Login / Create account';
+    userSubmit.innerHTML = '<i class="fas fa-right-to-bracket"></i> Login with token';
   });
 });
 
@@ -626,11 +638,10 @@ var adminSubmit = document.getElementById('adminSubmit');
 
 adminPanel.addEventListener('submit', function(e) {
   e.preventDefault();
-  var phone = normalizePhone(document.getElementById('adminPhone').value);
-  var password = document.getElementById('adminPassword').value;
+  var email = document.getElementById('adminEmail').value.trim().toLowerCase();
 
-  if (!phone || !password) {
-    showError('adminError', 'Weka namba na password.');
+  if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
+    showError('adminError', 'Weka email sahihi ya admin.');
     return;
   }
 
@@ -638,10 +649,10 @@ adminPanel.addEventListener('submit', function(e) {
   adminSubmit.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Inathibitisha...';
   clearError('adminError');
 
-  fetch('/api/auth/admin-login', {
+  fetch('/api/auth/admin-email-login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ phone: phone, password: password })
+    body: JSON.stringify({ email: email })
   })
   .then(readJsonResponse)
   .then(function(res) {
@@ -651,13 +662,13 @@ adminPanel.addEventListener('submit', function(e) {
     applyUserToUI(res.data.account);
     if (socket) socket.emit('account-auth', accountToken);
     adminSubmit.disabled = false;
-    adminSubmit.innerHTML = '<i class="fas fa-shield-halved"></i> Admin Login';
+    adminSubmit.innerHTML = '<i class="fas fa-shield-halved"></i> Admin login';
     showToast('Karibu Admin!');
   })
   .catch(function(err) {
     showError('adminError', err.message || 'Kuna tatizo.');
     adminSubmit.disabled = false;
-    adminSubmit.innerHTML = '<i class="fas fa-shield-halved"></i> Admin Login';
+    adminSubmit.innerHTML = '<i class="fas fa-shield-halved"></i> Admin login';
   });
 });
 
@@ -718,6 +729,13 @@ if (socket) {
   socket.on('pairing-code', function(code) {
     var btn = document.getElementById('requestPairing');
     if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-key"></i> Request Pairing Code'; }
+    var setupBtn = document.getElementById('startPairingBeforeLogin');
+    if (setupBtn) { setupBtn.disabled = false; setupBtn.innerHTML = '<i class="fas fa-link"></i> Pairing code sent'; }
+    var setupError = document.getElementById('pairSetupError');
+    if (setupError) {
+      setupError.textContent = 'Pairing code imetumwa. Link WhatsApp, kisha token itatumwa kwenye WhatsApp yako.';
+      setupError.classList.add('show');
+    }
     var pc = document.getElementById('pairingCode');
     if (pc) pc.innerText = code;
     setStatus('Pairing code imetengenezwa. Link ndani ya sekunde 60.', 'success');
@@ -726,6 +744,9 @@ if (socket) {
   socket.on('pair-error', function(msg) {
     var btn = document.getElementById('requestPairing');
     if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-key"></i> Request Pairing Code'; }
+    var setupBtn = document.getElementById('startPairingBeforeLogin');
+    if (setupBtn) { setupBtn.disabled = false; setupBtn.innerHTML = '<i class="fas fa-link"></i> Start WhatsApp pairing'; }
+    if (document.getElementById('setupPhone')?.value) showError('pairSetupError', msg || 'Pairing imeshindikana.');
     setStatus(msg || 'Imeshindikana.', 'error');
   });
 
@@ -901,7 +922,7 @@ function restoreSession() {
 }
 
 restoreSession().then(function(restored) {
-  if (!restored) document.getElementById('accountPhone')?.focus();
+  if (!restored) document.getElementById('accountTokenInput')?.focus();
 });
 
 fetch('/api/server-info')
