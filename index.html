@@ -34,6 +34,8 @@
   /* ---------- AUTH SCREEN ---------- */
   .auth-screen{position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(10,10,15,.96);overflow-y:auto;}
   .auth-card{width:min(460px,100%);padding:34px;border:1px solid var(--stroke);border-radius:24px;background:linear-gradient(145deg,rgba(255,255,255,.08),rgba(255,255,255,.02));box-shadow:var(--shadow);}
+  .auth-card{animation:authEnter .5s cubic-bezier(.2,.8,.2,1) both;}
+  @keyframes authEnter{from{opacity:0;transform:translateY(14px) scale(.98);}to{opacity:1;transform:none;}}
   .auth-card h2{font-family:'Space Grotesk',sans-serif;font-size:1.8rem;margin-bottom:8px;}
   .auth-card p.subtitle{color:var(--text-2);font-size:.9rem;margin-bottom:24px;}
   .auth-card .auth-error{display:none;color:var(--danger);font-size:.8rem;margin-top:12px;}
@@ -53,6 +55,8 @@
   .field label{font-size:.78rem;font-weight:600;color:var(--text-2);}
   .field input,.field select{padding:12px 16px;border-radius:12px;background:var(--card);border:1px solid var(--stroke);color:var(--text);font-family:inherit;font-size:.88rem;transition:.2s;}
   .field input:focus,.field select:focus{outline:none;border-color:var(--orange);background:rgba(255,255,255,.05);}
+  .field input::placeholder{color:var(--text-3);}
+  .field input[aria-invalid="true"]{border-color:var(--danger);}
 
   /* ---------- BUTTONS ---------- */
   .btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;padding:14px 26px;border-radius:14px;border:none;cursor:pointer;font-family:inherit;font-weight:600;font-size:.9rem;text-decoration:none;transition:.25s;position:relative;overflow:hidden;}
@@ -504,6 +508,19 @@ function showError(elementId, message) {
   el.classList.add('show');
   console.error('[Error]', message);
 }
+function readJsonResponse(response) {
+  return response.text().then(function(text) {
+    var data = {};
+    try { data = text ? JSON.parse(text) : {}; } catch (error) {
+      data = { error: 'Server response si sahihi.' };
+    }
+    return { ok: response.ok, data: data };
+  });
+}
+function setFieldInvalid(elementId, invalid) {
+  var field = document.getElementById(elementId);
+  if (field) field.setAttribute('aria-invalid', invalid ? 'true' : 'false');
+}
 function clearError(elementId) {
   var el = document.getElementById(elementId);
   if (el) el.classList.remove('show');
@@ -582,7 +599,7 @@ userPanel.addEventListener('submit', function(e) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ phone: phone, name: name })
   })
-  .then(function(r){ return r.json().then(function(d){ return { ok: r.ok, data: d }; }); })
+  .then(readJsonResponse)
   .then(function(res) {
     if (!res.ok) throw new Error(res.data.error || 'Login imeshindikana.');
     accountToken = res.data.token;
@@ -625,7 +642,7 @@ adminPanel.addEventListener('submit', function(e) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ phone: phone, password: password })
   })
-  .then(function(r){ return r.json().then(function(d){ return { ok: r.ok, data: d }; }); })
+  .then(readJsonResponse)
   .then(function(res) {
     if (!res.ok) throw new Error(res.data.error || 'Admin credentials si sahihi.');
     accountToken = res.data.token;
@@ -861,9 +878,30 @@ if (saveSettingsBtn) saveSettingsBtn.addEventListener('click', function(){
 var y = document.getElementById('year');
 if (y) y.textContent = new Date().getFullYear();
 
-if (accountToken && socket) {
-  socket.emit('account-auth', accountToken);
+function restoreSession() {
+  if (!accountToken) return Promise.resolve(false);
+  return fetch('/api/auth/me', {
+    headers: { 'Authorization': 'Bearer ' + accountToken }
+  })
+  .then(readJsonResponse)
+  .then(function(res) {
+    if (!res.ok || !res.data.account) throw new Error('Session imeisha. Login tena.');
+    applyUserToUI(res.data.account);
+    if (socket) socket.emit('account-auth', accountToken);
+    return true;
+  })
+  .catch(function() {
+    accountToken = '';
+    accountReady = false;
+    currentUser = null;
+    localStorage.removeItem('mickey_account_token');
+    return false;
+  });
 }
+
+restoreSession().then(function(restored) {
+  if (!restored) document.getElementById('accountPhone')?.focus();
+});
 
 fetch('/api/server-info')
   .then(function(r){ return r.ok ? r.json() : Promise.reject(); })
