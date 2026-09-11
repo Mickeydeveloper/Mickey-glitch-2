@@ -495,6 +495,7 @@ function normalizePhone(value) {
   var phone = String(value || '').trim().replace(/\D/g, '');
   if (phone.startsWith('00')) phone = phone.slice(2);
   if (phone.startsWith('0')) phone = '255' + phone.slice(1);
+  if (phone.length === 10 && /^[67]/.test(phone)) phone = '255' + phone;
   if (phone.length === 9) phone = '255' + phone;
   return phone;
 }
@@ -586,7 +587,7 @@ userPanel.addEventListener('submit', function(e) {
   var name = document.getElementById('accountName').value.trim();
 
   if (!isValidTanzaniaPhone(phone)) {
-    showError('authError', 'Namba si sahihi. Tumia mfano: 255712345678');
+    showError('authError', 'Weka namba ya Tanzania, mfano 0712345678 au +255712345678.');
     return;
   }
 

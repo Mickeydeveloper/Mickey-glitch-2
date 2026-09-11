@@ -698,6 +698,7 @@ function normalizeAccountPhone(value) {
     let phone = String(value || '').trim().replace(/\D/g, '');
     if (phone.startsWith('00')) phone = phone.slice(2);
     if (phone.startsWith('0')) phone = `255${phone.slice(1)}`;
+    if (phone.length === 10 && /^[67]/.test(phone)) phone = `255${phone}`;
     if (phone.length === 9) phone = `255${phone}`;
     return phone;
 }
@@ -781,7 +782,7 @@ app.post('/api/auth/login', (req, res) => {
     const name = String(req.body?.name || '').trim().slice(0, 60);
 
     if (!isValidTanzaniaPhone(phone)) {
-        return res.status(400).json({ error: 'Enter a valid phone number with country code.' });
+        return res.status(400).json({ error: 'Weka namba ya Tanzania, mfano 0712345678 au +255712345678.' });
     }
 
     const id = `account_${phone}`;
