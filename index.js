@@ -736,8 +736,8 @@ function accountResponse(account) {
    ADMIN CREDENTIALS (hardcoded)
 ========================================================= */
 
-const ADMIN_PHONE = '255612130873';
-const ADMIN_PASSWORD = 'MICKEY24@';
+const ADMIN_PHONE = normalizeAccountPhone(process.env.ADMIN_PHONE || '255612130873');
+const ADMIN_PASSWORD = String(process.env.ADMIN_PASSWORD || 'MICKEY24@').trim();
 
 
 /* =========================================================
@@ -747,9 +747,9 @@ const ADMIN_PASSWORD = 'MICKEY24@';
 // Admin login
 app.post('/api/auth/admin-login', (req, res) => {
     const phone = normalizeAccountPhone(req.body?.phone);
-    const password = String(req.body?.password || '');
+    const password = String(req.body?.password || '').trim();
 
-    if (phone !== ADMIN_PHONE || password !== ADMIN_PASSWORD) {
+    if (!isValidTanzaniaPhone(phone) || phone !== ADMIN_PHONE || password !== ADMIN_PASSWORD) {
         return res.status(401).json({ error: 'Admin credentials si sahihi.' });
     }
 
