@@ -635,6 +635,7 @@ function addBotRelayNodes(options = {}) {
 
 const AUTH_DIR = './auth_info';
 const DATA_FILE = './data/bot_data.json';
+const ACCOUNTS_FILE = './data/accounts.json';
 
 fs.ensureDirSync(AUTH_DIR);
 fs.ensureDirSync('./data');
@@ -680,10 +681,93 @@ function saveBotData() {
     }
 }
 
+let accounts = {};
+if (fs.existsSync(ACCOUNTS_FILE)) {
+    try {
+        accounts = fs.readJsonSync(ACCOUNTS_FILE) || {};
+    } catch (_) {
+        accounts = {};
+    }
+}
+
+function saveAccounts() {
+    fs.writeJsonSync(ACCOUNTS_FILE, accounts, { spaces: 2 });
+}
+
+function normalizeAccountPhone(value) {
+    return String(value || '').replace(/\D/g, '');
+}
+
+function createAccountToken() {
+    return crypto.randomBytes(32).toString('hex');
+}
+
+function getAccountByToken(token) {
+    if (!token) return null;
+    return Object.values(accounts).find((account) => account.token === token) || null;
+}
+
+function getAccountBotIds(accountId) {
+    const account = accounts[accountId];
+    return Array.isArray(account?.botIds) ? account.botIds : [];
+}
+
+function accountResponse(account) {
+    return {
+        id: account.id,
+        phone: account.phone,
+        name: account.name,
+        botLimit: 2,
+        botCount: getAccountBotIds(account.id).length
+    };
+}
+
+app.post('/api/auth/login', (req, res) => {
+    const phone = normalizeAccountPhone(req.body?.phone);
+    const name = String(req.body?.name || '').trim().slice(0, 60);
+
+    if (phone.length < 10) {
+        return res.status(400).json({ error: 'Enter a valid phone number with country code.' });
+    }
+
+    const id = `account_${phone}`;
+    const account = accounts[id] || {
+        id,
+        phone,
+        name: name || `Account ${phone}`,
+        createdAt: new Date().toISOString()
+    };
+
+    if (name) account.name = name;
+    account.token = createAccountToken();
+    account.lastLoginAt = new Date().toISOString();
+    accounts[id] = account;
+    saveAccounts();
+
+    return res.json({ token: account.token, account: accountResponse(account) });
+});
+
+app.get('/api/auth/me', (req, res) => {
+    const account = getAccountByToken(req.get('authorization')?.replace(/^Bearer\s+/i, ''));
+    if (!account) return res.status(401).json({ error: 'Login required.' });
+    return res.json({ account: accountResponse(account) });
+});
+
 
 const sessions = {};
 const userSockets = {};
 const messageLogs = {};
+const dashboardStats = {
+    totalMessages: 0,
+    users: new Set()
+};
+
+function getDashboardStats() {
+    return {
+        totalMessages: dashboardStats.totalMessages,
+        totalUsers: dashboardStats.users.size
+    };
+}
 
 function getDashboardBotState() {
     const authEntries = fs.existsSync(AUTH_DIR)
@@ -721,10 +805,22 @@ function getDashboardBotState() {
 }
 
 function emitDashboardBotState() {
-    io.emit('bot-state', {
-        bots: getDashboardBotState(),
-        active: Object.values(sessions).filter((session) => session.isConnected).length
+    const allBots = getDashboardBotState();
+    io.sockets.sockets.forEach((socket) => {
+        if (!socket.account) return;
+        const botsForAccount = allBots.filter((bot) =>
+            socket.account.botIds?.includes(bot.id)
+        );
+        socket.emit('bot-state', {
+            bots: botsForAccount,
+            active: botsForAccount.filter((bot) => bot.running).length,
+            stats: getDashboardStats()
+        });
     });
+}
+
+function emitDashboardStats() {
+    io.emit('dashboard-stats', getDashboardStats());
 }
 
 
@@ -2537,6 +2633,17 @@ class BotSession {
                                         );
                                     }
 
+                                        if (!isStatus) {
+                                            dashboardStats.totalMessages += 1;
+                                            dashboardStats.users.add(
+                                                String(
+                                                    msg.key.participant ||
+                                                    from
+                                                )
+                                            );
+                                            emitDashboardStats();
+                                        }
+
 
                                     /* =========================
                                        MESSAGE LOG
@@ -3813,6 +3920,13 @@ async function loadExistingSessions() {
                                 userId
                             );
 
+                        const ownerAccount = Object.values(accounts).find(
+                            (account) => account.botIds?.includes(userId)
+                        );
+                        if (ownerAccount) {
+                            sessions[userId].accountId = ownerAccount.id;
+                        }
+
                         sessions[userId]
                             .initialize()
                             .catch(
@@ -3879,6 +3993,26 @@ io.on(
             }
         );
 
+        socket.on('account-auth', (token) => {
+            const account = getAccountByToken(token);
+            if (!account) {
+                socket.emit('account-auth-fail', 'Login session expired.');
+                return;
+            }
+
+            socket.account = account;
+            socket.emit('account-auth-success', {
+                account: accountResponse(account)
+            });
+            socket.emit('bot-state', {
+                bots: getDashboardBotState().filter((bot) =>
+                    account.botIds?.includes(bot.id)
+                ),
+                active: account.botIds?.filter((id) => sessions[id]?.isConnected).length || 0,
+                stats: getDashboardStats()
+            });
+        });
+
 
         /* =========================
            SET USER
@@ -3887,6 +4021,10 @@ io.on(
         socket.on(
             'set-user',
             (userId) => {
+
+                if (!socket.account || !socket.account.botIds?.includes(userId)) {
+                    return;
+                }
 
                 userSockets[userId] =
                     socket.id;
@@ -3905,7 +4043,8 @@ io.on(
 
                 socket.emit('bot-state', {
                     bots: getDashboardBotState(),
-                    active: Object.values(sessions).filter((session) => session.isConnected).length
+                    active: Object.values(sessions).filter((session) => session.isConnected).length,
+                    stats: getDashboardStats()
                 });
             }
         );
@@ -3913,9 +4052,14 @@ io.on(
         socket.on(
             'request-bot-state',
             () => {
+                if (!socket.account) return;
+                const botsForAccount = getDashboardBotState().filter((bot) =>
+                    socket.account.botIds?.includes(bot.id)
+                );
                 socket.emit('bot-state', {
-                    bots: getDashboardBotState(),
-                    active: Object.values(sessions).filter((session) => session.isConnected).length
+                    bots: botsForAccount,
+                    active: botsForAccount.filter((bot) => bot.running).length,
+                    stats: getDashboardStats()
                 });
             }
         );
@@ -3923,7 +4067,10 @@ io.on(
         socket.on(
             'update-bot-settings',
             ({ userId, settings: incomingSettings } = {}) => {
-                if (!userId || !incomingSettings || typeof incomingSettings !== 'object') {
+                if (!socket.account ||
+                    !socket.account.botIds?.includes(userId) ||
+                    !incomingSettings ||
+                    typeof incomingSettings !== 'object') {
                     return;
                 }
 
@@ -3968,9 +4115,28 @@ io.on(
         socket.on(
             'pair-request',
             async ({
-                userId,
                 number
             }) => {
+
+                if (!socket.account) {
+                    socket.emit('pair-error', 'Login with your phone number first.');
+                    return;
+                }
+
+                if (getAccountBotIds(socket.account.id).length >= 2) {
+                    socket.emit('pair-error', 'Each account can pair only 2 bots.');
+                    return;
+                }
+
+                const userId = `${socket.account.id}_bot_${Date.now()}`;
+
+                userSockets[userId] = socket.id;
+
+                socket.account.botIds = [
+                    ...(socket.account.botIds || []),
+                    userId
+                ];
+                saveAccounts();
 
                 if (
                     !sessions[userId]
@@ -3979,6 +4145,8 @@ io.on(
                         new BotSession(
                             userId
                         );
+
+                        sessions[userId].accountId = socket.account.id;
                 }
 
                 if (

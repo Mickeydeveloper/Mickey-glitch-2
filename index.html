@@ -1,44 +1,3 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mickey Glitch 2 — WhatsApp Bot Platform</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-<style>
-  :root{
-    --bg:#0a0a0f;
-    --bg-2:#12121a;
-    --card:rgba(255,255,255,0.03);
-    --card-hover:rgba(255,255,255,0.06);
-    --stroke:rgba(255,255,255,0.08);
-    --stroke-hover:rgba(255,255,255,0.18);
-    --orange:#ff6b1a;
-    --orange-2:#ff9540;
-    --lime:#c8ff00;
-    --cyan:#00e5ff;
-    --pink:#ff2e88;
-    --text:#ffffff;
-    --text-2:#a8a8b8;
-    --text-3:#5a5a6e;
-    --success:#22e07a;
-    --warning:#ffb020;
-    --danger:#ff3b5c;
-    --radius:24px;
-    --radius-sm:14px;
-    --shadow:0 20px 60px rgba(0,0,0,0.5);
-  }
-
-  *{margin:0;padding:0;box-sizing:border-box;}
-  html{scroll-behavior:smooth;}
-  body{
-    background:var(--bg);
-    color:var(--text);
-    font-family:'Outfit',sans-serif;
-    min-height:100vh;
-    line-height:1.6;
-    overflow-x:hidden;
     -webkit-font-smoothing:antialiased;
   }
 
@@ -70,6 +29,15 @@
     background-size:60px 60px;
     mask-image:radial-gradient(ellipse 100% 60% at 50% 0%,#000 30%,transparent 80%);
   }
+
+  .auth-screen{position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(10,10,15,.96);}
+  .auth-card{width:min(440px,100%);padding:34px;border:1px solid var(--stroke);border-radius:24px;background:linear-gradient(145deg,rgba(255,255,255,.08),rgba(255,255,255,.02));box-shadow:var(--shadow);}
+  .auth-card h2{font-family:'Space Grotesk',sans-serif;font-size:1.8rem;margin-bottom:8px;}
+  .auth-card p{color:var(--text-2);font-size:.9rem;margin-bottom:24px;}
+  .auth-card .auth-error{display:none;color:var(--danger);font-size:.8rem;margin-top:12px;}
+  .auth-card .auth-error.show{display:block;}
+  body.authenticated .auth-screen{display:none;}
+  body:not(.authenticated) .sidebar,body:not(.authenticated) .main,body:not(.authenticated) .mobile-nav{display:none;}
 
   /* ---------- Sidebar Navigation ---------- */
   .sidebar{
@@ -595,6 +563,26 @@
   <div class="bg-noise"></div>
 </div>
 
+<section class="auth-screen" id="authScreen">
+  <form class="auth-card" id="authForm">
+    <div class="logo" style="margin-bottom:18px;">MG</div>
+    <h2>Welcome back</h2>
+    <p>Login with your phone number to manage up to two WhatsApp bots.</p>
+    <div class="field">
+      <label for="accountPhone">Phone number</label>
+      <input type="tel" id="accountPhone" placeholder="e.g. 255712345678" autocomplete="tel" required>
+    </div>
+    <div class="field">
+      <label for="accountName">Account name (optional)</label>
+      <input type="text" id="accountName" placeholder="Your name" maxlength="60" autocomplete="name">
+    </div>
+    <button class="btn btn-primary" id="authSubmit" type="submit" style="width:100%;">
+      <i class="fas fa-right-to-bracket"></i> Login / Create account
+    </button>
+    <div class="auth-error" id="authError"></div>
+  </form>
+</section>
+
 <!-- Sidebar -->
 <aside class="sidebar" id="sidebar">
   <div class="logo-wrap">
@@ -608,22 +596,11 @@
   <div class="nav-section-label">Main</div>
   <a href="#dashboard" class="nav-item active"><i class="fas fa-th-large"></i> Dashboard</a>
   <a href="#bots" class="nav-item"><i class="fas fa-robot"></i> Bots <span class="badge" id="botsBadge">4</span></a>
-  <a href="#commands" class="nav-item"><i class="fas fa-terminal"></i> Commands</a>
-  <a href="#logs" class="nav-item"><i class="fas fa-stream"></i> Activity Logs</a>
 
   <div class="nav-section-label">Configure</div>
   <a href="#settings" class="nav-item"><i class="fas fa-sliders-h"></i> Settings</a>
   <a href="#templates" class="nav-item"><i class="fas fa-cubes"></i> Templates</a>
   <a href="#connect" class="nav-item"><i class="fas fa-link"></i> Connect</a>
-  <a href="#links" class="nav-item"><i class="fas fa-share-alt"></i> Community</a>
-
-  <div class="sidebar-footer">
-    <h4>Need help?</h4>
-    <p>Join our WhatsApp channel for support</p>
-    <a href="https://whatsapp.com/channel/0029VaGiJKfIiRoybPBMTy38" target="_blank" class="btn btn-primary btn-sm">
-      <i class="fab fa-whatsapp"></i> Join Channel
-    </a>
-  </div>
 </aside>
 
 <!-- Main Content -->
@@ -634,7 +611,7 @@
     <button class="menu-btn" id="menuBtn"><i class="fas fa-bars"></i></button>
     <div class="search-bar">
       <i class="fas fa-search"></i>
-      <input type="text" placeholder="Search bots, commands, logs...">
+      <input type="text" placeholder="Search bots...">
     </div>
     <div class="topbar-actions">
       <button class="icon-btn" title="Notifications"><i class="fas fa-bell"></i><span class="dot"></span></button>
@@ -706,47 +683,6 @@
       </div>
     </div>
     <div class="bots-grid" id="botDashboard"></div>
-  </section>
-
-  <!-- Commands -->
-  <section class="section" id="commands">
-    <div class="section-head">
-      <div class="section-title">
-        <h2>Command Library</h2>
-        <p>All commands available across your bots</p>
-      </div>
-    </div>
-    <div class="search-row">
-      <div class="search-bar">
-        <i class="fas fa-search"></i>
-        <input type="text" id="commandSearch" placeholder="Search commands...">
-      </div>
-      <div class="filter-chips">
-        <button class="chip active" data-cmd-filter="all">All</button>
-        <button class="chip" data-cmd-filter="user">User</button>
-        <button class="chip" data-cmd-filter="admin">Admin</button>
-        <button class="chip" data-cmd-filter="group">Group</button>
-      </div>
-    </div>
-    <div class="commands-wrap" id="commandsList"></div>
-  </section>
-
-  <!-- Logs -->
-  <section class="section" id="logs">
-    <div class="section-head">
-      <div class="section-title">
-        <h2>Activity Logs</h2>
-        <p>Real-time stream of bot events</p>
-      </div>
-      <div class="filter-chips">
-        <button class="chip active" data-log-filter="all">All</button>
-        <button class="chip" data-log-filter="info">Info</button>
-        <button class="chip" data-log-filter="warn">Warning</button>
-        <button class="chip" data-log-filter="error">Error</button>
-        <button class="btn btn-ghost btn-sm" id="clearLogsBtn"><i class="fas fa-trash"></i></button>
-      </div>
-    </div>
-    <div class="logs-container" id="logsContainer"></div>
   </section>
 
   <!-- Settings -->
@@ -868,30 +804,6 @@
     </div>
   </section>
 
-  <!-- Links -->
-  <section class="section" id="links">
-    <div class="section-head">
-      <div class="section-title">
-        <h2>Community</h2>
-        <p>Stay connected with updates and support</p>
-      </div>
-    </div>
-    <div class="templates-grid">
-      <a href="https://whatsapp.com/channel/0029VaGiJKfIiRoybPBMTy38" target="_blank" class="channel-link">
-        <i class="fab fa-whatsapp"></i> WhatsApp Updates
-      </a>
-      <a href="https://whatsapp.com/channel/0029Vb7SDZ31iUxhzG0W4t1M" target="_blank" class="channel-link">
-        <i class="fab fa-whatsapp"></i> Support Channel
-      </a>
-      <a href="https://www.youtube.com/@Teamsyedhaker" target="_blank" class="channel-link">
-        <i class="fab fa-youtube"></i> YouTube Channel
-      </a>
-      <a href="https://whatsapp.com/channel/0029VbCkaqb5fM5VgpvRJc2Y" target="_blank" class="channel-link">
-        <i class="fab fa-whatsapp"></i> Announcements
-      </a>
-    </div>
-  </section>
-
   <footer style="padding:40px;text-align:center;border-top:1px solid var(--stroke);color:var(--text-3);font-size:.8rem;">
     © <span id="year"></span> <strong style="color:var(--orange);">Mickey Glitch 2</strong> · Built with <i class="fas fa-heart" style="color:var(--pink);"></i>
     <div style="margin-top:6px;font-size:.72rem;" id="serverAddress">Detecting server...</div>
@@ -903,24 +815,8 @@
 <nav class="mobile-nav">
   <a href="#dashboard" class="active"><i class="fas fa-th-large"></i>Home</a>
   <a href="#bots"><i class="fas fa-robot"></i>Bots</a>
-  <a href="#commands"><i class="fas fa-terminal"></i>Commands</a>
-  <a href="#logs"><i class="fas fa-stream"></i>Logs</a>
   <a href="#settings"><i class="fas fa-cog"></i>Settings</a>
 </nav>
-
-<!-- Welcome Modal -->
-<div class="modal" id="channelModal">
-  <div class="modal-inner">
-    <h3>Welcome to Mickey Glitch 2 👋</h3>
-    <p>Follow our community channels to unlock pairing access and receive updates.</p>
-    <a href="https://whatsapp.com/channel/0029VaGiJKfIiRoybPBMTy38" target="_blank" class="channel-link"><i class="fab fa-whatsapp"></i> Updates Channel</a>
-    <a href="https://whatsapp.com/channel/0029Vb7SDZ31iUxhzG0W4t1M" target="_blank" class="channel-link"><i class="fab fa-whatsapp"></i> Support Channel</a>
-    <a href="https://www.youtube.com/@Teamsyedhaker" target="_blank" class="channel-link"><i class="fab fa-youtube"></i> YouTube Channel</a>
-    <button class="btn btn-primary" id="confirmFollow" style="width:100%;margin-top:12px;">
-      <i class="fas fa-check"></i> I've followed all channels
-    </button>
-  </div>
-</div>
 
 <div id="toast">Copied to clipboard!</div>
 
@@ -1013,8 +909,9 @@ function renderBots(){
     `;
     grid.appendChild(card);
   });
+  const paired = bots.filter(b => b.paired).length;
   const online = bots.filter(b => b.running).length;
-  document.getElementById('activeBots').innerText = online;
+  document.getElementById('activeBots').innerText = paired;
   document.getElementById('botsBadge').innerText = bots.length;
   animateNumber('activeSockets', online);
   renderSettingsBot();
@@ -1101,6 +998,7 @@ function deleteBot(id){
    ============================================ */
 function renderCommands(){
   const wrap = document.getElementById('commandsList');
+  if(!wrap) return;
   const search = (document.getElementById('commandSearch')?.value || '').toLowerCase();
   const filtered = commands.filter(c => {
     const matchFilter = currentCmdFilter === 'all' || c.access === currentCmdFilter;
@@ -1136,6 +1034,7 @@ document.querySelectorAll('[data-cmd-filter]').forEach(chip => {
    ============================================ */
 function renderLogs(){
   const wrap = document.getElementById('logsContainer');
+  if(!wrap) return;
   const filtered = currentLogFilter === 'all' ? logs : logs.filter(l => l.level === currentLogFilter);
   if(filtered.length === 0){
     wrap.innerHTML = '<div style="padding:30px;text-align:center;color:var(--text-3);font-size:.85rem;">No logs to display</div>';
@@ -1253,20 +1152,6 @@ document.querySelectorAll('.nav-item, .mobile-nav a').forEach(a => {
 });
 
 /* ============================================
-   WELCOME MODAL
-   ============================================ */
-const modal = document.getElementById('channelModal');
-window.addEventListener('load', () => {
-  if(!localStorage.getItem('mickey_welcomed')){
-    setTimeout(() => modal.classList.add('active'), 800);
-  }
-});
-document.getElementById('confirmFollow')?.addEventListener('click', () => {
-  localStorage.setItem('mickey_welcomed', '1');
-  modal.classList.remove('active');
-});
-
-/* ============================================
    TOAST
    ============================================ */
 const toast = document.getElementById('toast');
@@ -1282,6 +1167,73 @@ function showToast(msg){
    ============================================ */
 let socket;
 try { socket = io(); } catch(e){ console.warn('Socket.IO not available'); }
+
+let accountToken = localStorage.getItem('mickey_account_token') || '';
+let accountReady = false;
+const authForm = document.getElementById('authForm');
+const authSubmit = document.getElementById('authSubmit');
+const authError = document.getElementById('authError');
+
+function showAuthError(message){
+  authError.textContent = message;
+  authError.classList.add('show');
+}
+
+function authenticateSocket(){
+  if(socket && accountToken) socket.emit('account-auth', accountToken);
+}
+
+authForm?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const phone = document.getElementById('accountPhone').value.replace(/\D/g, '');
+  const name = document.getElementById('accountName').value.trim();
+  if(phone.length < 10){
+    showAuthError('Enter a valid phone number with country code.');
+    return;
+  }
+
+  authSubmit.disabled = true;
+  authSubmit.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Signing in...';
+  authError.classList.remove('show');
+  try {
+    const response = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({phone, name})
+    });
+    const data = await response.json();
+    if(!response.ok) throw new Error(data.error || 'Login failed.');
+    accountToken = data.token;
+    localStorage.setItem('mickey_account_token', accountToken);
+    if(socket) authenticateSocket();
+    else throw new Error('Live connection unavailable. Refresh and try again.');
+  } catch(error){
+    showAuthError(error.message);
+    authSubmit.disabled = false;
+    authSubmit.innerHTML = '<i class="fas fa-right-to-bracket"></i> Login / Create account';
+  }
+});
+
+socket?.on('connect', authenticateSocket);
+
+socket?.on('account-auth-success', ({account}) => {
+  accountReady = true;
+  document.body.classList.add('authenticated');
+  const userName = document.querySelector('.user-chip .name');
+  if(userName) userName.textContent = account?.name || account?.phone || 'Account';
+  const badge = document.getElementById('botsBadge');
+  if(badge) badge.textContent = `${account?.botCount || 0}/2`;
+  authSubmit.disabled = false;
+  authSubmit.innerHTML = '<i class="fas fa-right-to-bracket"></i> Login / Create account';
+  socket.emit('request-bot-state');
+});
+
+socket?.on('account-auth-fail', (message) => {
+  accountToken = '';
+  localStorage.removeItem('mickey_account_token');
+  document.body.classList.remove('authenticated');
+  showAuthError(message || 'Login required.');
+});
 
 const phoneInput = document.getElementById('phone');
 const requestBtn = document.getElementById('requestPairing');
@@ -1300,6 +1252,10 @@ function copyCode(){
 }
 
 requestBtn?.addEventListener('click', () => {
+  if(!accountReady){
+    setStatus('Login first to pair a bot.', 'error');
+    return;
+  }
   const number = phoneInput.value.replace(/\D/g, '');
   if(!number || number.length < 10){
     setStatus('Enter a valid phone number with country code', 'error');
@@ -1310,9 +1266,7 @@ requestBtn?.addEventListener('click', () => {
   requestBtn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Requesting...';
   setStatus('Sending pairing request...', 'warn');
   if(socket){
-    const userId = 'user_' + Math.random().toString(36).substr(2,9);
-    socket.emit('set-user', userId);
-    socket.emit('pair-request', { userId, number });
+    socket.emit('pair-request', { number });
   } else {
     // Demo mode fallback
     setTimeout(() => {
@@ -1355,6 +1309,15 @@ socket?.on('bot-state', (state) => {
   bots.splice(0, bots.length, ...(state?.bots || []));
   renderBots();
   if(state?.active != null) document.getElementById('activeSockets').innerText = state.active;
+  if(state?.stats) {
+    document.getElementById('totalUsers').innerText = state.stats.totalUsers || 0;
+    document.getElementById('totalMessages').innerText = state.stats.totalMessages || 0;
+  }
+});
+
+socket?.on('dashboard-stats', (stats) => {
+  document.getElementById('totalUsers').innerText = stats?.totalUsers || 0;
+  document.getElementById('totalMessages').innerText = stats?.totalMessages || 0;
 });
 
 socket?.on('bot-settings-saved', ({userId, settings}) => {
