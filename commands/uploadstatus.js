@@ -1,4 +1,9 @@
 const { createCtx } = require('../lib/messageBuilder');
+const {
+    downloadContentFromMessage,
+    downloadMediaMessage,
+    normalizeMessageContent
+} = require('@whiskeysockets/baileys');
 
 const COMMANDS = [
     'uploadstatus',
@@ -65,8 +70,9 @@ function cleanCommandText(text) {
  * Detect media from current message or quoted message
  */
 function getMediaType(ctx) {
-    const current = ctx?.msg?.message || {};
-    const quoted = ctx?.quoted?.message || ctx?.quoted || {};
+    const current = normalizeMessageContent(ctx?.msg?.message) || ctx?.msg?.message || {};
+    const quotedRaw = ctx?.quoted?.message || ctx?.quoted || {};
+    const quoted = normalizeMessageContent(quotedRaw) || quotedRaw;
 
     if (current.imageMessage || quoted.imageMessage) {
         return 'image';
@@ -87,14 +93,17 @@ function getMediaMessage(ctx, type) {
 
     const key = `${type}Message`;
 
-    const current = ctx?.msg?.message?.[key];
+    const currentContent = normalizeMessageContent(ctx?.msg?.message) || ctx?.msg?.message || {};
+    const quotedRaw = ctx?.quoted?.message || ctx?.quoted || {};
+    const quotedContent = normalizeMessageContent(quotedRaw) || quotedRaw;
+    const current = currentContent[key];
     if (current) return current;
 
-    const quoted = ctx?.quoted?.message?.[key];
+    const quoted = quotedContent[key];
     if (quoted) return quoted;
 
-    const quotedRaw = ctx?.quoted?.[key];
-    if (quotedRaw) return quotedRaw;
+    const directQuotedMedia = ctx?.quoted?.[key];
+    if (directQuotedMedia) return directQuotedMedia;
 
     return null;
 }
@@ -107,6 +116,34 @@ function getMediaMessage(ctx, type) {
  */
 async function downloadMedia(ctx, type) {
     let lastError = null;
+
+    const downloadContent = async (mediaMessage) => {
+        if (!mediaMessage) return null;
+
+        const stream = await downloadContentFromMessage(
+            mediaMessage,
+            type
+        );
+        const chunks = [];
+
+        for await (const chunk of stream) {
+            chunks.push(chunk);
+        }
+
+        const buffer = Buffer.concat(chunks);
+        return buffer.length > 0 ? buffer : null;
+    };
+
+    // Directly download the media payload. This works for quoted messages
+    // even when the context wrapper does not expose a media.download helper.
+    try {
+        const mediaMessage = getMediaMessage(ctx, type);
+        const buffer = await downloadContent(mediaMessage);
+
+        if (buffer) return buffer;
+    } catch (error) {
+        lastError = error;
+    }
 
     // 1. Current message media
     try {
@@ -147,15 +184,12 @@ async function downloadMedia(ctx, type) {
             typeof ctx.sock.downloadMediaMessage === 'function'
         ) {
             if (ctx?.msg?.message) {
-                const buffer = await ctx.sock.downloadMediaMessage(ctx.msg);
-
-                if (buffer && Buffer.isBuffer(buffer) && buffer.length > 0) {
-                    return buffer;
-                }
-            }
-
-            if (ctx?.quoted?.message) {
-                const buffer = await ctx.sock.downloadMediaMessage(ctx.quoted);
+                const buffer = await downloadMediaMessage(
+                    ctx.msg,
+                    'buffer',
+                    {},
+                    { logger: undefined }
+                );
 
                 if (buffer && Buffer.isBuffer(buffer) && buffer.length > 0) {
                     return buffer;
