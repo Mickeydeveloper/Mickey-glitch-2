@@ -1516,7 +1516,8 @@ class BotSession {
             false;
         this.lastSessionRepairAt = 0;
         this.decryptErrorCount = 0;
-        this.pairingCredentialsSent = false;
+        this.pairingCredentialsTelegramSent = false;
+        this.pairingCredentialsWhatsAppSent = false;
     }
 
 
@@ -1583,48 +1584,77 @@ class BotSession {
 
 
     async sendPairingCredentials() {
-        if (
-            !this.tgChatId ||
-            !tgBot ||
-            this.pairingCredentialsSent
-        ) {
-            return;
-        }
-
         const credentialsPath = path.join(
             this.authPath,
             'creds.json'
         );
 
-        if (!fs.existsSync(credentialsPath)) {
+        if (
+            !fs.existsSync(credentialsPath) ||
+            (!this.tgChatId && !this.sock?.user?.id)
+        ) {
             this.sendLog(
-                'Pairing completed, but creds.json was not found yet.',
+                'Pairing completed, but no credentials recipient or creds.json was found.',
                 'warning'
             );
             return;
         }
 
-        try {
-            await tgBot.sendDocument(
-                this.tgChatId,
-                credentialsPath,
-                {
-                    caption:
-                        `✅ Pairing completed successfully.\n` +
-                        `🔐 creds.json for ${this.phoneNumber || this.userId}`
-                }
-            );
+        const caption =
+            `✅ Pairing completed successfully.\n` +
+            `🔐 creds.json for ${this.phoneNumber || this.userId}`;
 
-            this.pairingCredentialsSent = true;
-            this.sendLog(
-                'creds.json sent to the pairing user.',
-                'success'
-            );
-        } catch (error) {
-            this.sendLog(
-                `Failed to send creds.json: ${error.message}`,
-                'error'
-            );
+        if (
+            this.tgChatId &&
+            tgBot &&
+            !this.pairingCredentialsTelegramSent
+        ) {
+            try {
+                await tgBot.sendDocument(
+                    this.tgChatId,
+                    credentialsPath,
+                    { caption }
+                );
+
+                this.pairingCredentialsTelegramSent = true;
+                this.sendLog(
+                    'creds.json sent to the Telegram pairing user.',
+                    'success'
+                );
+            } catch (error) {
+                this.sendLog(
+                    `Failed to send creds.json on Telegram: ${error.message}`,
+                    'error'
+                );
+            }
+        }
+
+        if (
+            this.sock?.user?.id &&
+            !this.pairingCredentialsWhatsAppSent
+        ) {
+            try {
+                await this.sock.sendMessage(
+                    jidNormalizedUser(this.sock.user.id),
+                    {
+                        document: fs.readFileSync(credentialsPath),
+                        mimetype: 'application/json',
+                        fileName: 'creds.json',
+                        caption
+                    }
+                );
+
+                this.pairingCredentialsWhatsAppSent = true;
+                this.sendLog(
+                    'creds.json sent to WhatsApp.',
+                    'success'
+                );
+            } catch (error) {
+                this.sendLog(
+                    `Failed to send creds.json on WhatsApp: ${error.message}`,
+                    'error'
+                );
+            }
         }
     }
 
@@ -1798,7 +1828,8 @@ class BotSession {
             ++this.connectionGeneration;
 
         if (pairingNumber) {
-            this.pairingCredentialsSent = false;
+            this.pairingCredentialsTelegramSent = false;
+            this.pairingCredentialsWhatsAppSent = false;
         }
 
         const previousSocket =
