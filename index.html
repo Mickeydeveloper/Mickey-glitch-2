@@ -11,441 +11,188 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
   :root{
-    --bg:#0a0a0f;
-    --bg-2:#12121a;
-    --card:rgba(255,255,255,.04);
-    --card-hover:rgba(255,255,255,.08);
-    --stroke:rgba(255,255,255,.1);
-    --stroke-hover:rgba(255,255,255,.22);
-    --orange:#ff6b1a;
-    --orange-2:#ff9540;
-    --lime:#c8ff00;
-    --cyan:#00e5ff;
-    --pink:#ff2e88;
-    --text:#fff;
-    --text-2:#a8a8b8;
-    --text-3:#737386;
-    --success:#22e07a;
-    --warning:#ffb020;
-    --danger:#ff3b5c;
-    --radius:24px;
-    --shadow:0 20px 60px rgba(0,0,0,.5);
+    --bg:#0a0a0f;--bg-2:#12121a;--card:rgba(255,255,255,.04);--card-hover:rgba(255,255,255,.08);
+    --stroke:rgba(255,255,255,.1);--stroke-hover:rgba(255,255,255,.22);
+    --orange:#ff6b1a;--lime:#c8ff00;--cyan:#00e5ff;--pink:#ff2e88;
+    --text:#fff;--text-2:#a8a8b8;--text-3:#737386;
+    --success:#22e07a;--warning:#ffb020;--danger:#ff3b5c;
+    --radius:24px;--shadow:0 20px 60px rgba(0,0,0,.5);
   }
   *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
   html{scroll-behavior:smooth;}
   body{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;min-height:100vh;line-height:1.6;overflow-x:hidden;-webkit-font-smoothing:antialiased;}
 
-  /* ---------- Animated Background ---------- */
-  .bg-layer{
-    position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none;
-  }
-  .bg-blob{
-    position:absolute;border-radius:50%;filter:blur(120px);opacity:.35;
-    animation:blobFloat 20s ease-in-out infinite;
-  }
-  .bg-blob.b1{width:600px;height:600px;background:var(--orange);top:-200px;left:-200px;animation-delay:0s;}
+  .bg-layer{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none;}
+  .bg-blob{position:absolute;border-radius:50%;filter:blur(120px);opacity:.35;animation:blobFloat 20s ease-in-out infinite;}
+  .bg-blob.b1{width:600px;height:600px;background:var(--orange);top:-200px;left:-200px;}
   .bg-blob.b2{width:500px;height:500px;background:var(--pink);bottom:-150px;right:-100px;animation-delay:-7s;}
   .bg-blob.b3{width:400px;height:400px;background:var(--cyan);top:40%;left:50%;animation-delay:-14s;opacity:.2;}
-  @keyframes blobFloat{
-    0%,100%{transform:translate(0,0) scale(1);}
-    33%{transform:translate(80px,-60px) scale(1.1);}
-    66%{transform:translate(-60px,40px) scale(.95);}
-  }
-  .bg-noise{
-    position:absolute;inset:0;opacity:.04;
-    background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  }
-  .bg-grid{
-    position:absolute;inset:0;opacity:.15;
-    background-image:
-      linear-gradient(rgba(255,255,255,0.04) 1px,transparent 1px),
-      linear-gradient(90deg,rgba(255,255,255,0.04) 1px,transparent 1px);
-    background-size:60px 60px;
-    mask-image:radial-gradient(ellipse 100% 60% at 50% 0%,#000 30%,transparent 80%);
-  }
+  @keyframes blobFloat{0%,100%{transform:translate(0,0) scale(1);}33%{transform:translate(80px,-60px) scale(1.1);}66%{transform:translate(-60px,40px) scale(.95);}}
+  .bg-grid{position:absolute;inset:0;opacity:.15;background-image:linear-gradient(rgba(255,255,255,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.04) 1px,transparent 1px);background-size:60px 60px;mask-image:radial-gradient(ellipse 100% 60% at 50% 0%,#000 30%,transparent 80%);}
+  .bg-noise{position:absolute;inset:0;opacity:.04;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");}
 
-  .auth-screen{position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(10,10,15,.96);}
-  .auth-card{width:min(440px,100%);padding:34px;border:1px solid var(--stroke);border-radius:24px;background:linear-gradient(145deg,rgba(255,255,255,.08),rgba(255,255,255,.02));box-shadow:var(--shadow);}
+  /* ---------- AUTH SCREEN ---------- */
+  .auth-screen{position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(10,10,15,.96);overflow-y:auto;}
+  .auth-card{width:min(460px,100%);padding:34px;border:1px solid var(--stroke);border-radius:24px;background:linear-gradient(145deg,rgba(255,255,255,.08),rgba(255,255,255,.02));box-shadow:var(--shadow);}
   .auth-card h2{font-family:'Space Grotesk',sans-serif;font-size:1.8rem;margin-bottom:8px;}
-  .auth-card p{color:var(--text-2);font-size:.9rem;margin-bottom:24px;}
+  .auth-card p.subtitle{color:var(--text-2);font-size:.9rem;margin-bottom:24px;}
   .auth-card .auth-error{display:none;color:var(--danger);font-size:.8rem;margin-top:12px;}
   .auth-card .auth-error.show{display:block;}
   body.authenticated .auth-screen{display:none;}
   body:not(.authenticated) .sidebar,body:not(.authenticated) .main,body:not(.authenticated) .mobile-nav{display:none;}
 
-  /* ---------- Sidebar Navigation ---------- */
-  .sidebar{
-    position:fixed;left:0;top:0;bottom:0;width:260px;z-index:100;
-    background:rgba(10,10,15,0.7);backdrop-filter:blur(24px);
-    border-right:1px solid var(--stroke);
-    padding:28px 20px;display:flex;flex-direction:column;gap:8px;
-    transition:transform .4s cubic-bezier(.5,0,.2,1);
-  }
-  .logo-wrap{
-    display:flex;align-items:center;gap:12px;padding:0 8px 28px;
-    border-bottom:1px solid var(--stroke);margin-bottom:20px;
-  }
-  .logo{
-    width:46px;height:46px;border-radius:14px;flex-shrink:0;
-    background:linear-gradient(135deg,var(--orange),var(--pink));
-    display:flex;align-items:center;justify-content:center;
-    font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:1.1rem;
-    color:#fff;position:relative;overflow:hidden;
-    box-shadow:0 8px 24px rgba(255,107,26,.35);
-  }
-  .logo::after{
-    content:'';position:absolute;inset:0;
-    background:linear-gradient(135deg,transparent 40%,rgba(255,255,255,.3),transparent 60%);
-    animation:shine 3s infinite;
-  }
-  @keyframes shine{0%{transform:translateX(-100%);}100%{transform:translateX(100%);}}
-  .logo-text h1{font-size:1.05rem;font-weight:800;letter-spacing:-.02em;line-height:1.1;}
-  .logo-text span{font-size:.7rem;color:var(--text-3);font-weight:500;letter-spacing:.1em;text-transform:uppercase;}
+  .auth-tabs{display:flex;gap:6px;background:var(--card);border:1px solid var(--stroke);border-radius:14px;padding:6px;margin-bottom:24px;}
+  .auth-tab{flex:1;padding:10px 14px;border-radius:10px;border:none;background:transparent;color:var(--text-2);font-family:inherit;font-weight:600;font-size:.82rem;cursor:pointer;transition:.2s;display:flex;align-items:center;justify-content:center;gap:8px;}
+  .auth-tab:hover{color:var(--text);}
+  .auth-tab.active{background:linear-gradient(135deg,var(--orange),var(--pink));color:#fff;box-shadow:0 6px 20px rgba(255,107,26,.3);}
 
-  .nav-section-label{
-    font-size:.68rem;color:var(--text-3);font-weight:700;letter-spacing:.15em;
-    text-transform:uppercase;padding:16px 12px 8px;
-  }
-  .nav-item{
-    display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:12px;
-    color:var(--text-2);text-decoration:none;font-size:.9rem;font-weight:500;
-    transition:.2s;position:relative;
-  }
-  .nav-item:hover{background:var(--card-hover);color:var(--text);}
-  .nav-item.active{
-    background:linear-gradient(135deg,rgba(255,107,26,.15),rgba(255,46,136,.1));
-    color:var(--text);border:1px solid rgba(255,107,26,.25);
-  }
-  .nav-item.active::before{
-    content:'';position:absolute;left:-20px;top:50%;transform:translateY(-50%);
-    width:3px;height:20px;background:var(--orange);border-radius:0 3px 3px 0;
-  }
-  .nav-item i{width:20px;text-align:center;font-size:1rem;}
-  .nav-item .badge{
-    margin-left:auto;background:var(--orange);color:#fff;font-size:.65rem;
-    font-weight:700;padding:2px 8px;border-radius:10px;
-  }
+  .auth-panel{display:none;}
+  .auth-panel.active{display:block;}
 
-  /* ---------- Main Content ---------- */
-  .main{margin-left:260px;min-height:100vh;}
+  .field{display:flex;flex-direction:column;gap:6px;margin-bottom:16px;}
+  .field label{font-size:.78rem;font-weight:600;color:var(--text-2);}
+  .field input,.field select{padding:12px 16px;border-radius:12px;background:var(--card);border:1px solid var(--stroke);color:var(--text);font-family:inherit;font-size:.88rem;transition:.2s;}
+  .field input:focus,.field select:focus{outline:none;border-color:var(--orange);background:rgba(255,255,255,.05);}
 
-  /* ---------- Top Bar ---------- */
-  .topbar{
-    position:sticky;top:0;z-index:90;
-    padding:20px 40px;display:flex;align-items:center;gap:20px;
-    background:rgba(10,10,15,0.7);backdrop-filter:blur(20px);
-    border-bottom:1px solid var(--stroke);
-  }
-  .menu-btn{
-    display:none;background:none;border:none;color:var(--text);
-    font-size:1.3rem;cursor:pointer;padding:8px;
-  }
-  .search-bar{
-    flex:1;max-width:400px;position:relative;
-  }
-  .search-bar input{
-    width:100%;padding:11px 16px 11px 44px;border-radius:12px;
-    background:var(--card);border:1px solid var(--stroke);
-    color:var(--text);font-family:inherit;font-size:.85rem;transition:.2s;
-  }
-  .search-bar input:focus{outline:none;border-color:var(--orange);background:rgba(255,255,255,0.05);}
-  .search-bar i{position:absolute;left:16px;top:50%;transform:translateY(-50%);color:var(--text-3);font-size:.9rem;}
-
-  .topbar-actions{margin-left:auto;display:flex;gap:12px;align-items:center;}
-  .icon-btn{
-    width:40px;height:40px;border-radius:12px;background:var(--card);
-    border:1px solid var(--stroke);color:var(--text-2);cursor:pointer;
-    display:flex;align-items:center;justify-content:center;transition:.2s;
-    position:relative;
-  }
-  .icon-btn:hover{background:var(--card-hover);color:var(--text);border-color:var(--stroke-hover);}
-  .icon-btn .dot{
-    position:absolute;top:8px;right:8px;width:8px;height:8px;
-    background:var(--orange);border-radius:50%;border:2px solid var(--bg);
-  }
-  .user-chip{
-    display:flex;align-items:center;gap:10px;padding:6px 14px 6px 6px;
-    background:var(--card);border:1px solid var(--stroke);border-radius:50px;
-    cursor:pointer;transition:.2s;
-  }
-  .user-chip:hover{background:var(--card-hover);}
-  .user-chip .avatar{
-    width:32px;height:32px;border-radius:50%;
-    background:linear-gradient(135deg,var(--lime),var(--cyan));
-    display:flex;align-items:center;justify-content:center;
-    font-weight:800;font-size:.75rem;color:#0a0a0f;
-  }
-  .user-chip .name{font-size:.85rem;font-weight:600;}
-
-  /* ---------- Hero Section ---------- */
-  .hero{padding:60px 40px 40px;position:relative;}
-  .hero-badge{
-    display:inline-flex;align-items:center;gap:8px;
-    padding:6px 14px;border-radius:50px;
-    background:rgba(200,255,0,.08);border:1px solid rgba(200,255,0,.25);
-    font-size:.72rem;font-weight:700;color:var(--lime);
-    letter-spacing:.05em;text-transform:uppercase;margin-bottom:24px;
-  }
-  .hero-badge .live{
-    width:6px;height:6px;background:var(--lime);border-radius:50%;
-    box-shadow:0 0 10px var(--lime);animation:pulse 1.5s infinite;
-  }
-  @keyframes pulse{50%{opacity:.3;transform:scale(.8);}}
-
-  .hero h1{
-    font-family:'Space Grotesk',sans-serif;
-    font-size:clamp(2.5rem,5vw,4.5rem);font-weight:700;
-    line-height:1.05;letter-spacing:-.03em;margin-bottom:20px;
-  }
-  .hero h1 .grad{
-    background:linear-gradient(135deg,var(--orange),var(--pink),var(--cyan));
-    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
-    display:inline-block;
-  }
-  .hero p.lead{
-    font-size:1.05rem;color:var(--text-2);max-width:620px;
-    margin-bottom:32px;font-weight:400;
-  }
-  .hero-cta{display:flex;gap:14px;flex-wrap:wrap;}
-
-  /* ---------- Buttons ---------- */
-  .btn{
-    display:inline-flex;align-items:center;justify-content:center;gap:10px;
-    padding:14px 26px;border-radius:14px;border:none;cursor:pointer;
-    font-family:inherit;font-weight:600;font-size:.9rem;
-    text-decoration:none;transition:.25s;position:relative;overflow:hidden;
-  }
-  .btn-primary{
-    background:linear-gradient(135deg,var(--orange),var(--pink));
-    color:#fff;box-shadow:0 10px 30px rgba(255,107,26,.3);
-  }
+  /* ---------- BUTTONS ---------- */
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;padding:14px 26px;border-radius:14px;border:none;cursor:pointer;font-family:inherit;font-weight:600;font-size:.9rem;text-decoration:none;transition:.25s;position:relative;overflow:hidden;}
+  .btn-primary{background:linear-gradient(135deg,var(--orange),var(--pink));color:#fff;box-shadow:0 10px 30px rgba(255,107,26,.3);}
   .btn-primary:hover{transform:translateY(-2px);box-shadow:0 15px 40px rgba(255,107,26,.45);}
-  .btn-ghost{
-    background:var(--card);color:var(--text);border:1px solid var(--stroke);
-  }
+  .btn-admin{background:linear-gradient(135deg,#c8ff00,#a0d400);color:#0a0a0f;box-shadow:0 10px 30px rgba(200,255,0,.25);}
+  .btn-admin:hover{transform:translateY(-2px);box-shadow:0 15px 40px rgba(200,255,0,.4);}
+  .btn-ghost{background:var(--card);color:var(--text);border:1px solid var(--stroke);}
   .btn-ghost:hover{background:var(--card-hover);border-color:var(--stroke-hover);transform:translateY(-2px);}
-  .btn-lime{
-    background:linear-gradient(135deg,var(--lime),#a0d400);color:#0a0a0f;
-    box-shadow:0 10px 30px rgba(200,255,0,.25);
-  }
-  .btn-lime:hover{transform:translateY(-2px);box-shadow:0 15px 40px rgba(200,255,0,.4);}
-  .btn-danger{background:linear-gradient(135deg,var(--danger),#c41e42);color:#fff;}
+  .btn-lime{background:linear-gradient(135deg,var(--lime),#a0d400);color:#0a0a0f;}
   .btn-sm{padding:9px 16px;font-size:.78rem;border-radius:10px;}
   .btn:disabled{opacity:.5;cursor:not-allowed;transform:none !important;}
 
-  /* ---------- Stats Grid ---------- */
-  .stats-grid{
-    padding:20px 40px 40px;
-    display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;
-  }
-  .stat-tile{
-    padding:24px;border-radius:var(--radius);
-    background:linear-gradient(135deg,var(--card),rgba(255,255,255,0.01));
-    border:1px solid var(--stroke);position:relative;overflow:hidden;
-    transition:.3s;
-  }
-  .stat-tile::before{
-    content:'';position:absolute;top:0;left:0;right:0;height:2px;
-    background:linear-gradient(90deg,var(--orange),transparent);
-    opacity:0;transition:.3s;
-  }
+  .logo{width:46px;height:46px;border-radius:14px;flex-shrink:0;background:linear-gradient(135deg,var(--orange),var(--pink));display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:1.1rem;color:#fff;position:relative;overflow:hidden;box-shadow:0 8px 24px rgba(255,107,26,.35);}
+  .logo::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,transparent 40%,rgba(255,255,255,.3),transparent 60%);animation:shine 3s infinite;}
+  @keyframes shine{0%{transform:translateX(-100%);}100%{transform:translateX(100%);}}
+
+  /* ---------- SIDEBAR ---------- */
+  .sidebar{position:fixed;left:0;top:0;bottom:0;width:260px;z-index:100;background:rgba(10,10,15,0.7);backdrop-filter:blur(24px);border-right:1px solid var(--stroke);padding:28px 20px;display:flex;flex-direction:column;gap:8px;transition:transform .4s cubic-bezier(.5,0,.2,1);}
+  .logo-wrap{display:flex;align-items:center;gap:12px;padding:0 8px 28px;border-bottom:1px solid var(--stroke);margin-bottom:20px;}
+  .logo-text h1{font-size:1.05rem;font-weight:800;letter-spacing:-.02em;line-height:1.1;}
+  .logo-text span{font-size:.7rem;color:var(--text-3);font-weight:500;letter-spacing:.1em;text-transform:uppercase;}
+  .nav-section-label{font-size:.68rem;color:var(--text-3);font-weight:700;letter-spacing:.15em;text-transform:uppercase;padding:16px 12px 8px;}
+  .nav-item{display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:12px;color:var(--text-2);text-decoration:none;font-size:.9rem;font-weight:500;transition:.2s;position:relative;}
+  .nav-item:hover{background:var(--card-hover);color:var(--text);}
+  .nav-item.active{background:linear-gradient(135deg,rgba(255,107,26,.15),rgba(255,46,136,.1));color:var(--text);border:1px solid rgba(255,107,26,.25);}
+  .nav-item.active::before{content:'';position:absolute;left:-20px;top:50%;transform:translateY(-50%);width:3px;height:20px;background:var(--orange);border-radius:0 3px 3px 0;}
+  .nav-item i{width:20px;text-align:center;font-size:1rem;}
+  .nav-item .badge{margin-left:auto;background:var(--orange);color:#fff;font-size:.65rem;font-weight:700;padding:2px 8px;border-radius:10px;}
+
+  .admin-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:50px;font-size:.65rem;font-weight:700;background:rgba(200,255,0,.15);color:var(--lime);border:1px solid rgba(200,255,0,.3);letter-spacing:.05em;text-transform:uppercase;margin-left:auto;}
+
+  /* ---------- MAIN ---------- */
+  .main{margin-left:260px;min-height:100vh;}
+
+  .topbar{position:sticky;top:0;z-index:90;padding:20px 40px;display:flex;align-items:center;gap:20px;background:rgba(10,10,15,0.7);backdrop-filter:blur(20px);border-bottom:1px solid var(--stroke);}
+  .menu-btn{display:none;background:none;border:none;color:var(--text);font-size:1.3rem;cursor:pointer;padding:8px;}
+  .search-bar{flex:1;max-width:400px;position:relative;}
+  .search-bar input{width:100%;padding:11px 16px 11px 44px;border-radius:12px;background:var(--card);border:1px solid var(--stroke);color:var(--text);font-family:inherit;font-size:.85rem;transition:.2s;}
+  .search-bar input:focus{outline:none;border-color:var(--orange);}
+  .search-bar i{position:absolute;left:16px;top:50%;transform:translateY(-50%);color:var(--text-3);font-size:.9rem;}
+  .topbar-actions{margin-left:auto;display:flex;gap:12px;align-items:center;}
+  .icon-btn{width:40px;height:40px;border-radius:12px;background:var(--card);border:1px solid var(--stroke);color:var(--text-2);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.2s;position:relative;}
+  .icon-btn:hover{background:var(--card-hover);color:var(--text);border-color:var(--stroke-hover);}
+  .icon-btn .dot{position:absolute;top:8px;right:8px;width:8px;height:8px;background:var(--orange);border-radius:50%;border:2px solid var(--bg);}
+  .user-chip{display:flex;align-items:center;gap:10px;padding:6px 14px 6px 6px;background:var(--card);border:1px solid var(--stroke);border-radius:50px;cursor:pointer;transition:.2s;}
+  .user-chip:hover{background:var(--card-hover);}
+  .user-chip .avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--lime),var(--cyan));display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.75rem;color:#0a0a0f;}
+  .user-chip .name{font-size:.85rem;font-weight:600;}
+
+  .hero{padding:60px 40px 40px;position:relative;}
+  .hero-badge{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:50px;background:rgba(200,255,0,.08);border:1px solid rgba(200,255,0,.25);font-size:.72rem;font-weight:700;color:var(--lime);letter-spacing:.05em;text-transform:uppercase;margin-bottom:24px;}
+  .hero-badge .live{width:6px;height:6px;background:var(--lime);border-radius:50%;box-shadow:0 0 10px var(--lime);animation:pulse 1.5s infinite;}
+  @keyframes pulse{50%{opacity:.3;transform:scale(.8);}}
+  .hero h1{font-family:'Space Grotesk',sans-serif;font-size:clamp(2.5rem,5vw,4.5rem);font-weight:700;line-height:1.05;letter-spacing:-.03em;margin-bottom:20px;}
+  .hero h1 .grad{background:linear-gradient(135deg,var(--orange),var(--pink),var(--cyan));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;display:inline-block;}
+  .hero p.lead{font-size:1.05rem;color:var(--text-2);max-width:620px;margin-bottom:32px;}
+  .hero-cta{display:flex;gap:14px;flex-wrap:wrap;}
+
+  .stats-grid{padding:20px 40px 40px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;}
+  .stat-tile{padding:24px;border-radius:var(--radius);background:linear-gradient(135deg,var(--card),rgba(255,255,255,0.01));border:1px solid var(--stroke);transition:.3s;}
   .stat-tile:hover{transform:translateY(-4px);border-color:var(--stroke-hover);background:var(--card-hover);}
-  .stat-tile:hover::before{opacity:1;}
   .stat-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;}
-  .stat-icon{
-    width:44px;height:44px;border-radius:12px;
-    background:rgba(255,107,26,.12);border:1px solid rgba(255,107,26,.2);
-    display:flex;align-items:center;justify-content:center;
-    color:var(--orange);font-size:1.1rem;
-  }
+  .stat-icon{width:44px;height:44px;border-radius:12px;background:rgba(255,107,26,.12);border:1px solid rgba(255,107,26,.2);display:flex;align-items:center;justify-content:center;color:var(--orange);font-size:1.1rem;}
   .stat-icon.lime{background:rgba(200,255,0,.1);border-color:rgba(200,255,0,.2);color:var(--lime);}
   .stat-icon.cyan{background:rgba(0,229,255,.1);border-color:rgba(0,229,255,.2);color:var(--cyan);}
   .stat-icon.pink{background:rgba(255,46,136,.1);border-color:rgba(255,46,136,.2);color:var(--pink);}
-  .stat-trend{font-size:.72rem;font-weight:700;color:var(--success);display:flex;align-items:center;gap:4px;}
-  .stat-num{
-    font-family:'Space Grotesk',sans-serif;
-    font-size:2rem;font-weight:700;letter-spacing:-.02em;line-height:1;
-    margin-bottom:6px;
-  }
+  .stat-num{font-family:'Space Grotesk',sans-serif;font-size:2rem;font-weight:700;letter-spacing:-.02em;line-height:1;margin-bottom:6px;}
   .stat-lbl{font-size:.8rem;color:var(--text-3);font-weight:500;}
 
-  /* ---------- Section Headers ---------- */
   .section{padding:40px;scroll-margin-top:80px;}
-  .section-head{
-    display:flex;justify-content:space-between;align-items:flex-end;
-    margin-bottom:28px;flex-wrap:wrap;gap:16px;
-  }
-  .section-title h2{
-    font-family:'Space Grotesk',sans-serif;font-size:1.6rem;font-weight:700;
-    letter-spacing:-.02em;margin-bottom:4px;
-  }
+  .section-head{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:28px;flex-wrap:wrap;gap:16px;}
+  .section-title h2{font-family:'Space Grotesk',sans-serif;font-size:1.6rem;font-weight:700;letter-spacing:-.02em;margin-bottom:4px;}
   .section-title p{font-size:.88rem;color:var(--text-3);}
 
-  /* ---------- Bot Cards ---------- */
-  .bots-grid{
-    display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:18px;
-  }
-  .bot-card{
-    padding:24px;border-radius:var(--radius);background:var(--card);
-    border:1px solid var(--stroke);transition:.3s;position:relative;overflow:hidden;
-  }
+  .bots-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:18px;}
+  .bot-card{padding:24px;border-radius:var(--radius);background:var(--card);border:1px solid var(--stroke);transition:.3s;}
   .bot-card:hover{transform:translateY(-4px);border-color:var(--stroke-hover);background:var(--card-hover);}
   .bot-top{display:flex;align-items:flex-start;gap:14px;margin-bottom:20px;}
-  .bot-avatar{
-    width:52px;height:52px;border-radius:16px;flex-shrink:0;
-    background:linear-gradient(135deg,var(--orange),var(--pink));
-    display:flex;align-items:center;justify-content:center;
-    font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:1rem;color:#fff;
-  }
+  .bot-avatar{width:52px;height:52px;border-radius:16px;flex-shrink:0;background:linear-gradient(135deg,var(--orange),var(--pink));display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:1rem;color:#fff;}
   .bot-meta{flex:1;min-width:0;}
-  .bot-meta h3{font-size:1rem;font-weight:700;margin-bottom:2px;letter-spacing:-.01em;}
+  .bot-meta h3{font-size:1rem;font-weight:700;margin-bottom:2px;}
   .bot-meta .id{font-size:.7rem;color:var(--text-3);font-family:'Space Grotesk',monospace;}
-  .status-pill{
-    display:inline-flex;align-items:center;gap:6px;padding:4px 10px;
-    border-radius:50px;font-size:.68rem;font-weight:700;
-    letter-spacing:.05em;text-transform:uppercase;flex-shrink:0;
-  }
+  .status-pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:50px;font-size:.68rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;flex-shrink:0;}
   .status-pill.online{background:rgba(34,224,122,.12);color:var(--success);border:1px solid rgba(34,224,122,.25);}
   .status-pill.offline{background:rgba(255,59,92,.12);color:var(--danger);border:1px solid rgba(255,59,92,.25);}
   .status-pill.connecting{background:rgba(255,176,32,.12);color:var(--warning);border:1px solid rgba(255,176,32,.25);}
   .status-pill .ind{width:6px;height:6px;border-radius:50%;background:currentColor;animation:pulse 1.5s infinite;}
-
-  .bot-metrics{
-    display:grid;grid-template-columns:repeat(3,1fr);gap:8px;
-    padding:14px 0;border-top:1px solid var(--stroke);border-bottom:1px solid var(--stroke);
-    margin-bottom:18px;
-  }
+  .bot-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:14px 0;border-top:1px solid var(--stroke);border-bottom:1px solid var(--stroke);margin-bottom:18px;}
   .metric{text-align:center;}
-  .metric .v{font-family:'Space Grotesk',sans-serif;font-size:1.15rem;font-weight:700;letter-spacing:-.02em;}
+  .metric .v{font-family:'Space Grotesk',sans-serif;font-size:1.15rem;font-weight:700;}
   .metric .l{font-size:.68rem;color:var(--text-3);text-transform:uppercase;letter-spacing:.08em;font-weight:600;}
   .bot-actions{display:flex;gap:8px;}
 
-  /* ---------- Logs ---------- */
-  .logs-container{
-    background:#0d0d14;border:1px solid var(--stroke);border-radius:var(--radius);
-    padding:20px;max-height:420px;overflow-y:auto;
-    font-family:'Space Grotesk',monospace;font-size:.82rem;
-  }
-  .log-row{
-    display:grid;grid-template-columns:auto auto 1fr;gap:16px;
-    padding:8px 12px;border-radius:8px;transition:.15s;
-  }
+  .logs-container{background:#0d0d14;border:1px solid var(--stroke);border-radius:var(--radius);padding:20px;max-height:420px;overflow-y:auto;font-family:'Space Grotesk',monospace;font-size:.82rem;}
+  .log-row{display:grid;grid-template-columns:auto auto 1fr;gap:16px;padding:8px 12px;border-radius:8px;}
   .log-row:hover{background:rgba(255,255,255,.03);}
   .log-time{color:var(--text-3);font-size:.75rem;}
-  .log-lvl{
-    padding:1px 8px;border-radius:5px;font-size:.65rem;font-weight:700;
-    letter-spacing:.05em;text-transform:uppercase;align-self:center;
-  }
+  .log-lvl{padding:1px 8px;border-radius:5px;font-size:.65rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;align-self:center;}
   .log-lvl.info{background:rgba(0,229,255,.12);color:var(--cyan);}
   .log-lvl.warn{background:rgba(255,176,32,.12);color:var(--warning);}
   .log-lvl.error{background:rgba(255,59,92,.12);color:var(--danger);}
   .log-lvl.success{background:rgba(34,224,122,.12);color:var(--success);}
   .log-msg{color:var(--text-2);word-break:break-word;}
 
-  /* ---------- Settings ---------- */
-  .settings-grid{
-    display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;
-  }
-  .setting-row{
-    display:flex;justify-content:space-between;align-items:center;gap:16px;
-    padding:18px 20px;border-radius:16px;background:var(--card);
-    border:1px solid var(--stroke);transition:.2s;
-  }
+  .settings-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;}
+  .setting-row{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:18px 20px;border-radius:16px;background:var(--card);border:1px solid var(--stroke);transition:.2s;}
   .setting-row:hover{border-color:var(--stroke-hover);background:var(--card-hover);}
   .setting-info h4{font-size:.9rem;font-weight:600;margin-bottom:2px;}
   .setting-info p{font-size:.75rem;color:var(--text-3);}
-  .switch{
-    width:48px;height:28px;background:rgba(255,255,255,.1);border-radius:50px;
-    position:relative;cursor:pointer;transition:.3s;flex-shrink:0;
-    border:1px solid var(--stroke);
-  }
-  .switch::after{
-    content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;
-    background:#fff;border-radius:50%;transition:.3s cubic-bezier(.5,0,.2,1);
-  }
+  .switch{width:48px;height:28px;background:rgba(255,255,255,.1);border-radius:50px;position:relative;cursor:pointer;transition:.3s;flex-shrink:0;border:1px solid var(--stroke);}
+  .switch::after{content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;background:#fff;border-radius:50%;transition:.3s cubic-bezier(.5,0,.2,1);}
   .switch.active{background:linear-gradient(135deg,var(--orange),var(--pink));border-color:transparent;}
   .switch.active::after{transform:translateX(20px);}
 
-  .field{
-    display:flex;flex-direction:column;gap:6px;margin-bottom:16px;
-  }
-  .field label{font-size:.78rem;font-weight:600;color:var(--text-2);}
-  .field input,.field select{
-    padding:12px 16px;border-radius:12px;background:var(--card);
-    border:1px solid var(--stroke);color:var(--text);
-    font-family:inherit;font-size:.88rem;transition:.2s;
-  }
-  .field input:focus,.field select:focus{outline:none;border-color:var(--orange);background:rgba(255,255,255,.05);}
-
-  /* ---------- Connect Card ---------- */
-  .connect-wrap{
-    display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start;
-  }
-  .connect-card{
-    padding:32px;border-radius:var(--radius);
-    background:linear-gradient(135deg,rgba(255,107,26,.08),rgba(255,46,136,.04));
-    border:1px solid rgba(255,107,26,.2);
-  }
+  .connect-wrap{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start;}
+  .connect-card{padding:32px;border-radius:var(--radius);background:linear-gradient(135deg,rgba(255,107,26,.08),rgba(255,46,136,.04));border:1px solid rgba(255,107,26,.2);}
   .connect-card h3{font-family:'Space Grotesk',sans-serif;font-size:1.15rem;font-weight:700;margin-bottom:20px;}
   .steps{display:flex;flex-direction:column;gap:14px;margin-bottom:24px;}
   .step{display:flex;gap:14px;align-items:flex-start;}
-  .step-num{
-    width:28px;height:28px;border-radius:9px;flex-shrink:0;
-    background:rgba(255,107,26,.15);border:1px solid rgba(255,107,26,.3);
-    color:var(--orange);font-size:.75rem;font-weight:800;
-    display:flex;align-items:center;justify-content:center;
-  }
+  .step-num{width:28px;height:28px;border-radius:9px;flex-shrink:0;background:rgba(255,107,26,.15);border:1px solid rgba(255,107,26,.3);color:var(--orange);font-size:.75rem;font-weight:800;display:flex;align-items:center;justify-content:center;}
   .step-txt{font-size:.85rem;color:var(--text-2);padding-top:3px;}
-
-  .pair-result{
-    padding:28px;border-radius:var(--radius);background:var(--card);
-    border:1px solid var(--stroke);text-align:center;
-  }
-  .pair-result .code-display{
-    font-family:'Space Grotesk',sans-serif;font-size:2rem;font-weight:700;
-    letter-spacing:.15em;padding:24px;border-radius:16px;
-    background:rgba(200,255,0,.05);border:2px dashed rgba(200,255,0,.4);
-    color:var(--lime);margin:20px 0;cursor:pointer;transition:.2s;
-  }
+  .pair-result{padding:28px;border-radius:var(--radius);background:var(--card);border:1px solid var(--stroke);text-align:center;}
+  .pair-result .code-display{font-family:'Space Grotesk',sans-serif;font-size:2rem;font-weight:700;letter-spacing:.15em;padding:24px;border-radius:16px;background:rgba(200,255,0,.05);border:2px dashed rgba(200,255,0,.4);color:var(--lime);margin:20px 0;cursor:pointer;transition:.2s;}
   .pair-result .code-display:hover{background:rgba(200,255,0,.1);}
 
-  .alert{
-    padding:14px 18px;border-radius:12px;font-size:.85rem;
-    margin-top:16px;display:none;align-items:center;gap:10px;
-  }
+  .alert{padding:14px 18px;border-radius:12px;font-size:.85rem;margin-top:16px;display:none;align-items:center;gap:10px;}
   .alert.show{display:flex;}
   .alert.success{background:rgba(34,224,122,.1);border:1px solid rgba(34,224,122,.3);color:var(--success);}
   .alert.error{background:rgba(255,59,92,.1);border:1px solid rgba(255,59,92,.3);color:var(--danger);}
   .alert.warn{background:rgba(255,176,32,.1);border:1px solid rgba(255,176,32,.3);color:var(--warning);}
 
-  /* ---------- Toast ---------- */
-  #toast{
-    position:fixed;bottom:32px;left:50%;transform:translate(-50%,150px);
-    padding:14px 26px;border-radius:14px;
-    background:linear-gradient(135deg,var(--orange),var(--pink));
-    color:#fff;font-weight:600;font-size:.85rem;z-index:600;
-    box-shadow:0 15px 40px rgba(255,107,26,.4);
-    transition:.4s cubic-bezier(.34,1.56,.64,1);
-  }
+  #toast{position:fixed;bottom:32px;left:50%;transform:translate(-50%,150px);padding:14px 26px;border-radius:14px;background:linear-gradient(135deg,var(--orange),var(--pink));color:#fff;font-weight:600;font-size:.85rem;z-index:600;box-shadow:0 15px 40px rgba(255,107,26,.4);transition:.4s cubic-bezier(.34,1.56,.64,1);}
   #toast.show{transform:translate(-50%,0);}
 
-  /* ---------- Mobile Bottom Nav ---------- */
-  .mobile-nav{
-    display:none;position:fixed;bottom:0;left:0;right:0;z-index:100;
-    background:rgba(10,10,15,.9);backdrop-filter:blur(20px);
-    border-top:1px solid var(--stroke);
-    padding:10px 8px calc(10px + env(safe-area-inset-bottom));
-    grid-template-columns:repeat(5,1fr);
-  }
-  .mobile-nav a{
-    display:flex;flex-direction:column;align-items:center;gap:3px;
-    padding:8px 4px;color:var(--text-3);text-decoration:none;
-    font-size:.65rem;font-weight:600;border-radius:10px;transition:.2s;
-  }
+  .mobile-nav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(10,10,15,.9);backdrop-filter:blur(20px);border-top:1px solid var(--stroke);padding:10px 8px calc(10px + env(safe-area-inset-bottom));grid-template-columns:repeat(5,1fr);}
+  .mobile-nav a{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px;color:var(--text-3);text-decoration:none;font-size:.65rem;font-weight:600;border-radius:10px;transition:.2s;}
   .mobile-nav a i{font-size:1.1rem;}
   .mobile-nav a.active{color:var(--orange);background:rgba(255,107,26,.08);}
 
-  /* ---------- Responsive ---------- */
   @media(max-width:1024px){
     .sidebar{transform:translateX(-100%);}
     .sidebar.open{transform:translateX(0);}
@@ -468,17 +215,12 @@
     .stats-grid{padding:12px 18px 24px;grid-template-columns:repeat(2,1fr);gap:12px;}
     .stat-tile{padding:18px;}
     .stat-num{font-size:1.5rem;}
-    .stat-icon{width:38px;height:38px;font-size:.95rem;}
     .bots-grid{grid-template-columns:1fr;}
-    .logs-container{padding:12px;font-size:.75rem;}
-    .log-row{grid-template-columns:auto 1fr;gap:8px;}
-    .log-time{display:none;}
   }
 </style>
 </head>
 <body>
 
-<!-- Ambient Background -->
 <div class="bg-layer">
   <div class="bg-blob b1"></div>
   <div class="bg-blob b2"></div>
@@ -487,28 +229,62 @@
   <div class="bg-noise"></div>
 </div>
 
-<!-- AUTH SCREEN -->
+<!-- ============================================================
+     AUTH SCREEN (User + Admin tabs)
+     ============================================================ -->
 <section class="auth-screen" id="authScreen">
-  <form class="auth-card" id="authForm">
+  <div class="auth-card">
     <div class="logo" style="margin-bottom:18px;">MG</div>
     <h2>Welcome back</h2>
-    <p>Login with your phone number to manage up to two WhatsApp bots.</p>
-    <div class="field">
-      <label for="accountPhone">Phone number</label>
-      <input type="tel" id="accountPhone" placeholder="e.g. 255712345678" autocomplete="tel" required>
+    <p class="subtitle">Login to manage your WhatsApp bots.</p>
+
+    <!-- Tabs -->
+    <div class="auth-tabs">
+      <button class="auth-tab active" data-tab="user" type="button">
+        <i class="fas fa-user"></i> User
+      </button>
+      <button class="auth-tab" data-tab="admin" type="button">
+        <i class="fas fa-shield-halved"></i> Admin
+      </button>
     </div>
-    <div class="field">
-      <label for="accountName">Account name (optional)</label>
-      <input type="text" id="accountName" placeholder="Your name" maxlength="60" autocomplete="name">
-    </div>
-    <button class="btn btn-primary" id="authSubmit" type="submit" style="width:100%;">
-      <i class="fas fa-right-to-bracket"></i> Login / Create account
-    </button>
-    <div class="auth-error" id="authError"></div>
-  </form>
+
+    <!-- User Panel -->
+    <form class="auth-panel active" id="userPanel">
+      <div class="field">
+        <label for="accountPhone">Phone number</label>
+        <input type="tel" id="accountPhone" placeholder="e.g. 255712345678" autocomplete="tel" required>
+      </div>
+      <div class="field">
+        <label for="accountName">Account name (optional)</label>
+        <input type="text" id="accountName" placeholder="Your name" maxlength="60" autocomplete="name">
+      </div>
+      <button class="btn btn-primary" id="userSubmit" type="submit" style="width:100%;">
+        <i class="fas fa-right-to-bracket"></i> Login / Create account
+      </button>
+      <div class="auth-error" id="authError"></div>
+    </form>
+
+    <!-- Admin Panel -->
+    <form class="auth-panel" id="adminPanel">
+      <div class="field">
+        <label for="adminPhone">Admin phone number</label>
+        <input type="tel" id="adminPhone" placeholder="Admin number" autocomplete="tel" required>
+      </div>
+      <div class="field">
+        <label for="adminPassword">Admin password</label>
+        <input type="password" id="adminPassword" placeholder="••••••••" autocomplete="current-password" required>
+      </div>
+      <button class="btn btn-admin" id="adminSubmit" type="submit" style="width:100%;">
+        <i class="fas fa-shield-halved"></i> Admin Login
+      </button>
+      <div class="auth-error" id="adminError"></div>
+    </form>
+  </div>
 </section>
 
-<!-- Sidebar -->
+<!-- ============================================================
+     SIDEBAR
+     ============================================================ -->
 <aside class="sidebar" id="sidebar">
   <div class="logo-wrap">
     <div class="logo">MG</div>
@@ -520,17 +296,26 @@
 
   <div class="nav-section-label">Main</div>
   <a href="#dashboard" class="nav-item active"><i class="fas fa-th-large"></i> Dashboard</a>
-  <a href="#bots" class="nav-item"><i class="fas fa-robot"></i> Bots <span class="badge" id="botsBadge">0</span></a>
+  <a href="#bots" class="nav-item">
+    <i class="fas fa-robot"></i> Bots <span class="badge" id="botsBadge">0</span>
+  </a>
 
   <div class="nav-section-label">Configure</div>
   <a href="#settings" class="nav-item"><i class="fas fa-sliders-h"></i> Settings</a>
   <a href="#connect" class="nav-item"><i class="fas fa-link"></i> Connect</a>
+
+  <div style="margin-top:auto;display:flex;flex-direction:column;gap:8px;">
+    <button class="btn btn-ghost btn-sm" id="logoutBtn" style="width:100%;">
+      <i class="fas fa-right-from-bracket"></i> Logout
+    </button>
+  </div>
 </aside>
 
-<!-- Main Content -->
+<!-- ============================================================
+     MAIN CONTENT
+     ============================================================ -->
 <div class="main">
 
-  <!-- Topbar -->
   <header class="topbar">
     <button class="menu-btn" id="menuBtn"><i class="fas fa-bars"></i></button>
     <div class="search-bar">
@@ -541,13 +326,15 @@
       <button class="icon-btn" title="Notifications"><i class="fas fa-bell"></i><span class="dot"></span></button>
       <button class="icon-btn" title="Refresh" id="refreshBtn"><i class="fas fa-sync-alt"></i></button>
       <div class="user-chip">
-        <div class="avatar">OP</div>
+        <div class="avatar" id="userAvatar">OP</div>
         <span class="name" id="userNameDisplay">Operator</span>
       </div>
+      <span class="admin-badge" id="adminBadge" style="display:none;">
+        <i class="fas fa-crown"></i> Admin
+      </span>
     </div>
   </header>
 
-  <!-- Hero -->
   <section class="hero" id="dashboard">
     <div class="hero-badge"><span class="live"></span> System Operational · All Nodes Online</div>
     <h1>Control your <span class="grad">WhatsApp bots</span><br>from one place.</h1>
@@ -558,12 +345,10 @@
     </div>
   </section>
 
-  <!-- Stats -->
   <section class="stats-grid">
     <div class="stat-tile">
       <div class="stat-head">
         <div class="stat-icon"><i class="fas fa-robot"></i></div>
-        <span class="stat-trend"><i class="fas fa-arrow-up"></i> 12%</span>
       </div>
       <div class="stat-num" id="activeBots">0</div>
       <div class="stat-lbl">Active Bots</div>
@@ -571,7 +356,6 @@
     <div class="stat-tile">
       <div class="stat-head">
         <div class="stat-icon lime"><i class="fas fa-tower-broadcast"></i></div>
-        <span class="stat-trend"><i class="fas fa-arrow-up"></i> 8%</span>
       </div>
       <div class="stat-num" id="activeSockets">0</div>
       <div class="stat-lbl">Live Sessions</div>
@@ -579,7 +363,6 @@
     <div class="stat-tile">
       <div class="stat-head">
         <div class="stat-icon cyan"><i class="fas fa-users"></i></div>
-        <span class="stat-trend"><i class="fas fa-arrow-up"></i> 24%</span>
       </div>
       <div class="stat-num" id="totalUsers">0</div>
       <div class="stat-lbl">Total Users</div>
@@ -587,14 +370,12 @@
     <div class="stat-tile">
       <div class="stat-head">
         <div class="stat-icon pink"><i class="fas fa-comments"></i></div>
-        <span class="stat-trend"><i class="fas fa-arrow-up"></i> 31%</span>
       </div>
       <div class="stat-num" id="totalMessages">0</div>
       <div class="stat-lbl">Messages Handled</div>
     </div>
   </section>
 
-  <!-- Bots -->
   <section class="section" id="bots">
     <div class="section-head">
       <div class="section-title">
@@ -608,7 +389,6 @@
     <div class="bots-grid" id="botDashboard"></div>
   </section>
 
-  <!-- Settings -->
   <section class="section" id="settings">
     <div class="section-head">
       <div class="section-title">
@@ -621,30 +401,12 @@
       </div>
     </div>
     <div class="settings-grid">
-      <div class="setting-row">
-        <div class="setting-info"><h4>Auto Reply</h4><p>Automatically respond to messages</p></div>
-        <div class="switch active" data-setting="autoReply"></div>
-      </div>
-      <div class="setting-row">
-        <div class="setting-info"><h4>Read Receipts</h4><p>Send blue ticks on read</p></div>
-        <div class="switch active" data-setting="readReceipts"></div>
-      </div>
-      <div class="setting-row">
-        <div class="setting-info"><h4>Typing Indicator</h4><p>Show typing status</p></div>
-        <div class="switch active" data-setting="typingIndicator"></div>
-      </div>
-      <div class="setting-row">
-        <div class="setting-info"><h4>Auto Reconnect</h4><p>Recover from disconnects</p></div>
-        <div class="switch active" data-setting="autoReconnect"></div>
-      </div>
-      <div class="setting-row">
-        <div class="setting-info"><h4>Anti-Spam Shield</h4><p>Block spam messages</p></div>
-        <div class="switch" data-setting="antiSpam"></div>
-      </div>
-      <div class="setting-row">
-        <div class="setting-info"><h4>Message Logging</h4><p>Save all message history</p></div>
-        <div class="switch active" data-setting="logMessages"></div>
-      </div>
+      <div class="setting-row"><div class="setting-info"><h4>Auto Reply</h4><p>Automatically respond to messages</p></div><div class="switch active" data-setting="autoReply"></div></div>
+      <div class="setting-row"><div class="setting-info"><h4>Read Receipts</h4><p>Send blue ticks on read</p></div><div class="switch active" data-setting="readReceipts"></div></div>
+      <div class="setting-row"><div class="setting-info"><h4>Typing Indicator</h4><p>Show typing status</p></div><div class="switch active" data-setting="typingIndicator"></div></div>
+      <div class="setting-row"><div class="setting-info"><h4>Auto Reconnect</h4><p>Recover from disconnects</p></div><div class="switch active" data-setting="autoReconnect"></div></div>
+      <div class="setting-row"><div class="setting-info"><h4>Anti-Spam Shield</h4><p>Block spam messages</p></div><div class="switch" data-setting="antiSpam"></div></div>
+      <div class="setting-row"><div class="setting-info"><h4>Message Logging</h4><p>Save all message history</p></div><div class="switch active" data-setting="logMessages"></div></div>
     </div>
     <div style="margin-top:24px;display:flex;gap:16px;align-items:end;flex-wrap:wrap;">
       <div class="field" style="margin:0;min-width:220px;">
@@ -655,7 +417,6 @@
     </div>
   </section>
 
-  <!-- Connect -->
   <section class="section" id="connect">
     <div class="section-head">
       <div class="section-title">
@@ -688,33 +449,29 @@
         <p style="font-size:.8rem;color:var(--text-3);">Tap the code to copy it</p>
         <div class="code-display" id="pairingCode" onclick="copyCode()">— — — —</div>
         <div class="alert" id="status"></div>
-        <div style="font-size:.72rem;color:var(--text-3);margin-top:14px;">
-          <i class="fas fa-clock"></i> Code expires in 60 seconds
-        </div>
       </div>
     </div>
   </section>
 
   <footer style="padding:40px;text-align:center;border-top:1px solid var(--stroke);color:var(--text-3);font-size:.8rem;">
-    © <span id="year"></span> <strong style="color:var(--orange);">Mickey Glitch 2</strong> · Built with <i class="fas fa-heart" style="color:var(--pink);"></i>
+    © <span id="year"></span> <strong style="color:var(--orange);">Mickey Glitch 2</strong>
     <div style="margin-top:6px;font-size:.72rem;" id="serverAddress">Detecting server...</div>
   </footer>
 
 </div>
 
-<!-- Mobile Bottom Nav -->
 <nav class="mobile-nav">
   <a href="#dashboard" class="active"><i class="fas fa-th-large"></i>Home</a>
   <a href="#bots"><i class="fas fa-robot"></i>Bots</a>
   <a href="#settings"><i class="fas fa-cog"></i>Settings</a>
 </nav>
 
-<div id="toast">Copied to clipboard!</div>
+<div id="toast">Copied!</div>
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
 /* ============================================================
-   GLOBAL STATE (Zote zinatolewa juu ili kuepusha TDZ errors)
+   GLOBAL STATE
    ============================================================ */
 var socket = null;
 var accountToken = localStorage.getItem('mickey_account_token') || '';
@@ -728,7 +485,7 @@ try {
 }
 
 /* ============================================================
-   HELPER FUNCTIONS
+   HELPERS
    ============================================================ */
 function normalizePhone(value) {
   var phone = String(value || '').trim().replace(/\D/g, '');
@@ -737,175 +494,231 @@ function normalizePhone(value) {
   if (phone.length === 9) phone = '255' + phone;
   return phone;
 }
-
 function isValidTanzaniaPhone(phone) {
   return /^255[67]\d{8}$/.test(phone);
 }
-
-function showAuthError(message) {
-  var el = document.getElementById('authError');
+function showError(elementId, message) {
+  var el = document.getElementById(elementId);
   if (!el) return;
   el.textContent = message;
   el.classList.add('show');
-  console.error('[Auth Error]', message);
+  console.error('[Error]', message);
 }
-
+function clearError(elementId) {
+  var el = document.getElementById(elementId);
+  if (el) el.classList.remove('show');
+}
 function showToast(msg) {
-  var toast = document.getElementById('toast');
-  if (!toast) return;
-  toast.innerText = msg;
-  toast.classList.add('show');
+  var t = document.getElementById('toast');
+  if (!t) return;
+  t.innerText = msg;
+  t.classList.add('show');
   clearTimeout(window._tt);
-  window._tt = setTimeout(function() {
-    toast.classList.remove('show');
-  }, 2200);
+  window._tt = setTimeout(function(){ t.classList.remove('show'); }, 2200);
+}
+function applyUserToUI(user) {
+  if (!user) return;
+  currentUser = user;
+  accountReady = true;
+
+  var nameEl = document.getElementById('userNameDisplay');
+  if (nameEl) nameEl.textContent = user.name || user.phone || 'Account';
+
+  var avatarEl = document.getElementById('userAvatar');
+  if (avatarEl) {
+    avatarEl.textContent = (user.name || user.phone || 'OP')
+      .split(/\s+/).map(function(p){return p[0];}).join('').slice(0,2).toUpperCase();
+  }
+
+  var adminBadge = document.getElementById('adminBadge');
+  if (adminBadge) {
+    adminBadge.style.display = user.isAdmin ? 'inline-flex' : 'none';
+  }
+
+  var badge = document.getElementById('botsBadge');
+  if (badge) badge.textContent = (user.botCount || 0) + '/' + (user.botLimit || 2);
+
+  document.body.classList.add('authenticated');
 }
 
 /* ============================================================
-   LOGIN FORM
+   AUTH TABS
    ============================================================ */
-var authForm = document.getElementById('authForm');
-var authSubmit = document.getElementById('authSubmit');
-
-if (authForm) {
-  authForm.addEventListener('submit', function(event) {
-    event.preventDefault();
-
-    var rawPhone = document.getElementById('accountPhone').value;
-    var name = document.getElementById('accountName').value.trim();
-    var phone = normalizePhone(rawPhone);
-
-    console.log('[Login] Raw phone:', rawPhone);
-    console.log('[Login] Normalized phone:', phone);
-
-    if (!isValidTanzaniaPhone(phone)) {
-      showAuthError('Namba si sahihi. Tumia mfano: 255712345678 (bila +).');
-      return;
-    }
-
-    authSubmit.disabled = true;
-    authSubmit.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Inaingia...';
-    document.getElementById('authError').classList.remove('show');
-
-    fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone: phone, name: name })
-    })
-    .then(function(response) {
-      return response.json().then(function(data) {
-        return { ok: response.ok, data: data };
-      });
-    })
-    .then(function(result) {
-      if (!result.ok) {
-        throw new Error(result.data.error || 'Login imeshindikana.');
-      }
-
-      accountToken = result.data.token;
-      accountReady = true;
-      currentUser = result.data.account;
-      localStorage.setItem('mickey_account_token', accountToken);
-      console.log('[Login] Token saved:', accountToken);
-
-      // Onyesha dashboard
-      document.body.classList.add('authenticated');
-
-      // Update jina la mtumiaji
-      var userNameEl = document.getElementById('userNameDisplay');
-      if (userNameEl && currentUser) {
-        userNameEl.textContent = currentUser.name || currentUser.phone || 'Account';
-      }
-
-      // Update badge ya bots
-      var badge = document.getElementById('botsBadge');
-      if (badge && currentUser) {
-        badge.textContent = (currentUser.botCount || 0) + '/2';
-      }
-
-      // Tuma token kwa socket
-      if (socket) {
-        socket.emit('account-auth', accountToken);
-      }
-
-      authSubmit.disabled = false;
-      authSubmit.innerHTML = '<i class="fas fa-right-to-bracket"></i> Login / Create account';
-      showToast('Umeingia kikamilifu!');
-    })
-    .catch(function(error) {
-      console.error('[Login] Error:', error);
-      showAuthError(error.message || 'Kuna tatizo. Jaribu tena.');
-      authSubmit.disabled = false;
-      authSubmit.innerHTML = '<i class="fas fa-right-to-bracket"></i> Login / Create account';
-    });
+document.querySelectorAll('.auth-tab').forEach(function(tab) {
+  tab.addEventListener('click', function() {
+    var target = tab.dataset.tab;
+    document.querySelectorAll('.auth-tab').forEach(function(t){ t.classList.remove('active'); });
+    document.querySelectorAll('.auth-panel').forEach(function(p){ p.classList.remove('active'); });
+    tab.classList.add('active');
+    var panel = document.getElementById(target + 'Panel');
+    if (panel) panel.classList.add('active');
+    clearError('authError');
+    clearError('adminError');
   });
-}
+});
+
+/* ============================================================
+   USER LOGIN
+   ============================================================ */
+var userPanel = document.getElementById('userPanel');
+var userSubmit = document.getElementById('userSubmit');
+
+userPanel.addEventListener('submit', function(e) {
+  e.preventDefault();
+  var phone = normalizePhone(document.getElementById('accountPhone').value);
+  var name = document.getElementById('accountName').value.trim();
+
+  if (!isValidTanzaniaPhone(phone)) {
+    showError('authError', 'Namba si sahihi. Tumia mfano: 255712345678');
+    return;
+  }
+
+  userSubmit.disabled = true;
+  userSubmit.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Inaingia...';
+  clearError('authError');
+
+  fetch('/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ phone: phone, name: name })
+  })
+  .then(function(r){ return r.json().then(function(d){ return { ok: r.ok, data: d }; }); })
+  .then(function(res) {
+    if (!res.ok) throw new Error(res.data.error || 'Login imeshindikana.');
+    accountToken = res.data.token;
+    localStorage.setItem('mickey_account_token', accountToken);
+    applyUserToUI(res.data.account);
+    if (socket) socket.emit('account-auth', accountToken);
+    userSubmit.disabled = false;
+    userSubmit.innerHTML = '<i class="fas fa-right-to-bracket"></i> Login / Create account';
+    showToast('Umeingia kikamilifu!');
+  })
+  .catch(function(err) {
+    showError('authError', err.message || 'Kuna tatizo.');
+    userSubmit.disabled = false;
+    userSubmit.innerHTML = '<i class="fas fa-right-to-bracket"></i> Login / Create account';
+  });
+});
+
+/* ============================================================
+   ADMIN LOGIN
+   ============================================================ */
+var adminPanel = document.getElementById('adminPanel');
+var adminSubmit = document.getElementById('adminSubmit');
+
+adminPanel.addEventListener('submit', function(e) {
+  e.preventDefault();
+  var phone = normalizePhone(document.getElementById('adminPhone').value);
+  var password = document.getElementById('adminPassword').value;
+
+  if (!phone || !password) {
+    showError('adminError', 'Weka namba na password.');
+    return;
+  }
+
+  adminSubmit.disabled = true;
+  adminSubmit.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Inathibitisha...';
+  clearError('adminError');
+
+  fetch('/api/auth/admin-login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ phone: phone, password: password })
+  })
+  .then(function(r){ return r.json().then(function(d){ return { ok: r.ok, data: d }; }); })
+  .then(function(res) {
+    if (!res.ok) throw new Error(res.data.error || 'Admin credentials si sahihi.');
+    accountToken = res.data.token;
+    localStorage.setItem('mickey_account_token', accountToken);
+    applyUserToUI(res.data.account);
+    if (socket) socket.emit('account-auth', accountToken);
+    adminSubmit.disabled = false;
+    adminSubmit.innerHTML = '<i class="fas fa-shield-halved"></i> Admin Login';
+    showToast('Karibu Admin!');
+  })
+  .catch(function(err) {
+    showError('adminError', err.message || 'Kuna tatizo.');
+    adminSubmit.disabled = false;
+    adminSubmit.innerHTML = '<i class="fas fa-shield-halved"></i> Admin Login';
+  });
+});
+
+/* ============================================================
+   LOGOUT
+   ============================================================ */
+document.getElementById('logoutBtn').addEventListener('click', function() {
+  accountToken = '';
+  accountReady = false;
+  currentUser = null;
+  localStorage.removeItem('mickey_account_token');
+  document.body.classList.remove('authenticated');
+  showToast('Umetoka.');
+});
 
 /* ============================================================
    SOCKET EVENTS
    ============================================================ */
 if (socket) {
   socket.on('connect', function() {
-    console.log('[Socket] Connected');
-    if (accountToken) {
-      socket.emit('account-auth', accountToken);
-    }
+    if (accountToken) socket.emit('account-auth', accountToken);
   });
 
   socket.on('account-auth-success', function(payload) {
-    console.log('[Socket] Auth success:', payload);
-    accountReady = true;
-    if (payload && payload.account) {
-      currentUser = payload.account;
-      var userNameEl = document.getElementById('userNameDisplay');
-      if (userNameEl) {
-        userNameEl.textContent = currentUser.name || currentUser.phone || 'Account';
-      }
-      var badge = document.getElementById('botsBadge');
-      if (badge) {
-        badge.textContent = (currentUser.botCount || 0) + '/2';
-      }
-    }
-    document.body.classList.add('authenticated');
+    if (payload && payload.account) applyUserToUI(payload.account);
     socket.emit('request-bot-state');
   });
 
-  socket.on('account-auth-fail', function(message) {
-    console.warn('[Socket] Auth failed:', message);
+  socket.on('account-auth-fail', function(msg) {
     accountToken = '';
     accountReady = false;
     localStorage.removeItem('mickey_account_token');
     document.body.classList.remove('authenticated');
-    showAuthError(message || 'Session imeisha. Tafadhali login tena.');
+    showError('authError', msg || 'Session imeisha. Login tena.');
   });
 
   socket.on('bot-state', function(state) {
-    console.log('[Socket] Bot state:', state);
     if (!state) return;
-    var botsArray = state.bots || [];
-    var activeCount = state.active || 0;
-
-    // Update stats
     var activeEl = document.getElementById('activeSockets');
-    if (activeEl) activeEl.textContent = activeCount;
-
+    if (activeEl) activeEl.textContent = state.active || 0;
     if (state.stats) {
-      var usersEl = document.getElementById('totalUsers');
-      var msgsEl = document.getElementById('totalMessages');
-      if (usersEl) usersEl.textContent = state.stats.totalUsers || 0;
-      if (msgsEl) msgsEl.textContent = state.stats.totalMessages || 0;
+      var u = document.getElementById('totalUsers');
+      var m = document.getElementById('totalMessages');
+      if (u) u.textContent = state.stats.totalUsers || 0;
+      if (m) m.textContent = state.stats.totalMessages || 0;
     }
-
-    // Render bots
-    renderBots(botsArray);
+    renderBots(state.bots || []);
   });
 
   socket.on('dashboard-stats', function(stats) {
     if (!stats) return;
-    var usersEl = document.getElementById('totalUsers');
-    var msgsEl = document.getElementById('totalMessages');
-    if (usersEl) usersEl.textContent = stats.totalUsers || 0;
-    if (msgsEl) msgsEl.textContent = stats.totalMessages || 0;
+    var u = document.getElementById('totalUsers');
+    var m = document.getElementById('totalMessages');
+    if (u) u.textContent = stats.totalUsers || 0;
+    if (m) m.textContent = stats.totalMessages || 0;
+  });
+
+  socket.on('pairing-code', function(code) {
+    var btn = document.getElementById('requestPairing');
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-key"></i> Request Pairing Code'; }
+    var pc = document.getElementById('pairingCode');
+    if (pc) pc.innerText = code;
+    setStatus('Pairing code imetengenezwa. Link ndani ya sekunde 60.', 'success');
+  });
+
+  socket.on('pair-error', function(msg) {
+    var btn = document.getElementById('requestPairing');
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-key"></i> Request Pairing Code'; }
+    setStatus(msg || 'Imeshindikana.', 'error');
+  });
+
+  socket.on('connection-status', function(s) {
+    if (s && s.connected) {
+      var pc = document.getElementById('pairingCode');
+      if (pc) { pc.innerText = 'LINKED'; pc.style.color = 'var(--success)'; }
+      setStatus('Device imeunganishwa!', 'success');
+      showToast('Connected!');
+      setTimeout(function(){ location.reload(); }, 3000);
+    }
   });
 }
 
@@ -917,11 +730,11 @@ function renderBots(botsArray) {
   if (!grid) return;
 
   if (!botsArray || botsArray.length === 0) {
-    grid.innerHTML = '<div style="grid-column:1/-1;padding:36px;text-align:center;color:var(--text-3);">Hakuna bot zilizounganishwa. Nenda kwenye Connect ili kuongeza bot.</div>';
-    var activeBots = document.getElementById('activeBots');
-    if (activeBots) activeBots.textContent = '0';
-    var badge = document.getElementById('botsBadge');
-    if (badge) badge.textContent = '0/2';
+    grid.innerHTML = '<div style="grid-column:1/-1;padding:36px;text-align:center;color:var(--text-3);">Hakuna bot zilizounganishwa. Nenda kwenye Connect.</div>';
+    var ab = document.getElementById('activeBots');
+    if (ab) ab.textContent = '0';
+    var b = document.getElementById('botsBadge');
+    if (b) b.textContent = '0/2';
     return;
   }
 
@@ -930,18 +743,12 @@ function renderBots(botsArray) {
 
   botsArray.forEach(function(bot) {
     if (bot.paired) pairedCount++;
-
     var card = document.createElement('div');
     card.className = 'bot-card';
     var status = bot.running ? 'online' : (bot.connecting ? 'connecting' : 'offline');
-    var avatar = (bot.name || bot.id || 'BT')
-      .split(/\s+/)
-      .map(function(part) { return part[0]; })
-      .join('')
-      .slice(0, 2)
-      .toUpperCase();
+    var avatar = (bot.name || bot.id || 'BT').split(/\s+/).map(function(p){return p[0];}).join('').slice(0,2).toUpperCase();
 
-    card.innerHTML = 
+    card.innerHTML =
       '<div class="bot-top">' +
         '<div class="bot-avatar">' + avatar + '</div>' +
         '<div class="bot-meta">' +
@@ -954,207 +761,122 @@ function renderBots(botsArray) {
         '<div class="metric"><div class="v">' + (bot.phoneNumber || '—') + '</div><div class="l">Number</div></div>' +
         '<div class="metric"><div class="v">' + (bot.paired ? 'Yes' : 'No') + '</div><div class="l">Paired</div></div>' +
         '<div class="metric"><div class="v">' + (bot.running ? 'Live' : 'Idle') + '</div><div class="l">Runtime</div></div>' +
-      '</div>' +
-      '<div class="bot-actions">' +
-        '<button class="btn btn-ghost btn-sm" style="flex:1;" onclick="selectBotForSettings(\'' + bot.id + '\')">' +
-          '<i class="fas fa-sliders-h"></i> Configure' +
-        '</button>' +
       '</div>';
-
     grid.appendChild(card);
   });
 
-  var activeBots = document.getElementById('activeBots');
-  if (activeBots) activeBots.textContent = pairedCount;
+  var ab = document.getElementById('activeBots');
+  if (ab) ab.textContent = pairedCount;
 
-  var badge = document.getElementById('botsBadge');
-  if (badge) badge.textContent = botsArray.length + '/2';
+  var b = document.getElementById('botsBadge');
+  if (b) b.textContent = botsArray.length + '/' + (currentUser?.botLimit || 2);
 
-  renderSettingsBot(botsArray);
-}
-
-function renderSettingsBot(botsArray) {
-  var select = document.getElementById('settingsBot');
-  if (!select) return;
-  select.innerHTML = (botsArray && botsArray.length)
-    ? botsArray.map(function(bot) {
-        return '<option value="' + bot.id + '">' + (bot.name || bot.id) + ' · ' + (bot.running ? 'Running' : 'Offline') + '</option>';
-      }).join('')
-    : '<option value="">Hakuna bot</option>';
+  // Update settings select
+  var sel = document.getElementById('settingsBot');
+  if (sel) {
+    sel.innerHTML = botsArray.map(function(bot){
+      return '<option value="' + bot.id + '">' + (bot.name || bot.id) + ' · ' + (bot.running ? 'Running' : 'Offline') + '</option>';
+    }).join('');
+  }
 }
 
 /* ============================================================
    PAIRING
    ============================================================ */
-var phoneInput = document.getElementById('phone');
-var requestBtn = document.getElementById('requestPairing');
-var pairingCode = document.getElementById('pairingCode');
-var statusEl = document.getElementById('status');
-
 function setStatus(msg, type) {
-  if (!statusEl) return;
-  statusEl.className = 'alert show ' + type;
+  var el = document.getElementById('status');
+  if (!el) return;
+  el.className = 'alert show ' + type;
   var icon = type === 'success' ? 'check-circle' : (type === 'error' ? 'exclamation-circle' : 'info-circle');
-  statusEl.innerHTML = '<i class="fas fa-' + icon + '"></i> ' + msg;
+  el.innerHTML = '<i class="fas fa-' + icon + '"></i> ' + msg;
 }
-
 function copyCode() {
-  var code = pairingCode.innerText.replace(/[^0-9A-Za-z]/g, '');
+  var pc = document.getElementById('pairingCode');
+  if (!pc) return;
+  var code = pc.innerText.replace(/[^0-9A-Za-z]/g, '');
   if (!code || code.length < 4) return;
   if (navigator.clipboard) {
-    navigator.clipboard.writeText(code).then(function() {
-      showToast('Code copied!');
-    });
+    navigator.clipboard.writeText(code).then(function(){ showToast('Code copied!'); });
   }
 }
 
+var requestBtn = document.getElementById('requestPairing');
 if (requestBtn) {
   requestBtn.addEventListener('click', function() {
-    if (!accountReady) {
-      setStatus('Login kwanza ili kuunganisha bot.', 'error');
-      return;
-    }
-
-    var number = normalizePhone(phoneInput.value);
+    if (!accountReady) { setStatus('Login kwanza.', 'error'); return; }
+    var number = normalizePhone(document.getElementById('phone').value);
     if (!isValidTanzaniaPhone(number)) {
-      setStatus('Namba si sahihi. Tumia mfano: 255712345678', 'error');
-      phoneInput.focus();
+      setStatus('Namba si sahihi. Mfano: 255712345678', 'error');
       return;
     }
-
     requestBtn.disabled = true;
     requestBtn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Inatuma...';
     setStatus('Inatuma ombi la pairing...', 'warn');
-
-    if (socket) {
-      socket.emit('pair-request', { number: number });
-    } else {
-      setStatus('Socket haipatikani. Refresh ukurasa.', 'error');
-      requestBtn.disabled = false;
-      requestBtn.innerHTML = '<i class="fas fa-key"></i> Request Pairing Code';
-    }
-  });
-}
-
-if (socket) {
-  socket.on('pairing-code', function(code) {
-    if (requestBtn) {
-      requestBtn.disabled = false;
-      requestBtn.innerHTML = '<i class="fas fa-key"></i> Request Pairing Code';
-    }
-    if (pairingCode) pairingCode.innerText = code;
-    setStatus('Pairing code imetengenezwa. Link ndani ya sekunde 60.', 'success');
-  });
-
-  socket.on('pair-error', function(msg) {
-    if (requestBtn) {
-      requestBtn.disabled = false;
-      requestBtn.innerHTML = '<i class="fas fa-key"></i> Request Pairing Code';
-    }
-    setStatus(msg || 'Imeshindikana kutengeneza code.', 'error');
-  });
-
-  socket.on('connection-status', function(s) {
-    if (s && s.connected) {
-      if (pairingCode) {
-        pairingCode.innerText = 'LINKED';
-        pairingCode.style.color = 'var(--success)';
-      }
-      setStatus('Device imeunganishwa kikamilifu!', 'success');
-      showToast('Connected!');
-      setTimeout(function() { location.reload(); }, 3000);
-    }
+    if (socket) socket.emit('pair-request', { number: number });
   });
 }
 
 /* ============================================================
-   UI INTERACTIONS
+   UI
    ============================================================ */
 var sidebar = document.getElementById('sidebar');
 var menuBtn = document.getElementById('menuBtn');
-if (menuBtn && sidebar) {
-  menuBtn.addEventListener('click', function() {
-    sidebar.classList.toggle('open');
-  });
-}
+if (menuBtn) menuBtn.addEventListener('click', function(){ sidebar.classList.toggle('open'); });
 
-document.querySelectorAll('.nav-item, .mobile-nav a').forEach(function(a) {
-  a.addEventListener('click', function() {
-    document.querySelectorAll('.nav-item, .mobile-nav a').forEach(function(x) {
-      x.classList.remove('active');
-    });
+document.querySelectorAll('.nav-item, .mobile-nav a').forEach(function(a){
+  a.addEventListener('click', function(){
+    document.querySelectorAll('.nav-item, .mobile-nav a').forEach(function(x){ x.classList.remove('active'); });
     a.classList.add('active');
-    if (window.innerWidth < 1024 && sidebar) {
-      sidebar.classList.remove('open');
-    }
+    if (window.innerWidth < 1024 && sidebar) sidebar.classList.remove('open');
   });
 });
-
-document.querySelectorAll('.switch').forEach(function(sw) {
-  sw.addEventListener('click', function() {
-    sw.classList.toggle('active');
-  });
+document.querySelectorAll('.switch').forEach(function(sw){
+  sw.addEventListener('click', function(){ sw.classList.toggle('active'); });
 });
-
 var refreshBtn = document.getElementById('refreshBtn');
-if (refreshBtn) {
-  refreshBtn.addEventListener('click', function() {
-    if (socket) socket.emit('request-bot-state');
-    showToast('Inasasisha...');
-  });
-}
-
+if (refreshBtn) refreshBtn.addEventListener('click', function(){
+  if (socket) socket.emit('request-bot-state');
+  showToast('Inasasisha...');
+});
 var refreshBotsBtn = document.getElementById('refreshBotsBtn');
-if (refreshBotsBtn) {
-  refreshBotsBtn.addEventListener('click', function() {
-    if (socket) socket.emit('request-bot-state');
-    showToast('Inasasisha bots...');
-  });
-}
-
+if (refreshBotsBtn) refreshBotsBtn.addEventListener('click', function(){
+  if (socket) socket.emit('request-bot-state');
+  showToast('Inasasisha bots...');
+});
 var saveSettingsBtn = document.getElementById('saveSettingsBtn');
-if (saveSettingsBtn) {
-  saveSettingsBtn.addEventListener('click', function() {
-    var select = document.getElementById('settingsBot');
-    var botId = select ? select.value : '';
-    if (!botId || !socket) {
-      showToast('Chagua bot kwanza.');
-      return;
-    }
-    var s = {};
-    document.querySelectorAll('.switch').forEach(function(x) {
-      s[x.dataset.setting] = x.classList.contains('active');
-    });
-    var prefixEl = document.getElementById('botPrefix');
-    s.prefix = prefixEl ? prefixEl.value : '.';
-    socket.emit('update-bot-settings', { userId: botId, settings: s });
-  });
-}
+if (saveSettingsBtn) saveSettingsBtn.addEventListener('click', function(){
+  var sel = document.getElementById('settingsBot');
+  var botId = sel ? sel.value : '';
+  if (!botId || !socket) { showToast('Chagua bot.'); return; }
+  var s = {};
+  document.querySelectorAll('.switch').forEach(function(x){ s[x.dataset.setting] = x.classList.contains('active'); });
+  var p = document.getElementById('botPrefix');
+  s.prefix = p ? p.value : '.';
+  socket.emit('update-bot-settings', { userId: botId, settings: s });
+});
 
 /* ============================================================
    INIT
    ============================================================ */
-var yearEl = document.getElementById('year');
-if (yearEl) yearEl.textContent = new Date().getFullYear();
+var y = document.getElementById('year');
+if (y) y.textContent = new Date().getFullYear();
 
-// Kama tuna token ya zamani, jaribu ku-auth moja kwa moja
 if (accountToken && socket) {
   socket.emit('account-auth', accountToken);
 }
 
-// Fetch server info
 fetch('/api/server-info')
-  .then(function(r) { return r.ok ? r.json() : Promise.reject(); })
-  .then(function(info) {
+  .then(function(r){ return r.ok ? r.json() : Promise.reject(); })
+  .then(function(info){
     var el = document.getElementById('serverAddress');
     if (el) el.textContent = 'Online · ' + info.url;
   })
-  .catch(function() {
+  .catch(function(){
     var el = document.getElementById('serverAddress');
     if (el) el.textContent = 'Online · ' + window.location.origin;
   });
 
-console.log('[System] Script imepakiwa vizuri.');
+console.log('[System] Loaded.');
 </script>
 </body>
 </html>
