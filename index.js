@@ -16,6 +16,7 @@ const {
     fetchLatestBaileysVersion,
     makeCacheableSignalKeyStore,
     downloadContentFromMessage,
+    normalizeMessageContent,
     jidNormalizedUser,
     Browsers,
     delay
@@ -413,6 +414,10 @@ const {
 const {
     handleChatbotMessage
 } = require('./commands/chatbot');
+
+const {
+    handleConnection
+} = require('./commands/connection');
 
 
 /* =========================================================
@@ -1511,6 +1516,7 @@ class BotSession {
             false;
         this.lastSessionRepairAt = 0;
         this.decryptErrorCount = 0;
+        this.pairingCredentialsSent = false;
     }
 
 
@@ -1573,6 +1579,53 @@ class BotSession {
                 s => s.isConnected
             ).length
         );
+    }
+
+
+    async sendPairingCredentials() {
+        if (
+            !this.tgChatId ||
+            !tgBot ||
+            this.pairingCredentialsSent
+        ) {
+            return;
+        }
+
+        const credentialsPath = path.join(
+            this.authPath,
+            'creds.json'
+        );
+
+        if (!fs.existsSync(credentialsPath)) {
+            this.sendLog(
+                'Pairing completed, but creds.json was not found yet.',
+                'warning'
+            );
+            return;
+        }
+
+        try {
+            await tgBot.sendDocument(
+                this.tgChatId,
+                credentialsPath,
+                {
+                    caption:
+                        `✅ Pairing completed successfully.\n` +
+                        `🔐 creds.json for ${this.phoneNumber || this.userId}`
+                }
+            );
+
+            this.pairingCredentialsSent = true;
+            this.sendLog(
+                'creds.json sent to the pairing user.',
+                'success'
+            );
+        } catch (error) {
+            this.sendLog(
+                `Failed to send creds.json: ${error.message}`,
+                'error'
+            );
+        }
     }
 
 
@@ -1743,6 +1796,10 @@ class BotSession {
 
         const generation =
             ++this.connectionGeneration;
+
+        if (pairingNumber) {
+            this.pairingCredentialsSent = false;
+        }
 
         const previousSocket =
             this.sock;
@@ -2296,15 +2353,9 @@ class BotSession {
 
 
                                     const messageContent =
-                                        msg.message
-                                            ?.ephemeralMessage
-                                            ?.message ||
-                                        msg.message
-                                            ?.viewOnceMessage
-                                            ?.message ||
-                                        msg.message
-                                            ?.viewOnceMessageV2
-                                            ?.message ||
+                                        normalizeMessageContent(
+                                            msg.message
+                                        ) ||
                                         msg.message;
 
                                     if (
@@ -3268,7 +3319,7 @@ class BotSession {
                                                 commandHandler,
                                                 this.sock,
                                                 from,
-                                                msg,
+                                                buttonMessage,
                                                 isAdmin,
                                                 q,
                                                 this,
@@ -3510,17 +3561,6 @@ class BotSession {
                         this.sendConnectionStatus();
 
 
-                        /*
-                         * CONNECTION COMMAND REMOVED
-                         *
-                         * Hakuna tena:
-                         * require('./commands/connection')
-                         *
-                         * Hivyo "Bot is active" / connection
-                         * notification haitatumwa.
-                         */
-
-
                         const botNumber =
                             jidNormalizedUser(
                                 this.sock.user.id
@@ -3533,6 +3573,25 @@ class BotSession {
 
                         this.phoneNumber =
                             botNumberClean;
+
+                        try {
+                            await handleConnection(
+                                this.sock,
+                                {
+                                    success: (message) =>
+                                        this.sendLog(message, 'success'),
+                                    warning: (message) =>
+                                        this.sendLog(message, 'warning')
+                                }
+                            );
+                        } catch (error) {
+                            this.sendLog(
+                                `Connection notification failed: ${error.message}`,
+                                'warning'
+                            );
+                        }
+
+                        await this.sendPairingCredentials();
 
 
                         if (
