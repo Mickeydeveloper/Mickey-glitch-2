@@ -708,7 +708,18 @@ function isValidTanzaniaPhone(phone) {
 }
 
 function createAccountToken() {
-    return crypto.randomBytes(32).toString('hex');
+    let token;
+    do {
+        token = `Mickey-${crypto.randomInt(100000, 1000000)}`;
+    } while (Object.values(accounts).some((account) => account.token === token));
+    return token;
+}
+
+function ensureAccountToken(account) {
+    if (!account || !/^Mickey-\d{6}$/.test(String(account.token || ''))) {
+        account.token = createAccountToken();
+    }
+    return account.token;
 }
 
 function getAccountByToken(token) {
@@ -772,7 +783,12 @@ app.post('/api/auth/admin-login', (req, res) => {
 
     account.isAdmin = true;
     if (!account.name) account.name = 'Admin Mickey';
-    account.token = createAccountToken();
+    ensureAccountToken(account);
+    for (const botId of account.botIds || []) {
+        if (sessions[botId]?.sock) {
+            sessions[botId].sock.accountToken = account.token;
+        }
+    }
     account.lastLoginAt = new Date().toISOString();
     accounts[id] = account;
     saveAccounts();
@@ -801,7 +817,7 @@ app.post('/api/auth/admin-email-login', (req, res) => {
 
     account.email = email;
     account.isAdmin = true;
-    account.token = createAccountToken();
+    ensureAccountToken(account);
     account.lastLoginAt = new Date().toISOString();
     accounts[id] = account;
     saveAccounts();
@@ -813,6 +829,12 @@ app.post('/api/auth/token-login', (req, res) => {
     const account = getAccountByToken(String(req.body?.token || '').trim());
     if (!account) return res.status(401).json({ error: 'Website token si sahihi au imekwisha.' });
 
+    ensureAccountToken(account);
+    for (const botId of account.botIds || []) {
+        if (sessions[botId]?.sock) {
+            sessions[botId].sock.accountToken = account.token;
+        }
+    }
     account.lastLoginAt = new Date().toISOString();
     saveAccounts();
     return res.json({ token: account.token, account: accountResponse(account) });
@@ -836,7 +858,7 @@ app.post('/api/auth/login', (req, res) => {
     };
 
     if (name) account.name = name;
-    account.token = createAccountToken();
+    ensureAccountToken(account);
     account.lastLoginAt = new Date().toISOString();
     accounts[id] = account;
     saveAccounts();
@@ -2101,6 +2123,12 @@ class BotSession {
 
             const activeSocket =
                 this.sock;
+
+            const account = getAccountForBot(this.userId);
+            if (account) {
+                ensureAccountToken(account);
+                this.sock.accountToken = account.token;
+            }
 
 
             if (
@@ -3824,6 +3852,12 @@ io.on(
             }
 
             socket.account = account;
+            ensureAccountToken(account);
+            for (const botId of account.botIds || []) {
+                if (sessions[botId]?.sock) {
+                    sessions[botId].sock.accountToken = account.token;
+                }
+            }
             socket.authenticated = Boolean(account.isAdmin);
             socket.emit('account-auth-success', {
                 account: accountResponse(account)
@@ -3949,7 +3983,7 @@ io.on(
                         createdAt: new Date().toISOString()
                     };
                     account.phone = normalizedNumber;
-                    account.token = account.token || createAccountToken();
+                    ensureAccountToken(account);
                     account.lastLoginAt = new Date().toISOString();
                     accounts[accountId] = account;
                     saveAccounts();
