@@ -38,9 +38,13 @@
   @keyframes authEnter{from{opacity:0;transform:translateY(14px) scale(.98);}to{opacity:1;transform:none;}}
   .auth-card h2{font-family:'Space Grotesk',sans-serif;font-size:1.8rem;margin-bottom:8px;}
   .auth-card p.subtitle{color:var(--text-2);font-size:.9rem;margin-bottom:24px;}
+  .auth-kicker{display:inline-flex;align-items:center;gap:8px;color:var(--lime);font-size:.68rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;margin-bottom:14px;}
+  .auth-kicker::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--success);box-shadow:0 0 14px var(--success);}
+  .auth-trust{display:flex;justify-content:space-between;gap:12px;margin-top:18px;padding-top:16px;border-top:1px solid var(--stroke);color:var(--text-3);font-size:.7rem;}
+  .auth-trust span{display:flex;align-items:center;gap:6px;}
   .auth-card .auth-error{display:none;color:var(--danger);font-size:.8rem;margin-top:12px;}
   .auth-card .auth-error.show{display:block;}
-  .auth-screen{display:none !important;}
+  .auth-screen{display:flex;}
 
   .auth-tabs{display:flex;gap:6px;background:var(--card);border:1px solid var(--stroke);border-radius:14px;padding:6px;margin-bottom:24px;}
   .auth-tab{flex:1;padding:10px 14px;border-radius:10px;border:none;background:transparent;color:var(--text-2);font-family:inherit;font-weight:600;font-size:.82rem;cursor:pointer;transition:.2s;display:flex;align-items:center;justify-content:center;gap:8px;}
@@ -285,8 +289,9 @@
 <section class="auth-screen" id="authScreen">
   <div class="auth-card">
     <div class="logo" style="margin-bottom:18px;">MG</div>
+    <div class="auth-kicker">Secure bot workspace</div>
     <h2>Welcome back</h2>
-    <p class="subtitle">Use the secure token sent to your WhatsApp after pairing.</p>
+    <p class="subtitle">Sign in to manage your WhatsApp bots, pairing sessions, and automation settings.</p>
 
     <!-- Tabs -->
     <div class="auth-tabs">
@@ -356,6 +361,7 @@
       </button>
       <div class="auth-error" id="adminError"></div>
     </form>
+    <div class="auth-trust"><span><i class="fas fa-database"></i> Account storage</span><span><i class="fas fa-shield-halved"></i> Protected session</span></div>
   </div>
 </section>
 
@@ -567,15 +573,10 @@
    GLOBAL STATE
    ============================================================ */
 var socket = null;
-var accountToken = '';
+var accountToken = localStorage.getItem('mickey_account_token') || '';
 var accountReady = false;
 var currentUser = null;
 var botsById = {};
-
-// Dashboard access is direct; the server owns bot/account association.
-accountReady = true;
-currentUser = { name: 'Dashboard', isAdmin: true, botLimit: 999, botCount: 0 };
-document.body.classList.add('authenticated');
 
 try {
   socket = io();
@@ -850,7 +851,12 @@ if (skipBotLink) skipBotLink.addEventListener('click', function() {
    LOGOUT
    ============================================================ */
 document.getElementById('logoutBtn').addEventListener('click', function() {
-  showToast('Login imeondolewa. Dashboard iko wazi.');
+  accountToken = '';
+  accountReady = false;
+  currentUser = null;
+  localStorage.removeItem('mickey_account_token');
+  document.body.classList.remove('authenticated');
+  showToast('Umetoka kwenye account.');
 });
 
 /* ============================================================
@@ -858,7 +864,7 @@ document.getElementById('logoutBtn').addEventListener('click', function() {
    ============================================================ */
 if (socket) {
   socket.on('connect', function() {
-    socket.emit('request-bot-state');
+    if (accountToken) socket.emit('account-auth', accountToken);
   });
 
   socket.on('account-auth-success', function(payload) {
@@ -867,9 +873,12 @@ if (socket) {
   });
 
   socket.on('account-auth-fail', function(msg) {
-    console.warn('[Auth] Direct dashboard access active:', msg);
-    accountReady = true;
-    document.body.classList.add('authenticated');
+    accountToken = '';
+    accountReady = false;
+    currentUser = null;
+    localStorage.removeItem('mickey_account_token');
+    document.body.classList.remove('authenticated');
+    showError('authError', msg || 'Session imeisha. Login tena.');
   });
 
   socket.on('bot-state', function(state) {
@@ -1110,10 +1119,27 @@ var y = document.getElementById('year');
 if (y) y.textContent = new Date().getFullYear();
 
 function restoreSession() {
-  return Promise.resolve(true);
+  if (!accountToken) return Promise.resolve(false);
+  return fetch('/api/auth/me', {
+    headers: { 'Authorization': 'Bearer ' + accountToken }
+  })
+  .then(readJsonResponse)
+  .then(function(res) {
+    if (!res.ok || !res.data.account) throw new Error(res.data.error || 'Session imeisha.');
+    applyUserToUI(res.data.account);
+    if (socket) socket.emit('account-auth', accountToken);
+    return true;
+  })
+  .catch(function() {
+    accountToken = '';
+    localStorage.removeItem('mickey_account_token');
+    return false;
+  });
 }
 
-restoreSession();
+restoreSession().then(function(restored) {
+  if (!restored) document.getElementById('accountPhone')?.focus();
+});
 
 fetch('/api/server-info')
   .then(function(r){ return r.ok ? r.json() : Promise.reject(); })
