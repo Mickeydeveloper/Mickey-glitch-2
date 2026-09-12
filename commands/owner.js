@@ -117,41 +117,86 @@ const sendOwnerRichResponse = async (sock, chatId, msg) => {
 
 const ownerCommand = async (sock, chatId, msg, args = [], options = {}) => {
     try {
-        const targetChatId = chatId || msg?.key?.remoteJid || options.chatId;
-        const senderId = options.senderId || msg?.key?.participant || msg?.key?.remoteJid || '';
+        // ═══════════════════════════════════════
+        // GET SENDER (from various sources)
+        // ═══════════════════════════════════════
+        const senderId = options.senderId 
+            || msg?.key?.participant 
+            || msg?.participant 
+            || msg?.sender 
+            || msg?.key?.remoteJid 
+            || '';
 
-        if (senderId) {
+        // ═══════════════════════════════════════
+        // GET TARGET CHAT
+        // ═══════════════════════════════════════
+        const targetChatId = chatId 
+            || msg?.key?.remoteJid 
+            || options.chatId;
+
+        if (!sock || !targetChatId) {
+            console.error('[owner] No sock or chatId');
+            return false;
+        }
+
+        if (!senderId) {
+            console.error('[owner] No senderId found');
+            return false;
+        }
+
+        // ═══════════════════════════════════════
+        // CHECK PERMISSION - Owner OR Sudo
+        // ═══════════════════════════════════════
+        console.log('[owner] Checking permission for:', senderId);
+        
+        let isAllowed = false;
+        try {
+            // Pass sock for auto-detection of bot number
+            isAllowed = await isOwnerOrSudo(senderId, sock, targetChatId);
+            console.log('[owner] Permission result:', isAllowed);
+        } catch (error) {
+            console.error('[owner] Permission check failed:', error?.message || error);
+            // Fallback: try without sock
             try {
-                const isAllowed = await isOwnerOrSudo(senderId, sock, targetChatId);
-                if (!isAllowed) {
-                    await sock?.sendMessage?.(targetChatId, {
-                        text: '⚠️ Only the owner or sudo user can use this feature.'
-                    }, { quoted: msg });
-                    return true;
-                }
-            } catch (error) {
-                console.error('[owner] permission check failed:', error?.message || error);
+                isAllowed = await isOwnerOrSudo(senderId);
+                console.log('[owner] Fallback permission:', isAllowed);
+            } catch (e) {
+                console.error('[owner] Fallback failed:', e?.message);
             }
         }
 
-        if (typeof sock?.relayMessage === 'function') {
+        if (!isAllowed) {
+            await sock.sendMessage(targetChatId, {
+                text: '⚠️ Only the owner or sudo user can use this feature.'
+            }, { quoted: msg });
+            return true;
+        }
+
+        // ═══════════════════════════════════════
+        // SEND RICH RESPONSE
+        // ═══════════════════════════════════════
+        if (typeof sock.relayMessage === 'function') {
             await sendOwnerRichResponse(sock, targetChatId, msg);
             return true;
         }
 
-        if (typeof sock?.sendMessage === 'function') {
+        if (typeof sock.sendMessage === 'function') {
             await sock.sendMessage(targetChatId, {
                 text: '👑 Owner feature loaded.'
             }, { quoted: msg });
         }
 
         return true;
+
     } catch (error) {
         console.error('[owner] error:', error?.message || error);
         try {
-            await sock?.sendMessage?.(chatId || msg?.key?.remoteJid, {
-                text: `❌ ${error?.message || 'Owner command failed.'}`
-            }, { quoted: msg });
+            const fallbackChat = chatId || msg?.key?.remoteJid;
+            if (fallbackChat && sock) {
+                await sock.sendMessage(fallbackChat, {
+                    text: `❌ ${error?.message || 'Owner command failed.'}`
+                }, { quoted: msg });
+            }
         } catch (sendErr) {}
         return false;
     }
