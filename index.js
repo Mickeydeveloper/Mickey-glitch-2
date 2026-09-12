@@ -753,9 +753,20 @@ function ensureAccountToken(account) {
     return account.token;
 }
 
+function normalizeAccessToken(value) {
+    return String(value || '')
+        .replace(/[\s`'"“”‘’]+/g, '')
+        .trim();
+}
+
 function getAccountByToken(token) {
-    if (!token) return null;
-    return Object.values(accounts).find((account) => account.token === token) || null;
+    const normalizedToken = normalizeAccessToken(token);
+    if (!normalizedToken) return null;
+
+    return Object.values(accounts).find((account) => {
+        const storedToken = account?.token || account?.accountToken || account?.accessToken;
+        return normalizeAccessToken(storedToken) === normalizedToken;
+    }) || null;
 }
 
 function getAccountForBot(userId) {
@@ -866,7 +877,7 @@ app.post('/api/auth/admin-email-login', (req, res) => {
 });
 
 app.post('/api/auth/token-login', (req, res) => {
-    const token = String(req.body?.token || '').trim();
+    const token = normalizeAccessToken(req.body?.token);
     let account = getAccountByToken(token);
 
     if (!account && ADMIN_TOKEN && token === ADMIN_TOKEN && ADMIN_EMAIL) {

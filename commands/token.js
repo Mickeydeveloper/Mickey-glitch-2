@@ -16,8 +16,10 @@ async function tokenCommand(sock, chatId, msg) {
         return true;
     }
 
-    const token = String(sock.accountToken || '').trim();
-    if (!/^Mickey-\d{6}$/.test(token)) {
+    const token = String(sock.accountToken || '')
+        .replace(/[\s`'"“”‘’]+/g, '')
+        .trim();
+    if (!token) {
         await sock.sendMessage(chatId, {
             text: '⚠️ Token haijapatikana. Pair bot tena au wasiliana na admin.'
         }, { quoted: msg });
