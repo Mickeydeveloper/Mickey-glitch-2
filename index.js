@@ -746,6 +746,19 @@ function isValidTanzaniaPhone(phone) {
     return /^255[67]\d{8}$/.test(phone);
 }
 
+function normalizeNin(value) {
+    return String(value || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 32);
+}
+
+function isValidNin(nin) {
+    return !nin || /^[A-Z0-9]{8,32}$/.test(nin);
+}
+
+function maskNin(nin) {
+    const normalizedNin = normalizeNin(nin);
+    return normalizedNin ? `${normalizedNin.slice(0, 3)}••••${normalizedNin.slice(-3)}` : null;
+}
+
 function createAccountToken() {
     let token;
     do {
@@ -796,6 +809,8 @@ function accountResponse(account) {
         phone: account.phone,
         email: account.email,
         name: account.name,
+        nin: maskNin(account.nin),
+        hasNin: Boolean(account.nin),
         isAdmin: Boolean(account.isAdmin),
         botLimit: account.isAdmin ? 999 : 2,
         botCount: getAccountBotIds(account.id).length
@@ -950,9 +965,13 @@ app.post('/api/auth/token-login', requirePersistence, (req, res) => {
 app.post('/api/auth/login', requirePersistence, (req, res) => {
     const phone = normalizeAccountPhone(req.body?.phone);
     const name = String(req.body?.name || '').trim().slice(0, 60);
+    const nin = normalizeNin(req.body?.nin);
 
     if (!isValidTanzaniaPhone(phone)) {
         return res.status(400).json({ error: 'Weka namba ya Tanzania, mfano 0712345678 au +255712345678.' });
+    }
+    if (!isValidNin(nin)) {
+        return res.status(400).json({ error: 'NIN lazima iwe na herufi/namba 8 hadi 32.' });
     }
 
     const id = `account_${phone}`;
@@ -964,6 +983,7 @@ app.post('/api/auth/login', requirePersistence, (req, res) => {
     };
 
     if (name) account.name = name;
+    if (nin) account.nin = nin;
     if (phone === ADMIN_PHONE) {
         account.isAdmin = true;
         account.name = account.name || 'Admin Mickey';

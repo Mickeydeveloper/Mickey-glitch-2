@@ -308,6 +308,10 @@
         <label for="accountName">Name (new account)</label>
         <input type="text" id="accountName" placeholder="Your name" autocomplete="name">
       </div>
+      <div class="field" style="margin-top:12px;">
+        <label for="accountNin">NIN / National ID <span style="color:var(--text-3);font-weight:400;">(optional)</span></label>
+        <input type="text" id="accountNin" placeholder="e.g. 19901234567890123456" autocomplete="off" maxlength="32" spellcheck="false">
+      </div>
       <button class="btn btn-ghost" id="phoneLoginButton" type="button" style="width:100%;margin-top:14px;">
         <i class="fas fa-user-plus"></i> Create / login with phone
       </button>
@@ -685,12 +689,13 @@ function finishLogin(payload, message) {
 if (phoneLoginButton) phoneLoginButton.addEventListener('click', function() {
   var phone = normalizePhone(document.getElementById('accountPhone').value);
   var name = document.getElementById('accountName').value.trim();
+  var nin = document.getElementById('accountNin').value.replace(/[^a-z0-9]/gi, '').toUpperCase();
   if (!isValidTanzaniaPhone(phone)) {
     showError('authError', 'Weka namba sahihi ya Tanzania.');
     return;
   }
   phoneLoginButton.disabled = true;
-  fetch('/api/auth/login', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ phone: phone, name: name }) })
+  fetch('/api/auth/login', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ phone: phone, name: name, nin: nin }) })
     .then(readJsonResponse)
     .then(function(res) {
       if (!res.ok) throw new Error(res.data.error || 'Account haikuweza kufunguliwa.');
