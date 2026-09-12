@@ -38,12 +38,12 @@ const sendOwnerRichResponse = async (sock, chatId, msg) => {
                                 messageType: 1,
                                 gridImageMetadata: {
                                     gridImageUrl: {
-                                        imagePreviewUrl: "https://files.catbox.moe/5tgkff.jpg"
+                                        imagePreviewUrl: "https://raw.githubusercontent.com/Mickeymozy/Mickey-Vip/main/Privacy/privacy3.jpg"
                                     },
                                     imageUrls: [
                                         {
-                                            imagePreviewUrl: "https://files.catbox.moe/5tgkff.jpg",
-                                            imageHighResUrl: "https://files.catbox.moe/5tgkff.jpg",
+                                            imagePreviewUrl: "https://raw.githubusercontent.com/Mickeymozy/Mickey-Vip/main/Privacy/privacy3.jpg",
+                                            imageHighResUrl: "https://raw.githubusercontent.com/Mickeymozy/Mickey-Vip/main/Privacy/privacy3.jpg",
                                             sourceUrl: "https://files.catbox.moe/5tgkff.jpg"
                                         }
                                     ]
@@ -62,7 +62,7 @@ const sendOwnerRichResponse = async (sock, chatId, msg) => {
                                         "view_model": {
                                             "primitive": {
                                                 "media": {
-                                                    "url": "https://files.catbox.moe/5tgkff.jpg",
+                                                    "url": "https://raw.githubusercontent.com/Mickeymozy/Mickey-Vip/main/Privacy/privacy3.jpg",
                                                     "mime_type": "image/png",
                                                     "width": 16,
                                                     "height": 9
