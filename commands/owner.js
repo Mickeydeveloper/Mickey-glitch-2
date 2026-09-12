@@ -80,11 +80,11 @@ const sendOwnerRichResponse = async (sock, chatId, msg) => {
                                         "view_model": {
                                             "primitive": {
                                                 "__typename": "GenAICompactEntityPrimitive",
-                                                "title": "VenzioLûx",
-                                                "subtitle": "Owner of Vloûte Cataclysm",
-                                                "secondary_subtitle": "TikTok Creator",
+                                                "title": "Mickey_mozy",
+                                                "subtitle": "Owner of Mickey Glith",
+                                                "secondary_subtitle": "TikTok Account",
                                                 "entity_id": 867051314767696,
-                                                "entity_url": "https://tiktok.com/@rolenzo.0",
+                                                "entity_url": "https://tiktok.com/mickey_mozy",
                                                 "entity_type": "PAGE",
                                                 "action_type": "FOLLOW",
                                                 "is_verified": true,
