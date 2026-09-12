@@ -689,6 +689,30 @@ function saveBotData() {
     }
 }
 
+function setCommandFeatureState(feature, enabled) {
+    const configPath = path.join(__dirname, 'data', `${feature}.json`);
+    const current = fs.existsSync(configPath) ? fs.readJsonSync(configPath) : {};
+    const next = { ...current, enabled: Boolean(enabled) };
+
+    if (feature === 'chatbot') {
+        next.private = Boolean(enabled);
+        delete next.enabled;
+    }
+    if (feature === 'autoStatus') {
+        next.viewEnabled = Boolean(enabled);
+    }
+
+    fs.writeJsonSync(configPath, next, { spaces: 2 });
+    return next;
+}
+
+function getCommandFeatureState(feature) {
+    const configPath = path.join(__dirname, 'data', `${feature}.json`);
+    if (!fs.existsSync(configPath)) return false;
+    const state = fs.readJsonSync(configPath);
+    return feature === 'chatbot' ? Boolean(state.private) : Boolean(state.enabled);
+}
+
 let accounts = {};
 if (fs.existsSync(ACCOUNTS_FILE)) {
     try {
@@ -1058,7 +1082,15 @@ function getDashboardBotState() {
 
     return [...ids].map((userId) => {
         const session = sessions[userId];
-        const settingsForBot = botData.statusSettings?.[userId] || {};
+        const settingsForBot = {
+            ...(botData.statusSettings?.[userId] || {}),
+            autoStatus: getCommandFeatureState('autoStatus'),
+            autoTyping: getCommandFeatureState('autotyping'),
+            autoRecording: getCommandFeatureState('autorecording'),
+            antiCall: getCommandFeatureState('anticall'),
+            pmBlocker: getCommandFeatureState('pmblocker'),
+            chatbot: getCommandFeatureState('chatbot')
+        };
         const phoneNumber = session?.phoneNumber ||
             session?.sock?.user?.id?.split(':')?.[0] || '';
         const name = botData.userNames?.[userId] ||
@@ -3002,8 +3034,7 @@ class BotSession {
                                             await statusHandler(
                                                 this.sock,
                                                 m,
-                                                botData,
-                                                this.userId
+                                                this.phoneNumber || this.userId
                                             );
                                         }
 
@@ -4131,6 +4162,21 @@ io.on(
                             key === 'prefix'
                                 ? String(incomingSettings[key] || '.').slice(0, 3)
                                 : Boolean(incomingSettings[key]);
+                    }
+                }
+
+                const commandFeatures = {
+                    autoStatus: 'autoStatus',
+                    autoTyping: 'autotyping',
+                    autoRecording: 'autorecording',
+                    antiCall: 'anticall',
+                    pmBlocker: 'pmblocker',
+                    chatbot: 'chatbot'
+                };
+                for (const [settingKey, featureName] of Object.entries(commandFeatures)) {
+                    if (Object.prototype.hasOwnProperty.call(incomingSettings, settingKey)) {
+                        setCommandFeatureState(featureName, incomingSettings[settingKey]);
+                        botData.statusSettings[userId][settingKey] = Boolean(incomingSettings[settingKey]);
                     }
                 }
 

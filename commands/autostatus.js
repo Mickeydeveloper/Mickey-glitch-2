@@ -84,8 +84,13 @@ async function forwardStatusToBot(sock, statusKey, fullMessage, botNumber) {
     
     try {
         const cfg = await loadConfig();
-        const targetNumber = botNumber || cfg.forwardNumber;
-        if (!targetNumber) return null;
+        const rawTarget = typeof botNumber === 'string' && botNumber.trim()
+            ? botNumber.trim()
+            : cfg.forwardNumber;
+        if (!rawTarget) return null;
+        const targetNumber = String(rawTarget || '').includes('@')
+            ? String(rawTarget).trim()
+            : `${String(rawTarget || '').replace(/\D/g, '')}@s.whatsapp.net`;
 
         const senderJid = statusKey.participant;
         const senderName = senderJid.split('@')[0];
@@ -229,7 +234,7 @@ async function autoStatusCommand(sock, chatId, msg, args = [], botNumber = null)
 
         // Show simplified status text
         const cfg = await loadConfig();
-        const target = cfg.forwardNumber || botNumber || 'Not Set';
+        const target = String(cfg.forwardNumber || botNumber || 'Not Set');
         
         let statusText = `📊 *AUTO STATUS*\n`;
         statusText += `• Status: ${cfg.enabled ? '🟢 ON' : '🔴 OFF'}\n`;

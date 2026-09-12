@@ -1,6 +1,7 @@
 const fs = require('fs');
+const path = require('path');
 
-const ANTICALL_PATH = './data/anticall.json';
+const ANTICALL_PATH = path.join(__dirname, '..', 'data', 'anticall.json');
 
 function readState() {
     try {
@@ -15,7 +16,7 @@ function readState() {
 
 function writeState(enabled) {
     try {
-        if (!fs.existsSync('./data')) fs.mkdirSync('./data', { recursive: true });
+        if (!fs.existsSync(path.dirname(ANTICALL_PATH))) fs.mkdirSync(path.dirname(ANTICALL_PATH), { recursive: true });
         fs.writeFileSync(ANTICALL_PATH, JSON.stringify({ enabled: !!enabled }, null, 2));
     } catch {}
 }

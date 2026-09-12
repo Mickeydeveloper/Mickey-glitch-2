@@ -1,7 +1,8 @@
 const fs = require('fs');
+const path = require('path');
 const isOwnerOrSudo = require('../lib/isOwner');
 
-const PMBLOCKER_PATH = './data/pmblocker.json';
+const PMBLOCKER_PATH = path.join(__dirname, '..', 'data', 'pmblocker.json');
 
 function readState() {
     try {
@@ -19,7 +20,7 @@ function readState() {
 
 function writeState(enabled, message) {
     try {
-        if (!fs.existsSync('./data')) fs.mkdirSync('./data', { recursive: true });
+        if (!fs.existsSync(path.dirname(PMBLOCKER_PATH))) fs.mkdirSync(path.dirname(PMBLOCKER_PATH), { recursive: true });
         const current = readState();
         const payload = {
             enabled: !!enabled,
