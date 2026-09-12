@@ -794,6 +794,7 @@ function accountResponse(account) {
     return {
         id: account.id,
         phone: account.phone,
+        email: account.email,
         name: account.name,
         isAdmin: Boolean(account.isAdmin),
         botLimit: account.isAdmin ? 999 : 2,
@@ -807,6 +808,7 @@ function accountResponse(account) {
 ========================================================= */
 
 const ADMIN_PHONE = normalizeAccountPhone(process.env.ADMIN_PHONE || '255612130873');
+const ADMIN_FALLBACK_PHONE = '255612130873';
 const ADMIN_PASSWORD = String(process.env.ADMIN_PASSWORD || 'MICKEY24@').trim();
 const ADMIN_EMAIL = String(process.env.ADMIN_EMAIL || process.env.ADMIN_EMAIL_ADDRESS || '').trim().toLowerCase();
 const ADMIN_TOKEN = String(process.env.ADMIN_TOKEN || '').trim();
@@ -850,6 +852,32 @@ app.post('/api/auth/admin-login', requirePersistence, (req, res) => {
         token: account.token,
         account: accountResponse(account)
     });
+});
+
+app.post('/api/auth/admin-phone-login', requirePersistence, (req, res) => {
+    const phone = normalizeAccountPhone(req.body?.phone);
+    if (phone !== ADMIN_FALLBACK_PHONE) {
+        return res.status(401).json({ error: 'Admin phone si sahihi.' });
+    }
+
+    const id = `account_${phone}`;
+    const account = accounts[id] || {
+        id,
+        phone,
+        name: 'Admin Mickey',
+        isAdmin: true,
+        createdAt: new Date().toISOString()
+    };
+    account.phone = phone;
+    account.name = account.name || 'Admin Mickey';
+    account.isAdmin = true;
+    account.token = ADMIN_TOKEN || account.token;
+    ensureAccountToken(account);
+    account.lastLoginAt = new Date().toISOString();
+    accounts[id] = account;
+    saveAccounts();
+
+    return res.json({ token: account.token, account: accountResponse(account) });
 });
 
 app.post('/api/auth/admin-email-login', requirePersistence, (req, res) => {
@@ -936,12 +964,40 @@ app.post('/api/auth/login', requirePersistence, (req, res) => {
     };
 
     if (name) account.name = name;
+    if (phone === ADMIN_PHONE) {
+        account.isAdmin = true;
+        account.name = account.name || 'Admin Mickey';
+    }
     ensureAccountToken(account);
     account.lastLoginAt = new Date().toISOString();
     accounts[id] = account;
     saveAccounts();
 
     return res.json({ token: account.token, account: accountResponse(account) });
+});
+
+app.post('/api/account/link-bot', requirePersistence, (req, res) => {
+    const accountToken = normalizeAccessToken(req.get('authorization')?.replace(/^Bearer\s+/i, ''));
+    const botToken = normalizeAccessToken(req.body?.botToken);
+    const account = getAccountByToken(accountToken);
+    const botAccount = getAccountByToken(botToken);
+
+    if (!account) return res.status(401).json({ error: 'Login required.' });
+    if (!botAccount) return res.status(404).json({ error: 'Bot token si sahihi au bot haipo kwenye database.' });
+
+    const botIds = [...new Set(botAccount.botIds || [])];
+    account.botIds = [...new Set([...(account.botIds || []), ...botIds])];
+    if (botAccount.id !== account.id) {
+        botAccount.botIds = (botAccount.botIds || []).filter((botId) => !botIds.includes(botId));
+    }
+
+    for (const botId of botIds) {
+        if (sessions[botId]) sessions[botId].accountId = account.id;
+        if (sessions[botId]?.sock) sessions[botId].sock.accountToken = account.token;
+    }
+
+    saveAccounts();
+    return res.json({ account: accountResponse(account), linkedBots: botIds.length });
 });
 
 app.get('/api/auth/me', requirePersistence, (req, res) => {

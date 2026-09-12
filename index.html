@@ -298,6 +298,18 @@
     <!-- User Panel -->
     <form class="auth-panel active" id="userPanel">
       <div class="field">
+        <label for="accountPhone">Phone number</label>
+        <input type="tel" id="accountPhone" placeholder="0712345678 or +255712345678" autocomplete="tel">
+      </div>
+      <div class="field" style="margin-top:12px;">
+        <label for="accountName">Name (new account)</label>
+        <input type="text" id="accountName" placeholder="Your name" autocomplete="name">
+      </div>
+      <button class="btn btn-ghost" id="phoneLoginButton" type="button" style="width:100%;margin-top:14px;">
+        <i class="fas fa-user-plus"></i> Create / login with phone
+      </button>
+      <div style="display:flex;align-items:center;gap:10px;margin:18px 0;color:var(--text-2);font-size:.72rem;"><span style="height:1px;background:var(--stroke);flex:1;"></span>OR USE BOT TOKEN<span style="height:1px;background:var(--stroke);flex:1;"></span></div>
+      <div class="field">
         <label for="accountTokenInput">Website access token</label>
         <input type="password" id="accountTokenInput" placeholder="Paste your WhatsApp token" autocomplete="one-time-code" required>
       </div>
@@ -329,6 +341,9 @@
         <label for="adminToken">Admin token</label>
         <input type="password" id="adminToken" placeholder="Optional admin token" autocomplete="one-time-code">
       </div>
+      <button class="btn btn-ghost" id="adminPhoneButton" type="button" style="width:100%;margin-top:14px;">
+        <i class="fas fa-phone"></i> Admin login with 255612130873
+      </button>
       <button class="btn btn-admin" id="adminSubmit" type="submit" style="width:100%;">
         <i class="fas fa-shield-halved"></i> Admin login
       </button>
@@ -336,6 +351,17 @@
     </form>
   </div>
 </section>
+
+<div id="botLinkModal" style="display:none;position:fixed;inset:0;z-index:50;background:rgba(5,7,12,.78);align-items:center;justify-content:center;padding:20px;">
+  <div class="auth-card" style="width:min(440px,100%);">
+    <h2 style="font-size:1.35rem;">Una bot tayari?</h2>
+    <p class="subtitle">Weka token ya bot ili iunganishwe na account hii moja kwa moja.</p>
+    <div class="field"><label for="linkBotToken">Bot token</label><input type="password" id="linkBotToken" placeholder="Mickey-123456" autocomplete="one-time-code"></div>
+    <button class="btn btn-primary" id="linkBotButton" type="button" style="width:100%;margin-top:16px;"><i class="fas fa-link"></i> Unganisha bot</button>
+    <button class="btn btn-ghost" id="skipBotLink" type="button" style="width:100%;margin-top:10px;">Endelea bila bot</button>
+    <div class="auth-error" id="botLinkError"></div>
+  </div>
+</div>
 
 <!-- ============================================================
      SIDEBAR
@@ -632,6 +658,39 @@ document.querySelectorAll('.auth-tab').forEach(function(tab) {
 var userPanel = document.getElementById('userPanel');
 var userSubmit = document.getElementById('userSubmit');
 var loginPairButton = document.getElementById('loginPairButton');
+var phoneLoginButton = document.getElementById('phoneLoginButton');
+
+function openBotLinkPrompt() {
+  var modal = document.getElementById('botLinkModal');
+  if (modal) modal.style.display = 'flex';
+}
+
+function finishLogin(payload, message) {
+  accountToken = payload.token;
+  localStorage.setItem('mickey_account_token', accountToken);
+  applyUserToUI(payload.account);
+  if (socket) socket.emit('account-auth', accountToken);
+  showToast(message || 'Umeingia kikamilifu!');
+  openBotLinkPrompt();
+}
+
+if (phoneLoginButton) phoneLoginButton.addEventListener('click', function() {
+  var phone = normalizePhone(document.getElementById('accountPhone').value);
+  var name = document.getElementById('accountName').value.trim();
+  if (!isValidTanzaniaPhone(phone)) {
+    showError('authError', 'Weka namba sahihi ya Tanzania.');
+    return;
+  }
+  phoneLoginButton.disabled = true;
+  fetch('/api/auth/login', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ phone: phone, name: name }) })
+    .then(readJsonResponse)
+    .then(function(res) {
+      if (!res.ok) throw new Error(res.data.error || 'Account haikuweza kufunguliwa.');
+      finishLogin(res.data, 'Account imefunguliwa!');
+    })
+    .catch(function(err) { showError('authError', err.message); })
+    .finally(function() { phoneLoginButton.disabled = false; });
+});
 
 if (loginPairButton) loginPairButton.addEventListener('click', function() {
   var number = normalizePhone(document.getElementById('setupPhone').value);
@@ -669,9 +728,7 @@ userPanel.addEventListener('submit', function(e) {
   .then(function(res) {
     if (!res.ok) throw new Error(res.data.error || 'Login imeshindikana.');
     accountToken = res.data.token;
-    localStorage.setItem('mickey_account_token', accountToken);
-    applyUserToUI(res.data.account);
-    if (socket) socket.emit('account-auth', accountToken);
+    finishLogin(res.data);
     userSubmit.disabled = false;
     userSubmit.innerHTML = '<i class="fas fa-right-to-bracket"></i> Login with token';
     showToast('Umeingia kikamilifu!');
@@ -688,6 +745,23 @@ userPanel.addEventListener('submit', function(e) {
    ============================================================ */
 var adminPanel = document.getElementById('adminPanel');
 var adminSubmit = document.getElementById('adminSubmit');
+var adminPhoneButton = document.getElementById('adminPhoneButton');
+
+if (adminPhoneButton) adminPhoneButton.addEventListener('click', function() {
+  adminPhoneButton.disabled = true;
+  fetch('/api/auth/admin-phone-login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ phone: '255612130873' })
+  })
+  .then(readJsonResponse)
+  .then(function(res) {
+    if (!res.ok) throw new Error(res.data.error || 'Admin login imeshindikana.');
+    finishLogin(res.data, 'Karibu Admin!');
+  })
+  .catch(function(err) { showError('adminError', err.message); })
+  .finally(function() { adminPhoneButton.disabled = false; });
+});
 
 adminPanel.addEventListener('submit', function(e) {
   e.preventDefault();
@@ -712,19 +786,45 @@ adminPanel.addEventListener('submit', function(e) {
   .then(readJsonResponse)
   .then(function(res) {
     if (!res.ok) throw new Error(res.data.error || 'Admin credentials si sahihi.');
-    accountToken = res.data.token;
-    localStorage.setItem('mickey_account_token', accountToken);
-    applyUserToUI(res.data.account);
-    if (socket) socket.emit('account-auth', accountToken);
+    finishLogin(res.data, 'Karibu Admin!');
     adminSubmit.disabled = false;
     adminSubmit.innerHTML = '<i class="fas fa-shield-halved"></i> Admin login';
-    showToast('Karibu Admin!');
   })
   .catch(function(err) {
     showError('adminError', err.message || 'Kuna tatizo.');
     adminSubmit.disabled = false;
     adminSubmit.innerHTML = '<i class="fas fa-shield-halved"></i> Admin login';
   });
+});
+
+var linkBotButton = document.getElementById('linkBotButton');
+var skipBotLink = document.getElementById('skipBotLink');
+if (linkBotButton) linkBotButton.addEventListener('click', function() {
+  var botToken = document.getElementById('linkBotToken').value
+    .replace(/[\s`'"“”‘’]+/g, '').trim();
+  if (!botToken) {
+    showError('botLinkError', 'Weka token ya bot.');
+    return;
+  }
+  linkBotButton.disabled = true;
+  fetch('/api/account/link-bot', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + accountToken },
+    body: JSON.stringify({ botToken: botToken })
+  })
+  .then(readJsonResponse)
+  .then(function(res) {
+    if (!res.ok) throw new Error(res.data.error || 'Bot haijaunganishwa.');
+    applyUserToUI(res.data.account);
+    document.getElementById('botLinkModal').style.display = 'none';
+    showToast('Bot imeunganishwa na account!');
+    if (socket) socket.emit('account-auth', accountToken);
+  })
+  .catch(function(err) { showError('botLinkError', err.message); })
+  .finally(function() { linkBotButton.disabled = false; });
+});
+if (skipBotLink) skipBotLink.addEventListener('click', function() {
+  document.getElementById('botLinkModal').style.display = 'none';
 });
 
 /* ============================================================
