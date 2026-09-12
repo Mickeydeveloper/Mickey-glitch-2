@@ -21,7 +21,7 @@ const test8Command = async (sock, chatId, msg, args = []) => {
 
         // Try native flow
         await sock.sendMessage(target, {
-            image: { url: 'https://picsum.photos/400/200' },
+            image: { url: 'https://cdn.ornzora.eu.cc/4d2905ce-3707-4ec0-998a-68a3d851629f-FIORA.jpg' },
             caption: `🗄️ Interactive Native Flow!\n👤 Hello ${userName}!`,
             footer: '@itsliaaa/baileys',
             optionText: '👉🏻 Select Options',
