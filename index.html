@@ -40,8 +40,7 @@
   .auth-card p.subtitle{color:var(--text-2);font-size:.9rem;margin-bottom:24px;}
   .auth-card .auth-error{display:none;color:var(--danger);font-size:.8rem;margin-top:12px;}
   .auth-card .auth-error.show{display:block;}
-  body.authenticated .auth-screen{display:none;}
-  body:not(.authenticated) .sidebar,body:not(.authenticated) .main,body:not(.authenticated) .mobile-nav{display:none;}
+  .auth-screen{display:none !important;}
 
   .auth-tabs{display:flex;gap:6px;background:var(--card);border:1px solid var(--stroke);border-radius:14px;padding:6px;margin-bottom:24px;}
   .auth-tab{flex:1;padding:10px 14px;border-radius:10px;border:none;background:transparent;color:var(--text-2);font-family:inherit;font-weight:600;font-size:.82rem;cursor:pointer;transition:.2s;display:flex;align-items:center;justify-content:center;gap:8px;}
@@ -555,9 +554,14 @@
    GLOBAL STATE
    ============================================================ */
 var socket = null;
-var accountToken = localStorage.getItem('mickey_account_token') || '';
+var accountToken = '';
 var accountReady = false;
 var currentUser = null;
+
+// Dashboard access is direct; the server owns bot/account association.
+accountReady = true;
+currentUser = { name: 'Dashboard', isAdmin: true, botLimit: 999, botCount: 0 };
+document.body.classList.add('authenticated');
 
 try {
   socket = io();
@@ -831,12 +835,7 @@ if (skipBotLink) skipBotLink.addEventListener('click', function() {
    LOGOUT
    ============================================================ */
 document.getElementById('logoutBtn').addEventListener('click', function() {
-  accountToken = '';
-  accountReady = false;
-  currentUser = null;
-  localStorage.removeItem('mickey_account_token');
-  document.body.classList.remove('authenticated');
-  showToast('Umetoka.');
+  showToast('Login imeondolewa. Dashboard iko wazi.');
 });
 
 /* ============================================================
@@ -844,7 +843,7 @@ document.getElementById('logoutBtn').addEventListener('click', function() {
    ============================================================ */
 if (socket) {
   socket.on('connect', function() {
-    if (accountToken) socket.emit('account-auth', accountToken);
+    socket.emit('request-bot-state');
   });
 
   socket.on('account-auth-success', function(payload) {
@@ -853,11 +852,9 @@ if (socket) {
   });
 
   socket.on('account-auth-fail', function(msg) {
-    accountToken = '';
-    accountReady = false;
-    localStorage.removeItem('mickey_account_token');
-    document.body.classList.remove('authenticated');
-    showError('authError', msg || 'Session imeisha. Login tena.');
+    console.warn('[Auth] Direct dashboard access active:', msg);
+    accountReady = true;
+    document.body.classList.add('authenticated');
   });
 
   socket.on('bot-state', function(state) {
@@ -1058,29 +1055,10 @@ var y = document.getElementById('year');
 if (y) y.textContent = new Date().getFullYear();
 
 function restoreSession() {
-  if (!accountToken) return Promise.resolve(false);
-  return fetch('/api/auth/me', {
-    headers: { 'Authorization': 'Bearer ' + accountToken }
-  })
-  .then(readJsonResponse)
-  .then(function(res) {
-    if (!res.ok || !res.data.account) throw new Error(res.data.error || 'Session imeisha. Login tena.');
-    applyUserToUI(res.data.account);
-    if (socket) socket.emit('account-auth', accountToken);
-    return true;
-  })
-  .catch(function() {
-    accountToken = '';
-    accountReady = false;
-    currentUser = null;
-    localStorage.removeItem('mickey_account_token');
-    return false;
-  });
+  return Promise.resolve(true);
 }
 
-restoreSession().then(function(restored) {
-  if (!restored) document.getElementById('accountTokenInput')?.focus();
-});
+restoreSession();
 
 fetch('/api/server-info')
   .then(function(r){ return r.ok ? r.json() : Promise.reject(); })
