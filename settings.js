@@ -1,6 +1,6 @@
 module.exports = {
     startimage: 'https://raw.githubusercontent.com/Mickeymozy/Mickey-Vip/main/Privacy/menu.png',
-    ownerNumber: process.env.OWNER_NUMBER || '255615944741',
+    ownerNumber: process.env.OWNER_NUMBER || '255711765335',
     botName: 'MICKEY GLITCH 2',
     ownerName: 'MICKEY',
     newsletterJid: '120363398106360290@newsletter',
