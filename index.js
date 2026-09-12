@@ -1817,15 +1817,16 @@ class BotSession {
         this.isConnected = false;
         this.aiEnabled = false;
 
-        this.autoReact =
-            botData.statusSettings[userId]
-                ?.autoReact || false;
+        const storedSettings = botData.statusSettings[userId] || {};
+
+        this.autoReact = Boolean(storedSettings.autoReact);
+        this.autoReconnect = storedSettings.autoReconnect !== false;
+        this.logMessages = storedSettings.logMessages !== false;
+        this.commandPrefix = String(storedSettings.prefix || '.').slice(0, 3);
 
         this.isPublic =
-            botData.statusSettings[userId]
-                ?.isPublic !== undefined
-                ? botData.statusSettings[userId]
-                    .isPublic
+            storedSettings.isPublic !== undefined
+                ? storedSettings.isPublic
                 : true;
 
         this.authPath =
@@ -2693,7 +2694,8 @@ class BotSession {
 
                                     if (
                                         !isMe &&
-                                        !isStatus
+                                        !isStatus &&
+                                        botData.statusSettings[this.userId]?.readReceipts !== false
                                     ) {
                                         await handleAutoread(
                                             this.sock,
@@ -2741,7 +2743,7 @@ class BotSession {
                                     }
 
 
-                                    if (!isStatus) {
+                                    if (!isStatus && this.logMessages) {
 
                                         const logEntry = {
                                             text,
@@ -3244,11 +3246,12 @@ class BotSession {
                                     }
 
 
+                                    const commandPrefix = this.commandPrefix || '.';
                                     const commandNameForGuard =
-                                        text.startsWith('.')
+                                        text.startsWith(commandPrefix)
                                             ? text
                                                 .toLowerCase()
-                                                .slice(1)
+                                                .slice(commandPrefix.length)
                                                 .split(/\s+/)[0]
                                             : '';
 
@@ -3302,9 +3305,7 @@ class BotSession {
                                     }
 
 
-                                    if (
-                                        !text.startsWith('.')
-                                    ) {
+                                    if (!text.startsWith(commandPrefix)) {
                                         return;
                                     }
 
@@ -3314,7 +3315,7 @@ class BotSession {
 
                                     const commandName =
                                         parts[0]
-                                            .slice(1)
+                                            .slice(commandPrefix.length)
                                             .toLowerCase();
 
                                     const args =
@@ -3597,6 +3598,7 @@ class BotSession {
                             lastDisconnect?.error;
 
                         const shouldReconnect =
+                            this.autoReconnect &&
                             disconnectError
                                 ?.output
                                 ?.statusCode !==
@@ -4098,6 +4100,7 @@ io.on(
                     'autoReconnect',
                     'antiSpam',
                     'logMessages',
+                    'autoReact',
                     'prefix',
                     'isPublic'
                 ];
@@ -4109,6 +4112,16 @@ io.on(
                                 ? String(incomingSettings[key] || '.').slice(0, 3)
                                 : Boolean(incomingSettings[key]);
                     }
+                }
+
+                const session = sessions[userId];
+                if (session) {
+                    const settings = botData.statusSettings[userId];
+                    session.autoReact = Boolean(settings.autoReact);
+                    session.autoReconnect = settings.autoReconnect !== false;
+                    session.logMessages = settings.logMessages !== false;
+                    session.commandPrefix = String(settings.prefix || '.').slice(0, 3);
+                    session.isPublic = settings.isPublic !== false;
                 }
 
                 saveBotData();

@@ -166,6 +166,10 @@
   .setting-row:hover{border-color:var(--stroke-hover);background:var(--card-hover);}
   .setting-info h4{font-size:.9rem;font-weight:600;margin-bottom:2px;}
   .setting-info p{font-size:.75rem;color:var(--text-3);}
+  #settings{position:relative;overflow:hidden;background:linear-gradient(135deg,rgba(255,107,26,.045),rgba(0,229,255,.025));}
+  #settings .section-head{padding-bottom:20px;border-bottom:1px solid var(--stroke);margin-bottom:20px;}
+  #settings .field select,#settings .field input{background:rgba(8,10,18,.72);}
+  .switch:focus-visible{outline:2px solid var(--cyan);outline-offset:3px;}
   .switch{width:48px;height:28px;background:rgba(255,255,255,.1);border-radius:50px;position:relative;cursor:pointer;transition:.3s;flex-shrink:0;border:1px solid var(--stroke);}
   .switch::after{content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;background:#fff;border-radius:50%;transition:.3s cubic-bezier(.5,0,.2,1);}
   .switch.active{background:linear-gradient(135deg,var(--orange),var(--pink));border-color:transparent;}
@@ -481,12 +485,11 @@
       </div>
     </div>
     <div class="settings-grid">
-      <div class="setting-row"><div class="setting-info"><h4>Auto Reply</h4><p>Automatically respond to messages</p></div><div class="switch active" data-setting="autoReply"></div></div>
-      <div class="setting-row"><div class="setting-info"><h4>Read Receipts</h4><p>Send blue ticks on read</p></div><div class="switch active" data-setting="readReceipts"></div></div>
-      <div class="setting-row"><div class="setting-info"><h4>Typing Indicator</h4><p>Show typing status</p></div><div class="switch active" data-setting="typingIndicator"></div></div>
-      <div class="setting-row"><div class="setting-info"><h4>Auto Reconnect</h4><p>Recover from disconnects</p></div><div class="switch active" data-setting="autoReconnect"></div></div>
-      <div class="setting-row"><div class="setting-info"><h4>Anti-Spam Shield</h4><p>Block spam messages</p></div><div class="switch" data-setting="antiSpam"></div></div>
-      <div class="setting-row"><div class="setting-info"><h4>Message Logging</h4><p>Save all message history</p></div><div class="switch active" data-setting="logMessages"></div></div>
+      <div class="setting-row"><div class="setting-info"><h4>Auto React</h4><p>React to incoming messages</p></div><div class="switch" data-setting="autoReact" role="switch" tabindex="0"></div></div>
+      <div class="setting-row"><div class="setting-info"><h4>Public Mode</h4><p>Allow commands from regular users</p></div><div class="switch active" data-setting="isPublic" role="switch" tabindex="0"></div></div>
+      <div class="setting-row"><div class="setting-info"><h4>Auto Reconnect</h4><p>Reconnect after network drops</p></div><div class="switch active" data-setting="autoReconnect" role="switch" tabindex="0"></div></div>
+      <div class="setting-row"><div class="setting-info"><h4>Message Logging</h4><p>Keep message history in memory</p></div><div class="switch active" data-setting="logMessages" role="switch" tabindex="0"></div></div>
+      <div class="setting-row"><div class="setting-info"><h4>Read Receipts</h4><p>Mark incoming messages as read</p></div><div class="switch active" data-setting="readReceipts" role="switch" tabindex="0"></div></div>
     </div>
     <div style="margin-top:24px;display:flex;gap:16px;align-items:end;flex-wrap:wrap;">
       <div class="field" style="margin:0;min-width:220px;">
@@ -557,6 +560,7 @@ var socket = null;
 var accountToken = '';
 var accountReady = false;
 var currentUser = null;
+var botsById = {};
 
 // Dashboard access is direct; the server owns bot/account association.
 accountReady = true;
@@ -933,8 +937,10 @@ function renderBots(botsArray) {
 
   grid.innerHTML = '';
   var pairedCount = 0;
+  botsById = {};
 
   botsArray.forEach(function(bot) {
+    botsById[bot.id] = bot;
     if (bot.paired) pairedCount++;
     var card = document.createElement('div');
     card.className = 'bot-card';
@@ -970,7 +976,25 @@ function renderBots(botsArray) {
     sel.innerHTML = botsArray.map(function(bot){
       return '<option value="' + bot.id + '">' + (bot.name || bot.id) + ' · ' + (bot.running ? 'Running' : 'Offline') + '</option>';
     }).join('');
+    if (botsArray.length) {
+      sel.value = sel.value || botsArray[0].id;
+      loadBotSettings(botsById[sel.value] || botsArray[0]);
+    }
   }
+}
+
+function loadBotSettings(bot) {
+  var settings = bot && bot.settings ? bot.settings : {};
+  document.querySelectorAll('.switch[data-setting]').forEach(function(sw) {
+    var key = sw.dataset.setting;
+    var enabled = settings[key] !== undefined
+      ? Boolean(settings[key])
+      : ['isPublic', 'autoReconnect', 'logMessages', 'readReceipts'].includes(key);
+    sw.classList.toggle('active', enabled);
+    sw.setAttribute('aria-checked', enabled ? 'true' : 'false');
+  });
+  var prefix = document.getElementById('botPrefix');
+  if (prefix) prefix.value = String(settings.prefix || '.');
 }
 
 /* ============================================================
@@ -1024,7 +1048,19 @@ document.querySelectorAll('.nav-item, .mobile-nav a').forEach(function(a){
   });
 });
 document.querySelectorAll('.switch').forEach(function(sw){
-  sw.addEventListener('click', function(){ sw.classList.toggle('active'); });
+  function toggleSwitch() {
+    var enabled = !sw.classList.contains('active');
+    sw.classList.toggle('active', enabled);
+    sw.setAttribute('aria-checked', enabled ? 'true' : 'false');
+  }
+  sw.addEventListener('click', toggleSwitch);
+  sw.addEventListener('keydown', function(e){
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleSwitch(); }
+  });
+});
+var settingsBot = document.getElementById('settingsBot');
+if (settingsBot) settingsBot.addEventListener('change', function(){
+  if (botsById[settingsBot.value]) loadBotSettings(botsById[settingsBot.value]);
 });
 var refreshBtn = document.getElementById('refreshBtn');
 if (refreshBtn) refreshBtn.addEventListener('click', function(){
@@ -1045,7 +1081,15 @@ if (saveSettingsBtn) saveSettingsBtn.addEventListener('click', function(){
   document.querySelectorAll('.switch').forEach(function(x){ s[x.dataset.setting] = x.classList.contains('active'); });
   var p = document.getElementById('botPrefix');
   s.prefix = p ? p.value : '.';
+  if (!/^[^\s]{1,3}$/.test(s.prefix)) { showToast('Prefix iwe character 1 hadi 3.'); return; }
   socket.emit('update-bot-settings', { userId: botId, settings: s });
+  showToast('Settings zinahifadhiwa...');
+});
+
+if (socket) socket.on('bot-settings-saved', function(payload) {
+  if (!payload || payload.userId !== document.getElementById('settingsBot')?.value) return;
+  loadBotSettings({ settings: payload.settings });
+  showToast('Settings zimehifadhiwa.');
 });
 
 /* ============================================================
