@@ -692,7 +692,8 @@ var adminSubmit = document.getElementById('adminSubmit');
 adminPanel.addEventListener('submit', function(e) {
   e.preventDefault();
   var email = document.getElementById('adminEmail').value.trim().toLowerCase();
-  var token = document.getElementById('adminToken').value.trim();
+  var token = document.getElementById('adminToken').value
+    .replace(/[\s`'"“”‘’]+/g, '').trim();
 
   if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
     showError('adminError', 'Weka email sahihi ya admin.');
@@ -963,7 +964,7 @@ function restoreSession() {
   })
   .then(readJsonResponse)
   .then(function(res) {
-    if (!res.ok || !res.data.account) throw new Error('Session imeisha. Login tena.');
+    if (!res.ok || !res.data.account) throw new Error(res.data.error || 'Session imeisha. Login tena.');
     applyUserToUI(res.data.account);
     if (socket) socket.emit('account-auth', accountToken);
     return true;

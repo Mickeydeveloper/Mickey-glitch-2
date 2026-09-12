@@ -643,6 +643,7 @@ const MONGODB_URI = String(process.env.MONGODB_URI || process.env.MONGO_URI || '
 const MONGODB_DB = String(process.env.MONGODB_DB || 'mickey_glitch').trim();
 const MONGODB_SESSION_SECRET = String(process.env.MONGODB_SESSION_SECRET || process.env.SESSION_SECRET || '').trim();
 let mongoStore = null;
+let persistenceReady = false;
 
 fs.ensureDirSync(AUTH_DIR);
 fs.ensureDirSync(path.dirname(DATA_FILE));
@@ -709,6 +710,7 @@ function saveAccounts() {
 async function initializePersistence() {
     if (!MONGODB_URI) {
         console.warn('[Mongo] MONGODB_URI is not configured. Using local JSON/session files.');
+        persistenceReady = true;
         return;
     }
     if (!MONGODB_SESSION_SECRET) {
@@ -721,6 +723,14 @@ async function initializePersistence() {
     accounts = { ...remoteAccounts, ...accounts };
     await mongoStore.saveAccounts(accounts);
     console.log(`[Mongo] Connected. Restored ${Object.keys(remoteAccounts).length} account records.`);
+    persistenceReady = true;
+}
+
+function requirePersistence(req, res, next) {
+    if (!persistenceReady) {
+        return res.status(503).json({ error: 'Server bado inaandaa database. Jaribu tena baada ya sekunde chache.' });
+    }
+    next();
 }
 
 function normalizeAccountPhone(value) {
@@ -807,7 +817,7 @@ const ADMIN_TOKEN = String(process.env.ADMIN_TOKEN || '').trim();
 ========================================================= */
 
 // Admin login
-app.post('/api/auth/admin-login', (req, res) => {
+app.post('/api/auth/admin-login', requirePersistence, (req, res) => {
     const phone = normalizeAccountPhone(req.body?.phone);
     const password = String(req.body?.password || '').trim();
 
@@ -842,9 +852,9 @@ app.post('/api/auth/admin-login', (req, res) => {
     });
 });
 
-app.post('/api/auth/admin-email-login', (req, res) => {
+app.post('/api/auth/admin-email-login', requirePersistence, (req, res) => {
     const email = String(req.body?.email || '').trim().toLowerCase();
-    const suppliedToken = String(req.body?.token || '').trim();
+    const suppliedToken = normalizeAccessToken(req.body?.token);
 
     if (!ADMIN_EMAIL) {
         return res.status(503).json({ error: 'ADMIN_EMAIL haijawekwa kwenye server environment.' });
@@ -876,7 +886,7 @@ app.post('/api/auth/admin-email-login', (req, res) => {
     return res.json({ token: account.token, account: accountResponse(account) });
 });
 
-app.post('/api/auth/token-login', (req, res) => {
+app.post('/api/auth/token-login', requirePersistence, (req, res) => {
     const token = normalizeAccessToken(req.body?.token);
     let account = getAccountByToken(token);
 
@@ -909,7 +919,7 @@ app.post('/api/auth/token-login', (req, res) => {
 });
 
 // User login
-app.post('/api/auth/login', (req, res) => {
+app.post('/api/auth/login', requirePersistence, (req, res) => {
     const phone = normalizeAccountPhone(req.body?.phone);
     const name = String(req.body?.name || '').trim().slice(0, 60);
 
@@ -934,7 +944,7 @@ app.post('/api/auth/login', (req, res) => {
     return res.json({ token: account.token, account: accountResponse(account) });
 });
 
-app.get('/api/auth/me', (req, res) => {
+app.get('/api/auth/me', requirePersistence, (req, res) => {
     const account = getAccountByToken(req.get('authorization')?.replace(/^Bearer\s+/i, ''));
     if (!account) return res.status(401).json({ error: 'Login required.' });
     return res.json({ account: accountResponse(account) });
@@ -4040,6 +4050,11 @@ io.on(
             async ({
                 number
             }) => {
+
+                if (!persistenceReady) {
+                    socket.emit('pair-error', 'Server bado inaunganisha database. Jaribu tena baada ya sekunde chache.');
+                    return;
+                }
 
                 const normalizedNumber = normalizeAccountPhone(number);
                 if (!isValidTanzaniaPhone(normalizedNumber)) {
