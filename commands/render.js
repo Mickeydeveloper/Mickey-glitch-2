@@ -2,9 +2,8 @@ const { createCtx } = require('../lib/messageBuilder');
 const { randomUUID } = require('crypto');
 
 // ═══════════════════════════════════════════════════════════
-// AI RICH PRIMITIVES
+// PROOF SIGNATURE & CERT CHAIN (AI Rich)
 // ═══════════════════════════════════════════════════════════
-
 const PROOF_SIGNATURE = 'TklYRUwuTWVzc2FnZUJ1aWxkZXJWNC43LVZlcmlmaWNhdGlvblNpZ25hdHVyZS5NZXRhZGF0YeN55YRyad2+ZA==';
 const CERT_CHAIN = [
     'TklYRUwuTWVzc2FnZUJ1aWxkZXJWNC43LUNlcnRpZmljYXRlQ2hhaW4uTWV0YWRhdGEOvtJr968bbpKdZreOTwkk9aPN++XPE60RfuzNLkXXc7LE8BOkJOWRpo2oNXaRJ3uCNJ43HY3A+oetnvHSfcxWqmvvTSrBOI5V1NOD6RMsZ/st1XVPUx83AGps1l5jYBOYzqMNy6un2tToJ2Bt9bXRo29tWLZTu8m7TNY/hISwVpVc5tjSet5U7btPN+dMIx2UvykB1jcbWGsdklheeuz8RXSStNXzeaGvsf1lpZ/ugLE4b2BdmlRNKrY6zLE4qFtRYQoS7axOyQX+4QUyN2m9bfm7urQmn+QRSXJwMO7X5kAJJLbkVGJFt9Pm9VXPwQVrK2aaqiXlpusj+7DfDw00OULmYMmZDTqXM0nUVLxj13z0LhMQoQhhNG8utdUn4uKOFceliTZ/xiP+A54GnX9620641bqw3ctfh9NNXPsTEK8hAUD7FDqUhVntHmoEYYEHq8X1tHHZYP49/f2iezTiE8AUaoZo42/jIWQIKohOGNUib2hEqMkW8NsR8vPihvNuqPc0zKZcl6359YFQdjiiW8kCRD/rsDOr9v1eYLFZKYloFyzFqEgj+jcG/V47elOjShJ5CCPwatXwP6HIloVwtgygFsnOFmCg6Ojoivfoz8Nw1qxFwg5OU2cq/1WbWNELKnaFg4eUWCAIJ/3ZIJsEPkgemZxGhE+hdiNn9dkQYBJs1kx2BxdIkJmQ9vJSKkrMz6lTxZM3IJ9mhmKS6zYdU1ppeAao0/ayte997DQParb/AHLN79g0iW1ad0z8ir5jAl0q3a+UZPTSa4YiSqC2PZ/gfxG5wvL2mKmeKowG0RXjmEp5iNxrni+T/HRLZOoH7y0DQ24nMCPg',
@@ -12,15 +11,141 @@ const CERT_CHAIN = [
 ];
 
 // ═══════════════════════════════════════════════════════════
-// BUILD AI RICH PAYLOAD
+// AIRich CLASS - For building AI Rich responses
 // ═══════════════════════════════════════════════════════════
+class AIRich {
+    constructor(sock) {
+        this.sock = sock;
+        this.sections = [];
+    }
 
-function buildAIRichPayload(jid, primitives) {
-    const responseId = randomUUID();
+    /**
+     * Add a section/primitive to the response
+     * @param {Object} primitive - The primitive object
+     * @returns {AIRich} - this (for chaining)
+     */
+    addSection(primitive) {
+        this.sections.push(primitive);
+        return this;
+    }
 
-    return {
-        jid,
-        content: {
+    /**
+     * Create a new layout wrapper
+     * @param {string} type - Layout type (e.g. 'Single')
+     * @param {Object} primitive - The primitive data
+     * @returns {Object} - Wrapped primitive
+     */
+    static newLayout(type, primitive) {
+        return primitive;
+    }
+
+    /**
+     * Add progress status
+     */
+    addProgress(title = 'Processing...', inProgress = true) {
+        this.sections.push({
+            __typename: 'GenAIBotProgressStatusPrimitive',
+            icon: null,
+            is_in_progress: inProgress,
+            meta_search_apps: null,
+            target_secondary_screen_id: null,
+            target_secondary_screen_tab_id: null,
+            title: title
+        });
+        return this;
+    }
+
+    /**
+     * Add text
+     */
+    addText(text) {
+        this.sections.push({
+            __typename: 'GenAIMarkdownTextUXPrimitive',
+            text: text
+        });
+        return this;
+    }
+
+    /**
+     * Add metadata text
+     */
+    addMetadata(text) {
+        this.sections.push({
+            __typename: 'GenAIMetadataTextPrimitive',
+            text: text
+        });
+        return this;
+    }
+
+    /**
+     * Add HTML content
+     */
+    addHtml(html) {
+        this.sections.push({
+            __typename: 'GenAIaeacdsnwHtmlPrimitive',
+            payload: html,
+            trusted_sources: []
+        });
+        return this;
+    }
+
+    /**
+     * Add image
+     */
+    addImage(url) {
+        this.sections.push({
+            __typename: 'GenAIImaginePrimitive',
+            media: {
+                url: url,
+                mime_type: 'image/png',
+                width: 16,
+                height: 9
+            },
+            imagine_type: 'IMAGE',
+            status: {
+                status: 'READY'
+            }
+        });
+        return this;
+    }
+
+    /**
+     * Add entity card
+     */
+    addEntity(title, subtitle, entityUrl, imageUrl, secondarySubtitle = 'Verified') {
+        this.sections.push({
+            __typename: 'GenAICompactEntityPrimitive',
+            title: title,
+            subtitle: subtitle,
+            secondary_subtitle: secondarySubtitle,
+            entity_id: Date.now(),
+            entity_url: entityUrl,
+            entity_type: 'PAGE',
+            action_type: 'FOLLOW',
+            is_verified: true,
+            image: {
+                url: imageUrl,
+                url_fallback: imageUrl
+            }
+        });
+        return this;
+    }
+
+    /**
+     * Send the response
+     */
+    async send(chatId, options = {}) {
+        if (!this.sock || !chatId) {
+            throw new Error('Sock and chatId are required');
+        }
+
+        if (this.sections.length === 0) {
+            throw new Error('No sections added');
+        }
+
+        const responseId = randomUUID();
+
+        const payload = {
             messageContextInfo: {
                 deviceListMetadata: {},
                 deviceListMetadataVersion: 2,
@@ -50,9 +175,9 @@ function buildAIRichPayload(jid, primitives) {
                         unifiedResponse: {
                             data: Buffer.from(JSON.stringify({
                                 response_id: responseId,
-                                sections: primitives.map(p => ({
+                                sections: this.sections.map(primitive => ({
                                     view_model: {
-                                        primitive: p,
+                                        primitive: primitive,
                                         __typename: "GenAISingleLayoutViewModel"
                                     }
                                 }))
@@ -69,111 +194,62 @@ function buildAIRichPayload(jid, primitives) {
                     }
                 }
             }
+        };
+
+        return await this.sock.relayMessage(chatId, payload, options);
+    }
+}
+
+// ═══════════════════════════════════════════════════════════
+// CODE PARSER - Extract primitives from code
+// ═══════════════════════════════════════════════════════════
+function parseAIRichCode(code) {
+    const primitives = [];
+
+    // 1. Match addSection({...}) or AIRich.newLayout(..., {...})
+    const sectionRegex = /(?:addSection|newLayout)\s*\([^,]*?,\s*(\{[\s\S]*?\})\s*\)/g;
+    let match;
+
+    while ((match = sectionRegex.exec(code)) !== null) {
+        try {
+            // Clean the object string
+            let objStr = match[1];
+            
+            // Convert JS object to JSON (handle single quotes, trailing commas)
+            objStr = objStr
+                .replace(/([{,]\s*)([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:/g, '$1"$2":') // Quote keys
+                .replace(/'/g, '"')                                                // Single to double quotes
+                .replace(/,\s*([}\]])/g, '$1');                                    // Remove trailing commas
+
+            const primitive = JSON.parse(objStr);
+            primitives.push(primitive);
+        } catch (e) {
+            console.error('[render] Failed to parse primitive:', e.message);
         }
-    };
+    }
+
+    // 2. If no primitives found, try to find raw __typename objects
+    if (primitives.length === 0) {
+        const typenameRegex = /\{[^{}]*__typename\s*:\s*['"]([^'"]+)['"][^{}]*\}/g;
+        while ((match = typenameRegex.exec(code)) !== null) {
+            try {
+                let objStr = match[0]
+                    .replace(/([{,]\s*)([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:/g, '$1"$2":')
+                    .replace(/'/g, '"')
+                    .replace(/,\s*([}\]])/g, '$1');
+
+                const primitive = JSON.parse(objStr);
+                primitives.push(primitive);
+            } catch (e) {}
+        }
+    }
+
+    return primitives;
 }
-
-// ═══════════════════════════════════════════════════════════
-// AIRich BUILDER CLASS
-// ═══════════════════════════════════════════════════════════
-
-class AIRich {
-    constructor(sock) {
-        this.sock = sock;
-        this.sections = [];
-    }
-
-    addSection(primitive) {
-        this.sections.push(primitive);
-        return this;
-    }
-
-    addProgress(title = 'Processing...', inProgress = true) {
-        this.sections.push({
-            __typename: 'GenAIBotProgressStatusPrimitive',
-            icon: null,
-            is_in_progress: inProgress,
-            meta_search_apps: null,
-            target_secondary_screen_id: null,
-            target_secondary_screen_tab_id: null,
-            title: title
-        });
-        return this;
-    }
-
-    addText(text) {
-        this.sections.push({
-            __typename: 'GenAIMarkdownTextUXPrimitive',
-            text: text
-        });
-        return this;
-    }
-
-    addMetadata(text) {
-        this.sections.push({
-            __typename: 'GenAIMetadataTextPrimitive',
-            text: text
-        });
-        return this;
-    }
-
-    addHtml(html) {
-        this.sections.push({
-            __typename: 'GenAIaeacdsnwHtmlPrimitive',
-            payload: html,
-            trusted_sources: []
-        });
-        return this;
-    }
-
-    addImage(url) {
-        this.sections.push({
-            __typename: 'GenAIImaginePrimitive',
-            media: {
-                url: url,
-                mime_type: 'image/png',
-                width: 16,
-                height: 9
-            },
-            imagine_type: 'IMAGE',
-            status: {
-                status: 'READY'
-            }
-        });
-        return this;
-    }
-
-    addEntity(title, subtitle, entityUrl, imageUrl) {
-        this.sections.push({
-            __typename: 'GenAICompactEntityPrimitive',
-            title: title,
-            subtitle: subtitle,
-            secondary_subtitle: 'Verified',
-            entity_id: Date.now(),
-            entity_url: entityUrl,
-            entity_type: 'PAGE',
-            action_type: 'FOLLOW',
-            is_verified: true,
-            image: {
-                url: imageUrl,
-                url_fallback: imageUrl
-            }
-        });
-        return this;
-    }
-
-    async send(chatId, options = {}) {
-        const payload = buildAIRichPayload(chatId, this.sections);
-        return await this.sock.relayMessage(payload.jid, payload.content, options);
-    }
-}
-
-AIRich.newLayout = (type, primitive) => primitive;
 
 // ═══════════════════════════════════════════════════════════
 // RENDER COMMAND
 // ═══════════════════════════════════════════════════════════
-
 const renderCommand = async (sock, chatId, msg, args = []) => {
     const ctx = createCtx(sock, chatId, msg, { args });
     const target = ctx.chatId || chatId || msg?.key?.remoteJid;
@@ -182,147 +258,87 @@ const renderCommand = async (sock, chatId, msg, args = []) => {
         throw new Error('Chat context is required');
     }
 
-    // Get input
+    // ═══════════════════════════════════════
+    // GET CODE INPUT
+    // ═══════════════════════════════════════
     let inputCode = '';
-    const quoted = msg?.quoted || msg?.msg?.contextInfo?.quotedMessage;
 
-    if (args.length > 0) {
-        inputCode = args.join(' ');
-    } else if (quoted) {
+    // From quoted message
+    const quoted = msg?.quoted || msg?.msg?.contextInfo?.quotedMessage;
+    if (quoted) {
         inputCode = quoted?.conversation ||
                     quoted?.extendedTextMessage?.text ||
                     quoted?.imageMessage?.caption ||
-                    quoted?.videoMessage?.caption || '';
-    } else {
-        inputCode = msg?.body || msg?.text || '';
+                    quoted?.videoMessage?.caption ||
+                    quoted?.documentMessage?.caption || '';
     }
 
-    // Clean command prefix
-    inputCode = inputCode.replace(/^\.?(?:render|html|view|code|airich)\s*/i, '').trim();
+    // From args
+    if (!inputCode && args.length > 0) {
+        inputCode = args.join(' ');
+    }
+
+    // From body
+    if (!inputCode) {
+        const body = msg?.body || msg?.text || '';
+        inputCode = body.replace(/^[\/.!?#$%^&*\-+=]\S+\s*/, '').trim();
+    }
 
     if (!inputCode) {
         await sock.sendMessage(target, {
-            text: `📝 AI RICH RENDERER\n━━━━━━━━━━━━━━━━━━━\n⚠️ Send HTML or text!\n━━━━━━━━━━━━━━━━━━━\n📌 Example:\n.render <div>Hello</div>\n━━━━━━━━━━━━━━━━━━━\n📎 Or quote a message`
+            text: `📝 AI RICH RENDERER\n━━━━━━━━━━━━━━━━━━━\n⚠️ Send AIRich code!\n━━━━━━━━━━━━━━━━━━━\n📌 Example:\nnew AIRich(conn)\n  .addSection(\n    AIRich.newLayout('Single', {\n      __typename: 'GenAIBotProgressStatusPrimitive',\n      title: 'Processing...',\n      is_in_progress: true\n    })\n  )\n  .send(m.chat)\n━━━━━━━━━━━━━━━━━━━\n📎 Or quote a message with code`
         }, { quoted: ctx.msg });
         return false;
     }
 
-    // Extract HTML
-    let htmlCode = '';
+    // ═══════════════════════════════════════
+    // PARSE PRIMITIVES
+    // ═══════════════════════════════════════
+    const primitives = parseAIRichCode(inputCode);
 
-    const fullHtml = inputCode.match(/(?:<!DOCTYPE html>\s*)?<html[\s\S]*<\/html>/i);
-    const inBackticks = inputCode.match(/`([\s\S]*?(?:<style|<div|<script|<canvas)[\s\S]*?)`/i);
-    const rawBlocks = inputCode.match(/(<(?:style|div|script|canvas|svg|h1|p|button|input|form|span)[\s\S]*<\/(?:style|div|script|canvas|svg|h1|p|button|input|form|span)>)/i);
-    const simpleTags = inputCode.match(/<([a-z]+)[\s\S]*<\/\1>/i);
-
-    if (fullHtml) htmlCode = fullHtml[0];
-    else if (inBackticks) htmlCode = inBackticks[1];
-    else if (rawBlocks) htmlCode = rawBlocks[0];
-    else if (simpleTags) htmlCode = simpleTags[0];
-    else {
-        htmlCode = `<div style="padding:20px;background:rgba(0,0,0,0.8);border-radius:12px;color:#fff;font-family:Arial,sans-serif;">\n${inputCode}\n</div>`;
+    if (primitives.length === 0) {
+        await sock.sendMessage(target, {
+            text: `❌ No AI Rich primitives found in code!\n━━━━━━━━━━━━━━━━━━━\n💡 Make sure your code contains:\n• addSection({...})\n• OR objects with __typename`
+        }, { quoted: ctx.msg });
+        return false;
     }
 
-    // Wrap if not full HTML
-    if (!/<html/i.test(htmlCode)) {
-        htmlCode = `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{background:transparent;font-family:Arial,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:10px}
-</style>
-</head>
-<body>
-${htmlCode}
-</body>
-</html>`;
-    }
-
+    // ═══════════════════════════════════════
+    // SEND AI RICH
+    // ═══════════════════════════════════════
     try {
-        const responseId = randomUUID();
+        const airich = new AIRich(sock);
+        for (const primitive of primitives) {
+            airich.addSection(primitive);
+        }
+        await airich.send(target);
 
-        const payload = {
-            messageContextInfo: {
-                deviceListMetadata: {},
-                deviceListMetadataVersion: 2,
-                botMetadata: {
-                    messageDisclaimerText: "",
-                    botResponseId: responseId,
-                    verificationMetadata: {
-                        proofs: [{
-                            version: 1,
-                            useCase: 1,
-                            signature: PROOF_SIGNATURE,
-                            certificateChain: CERT_CHAIN
-                        }]
-                    }
-                }
-            },
-            botForwardedMessage: {
-                message: {
-                    richResponseMessage: {
-                        messageType: 1,
-                        submessages: [
-                            {
-                                messageType: 2,
-                                messageText: "AI Rich HTML View"
-                            }
-                        ],
-                        unifiedResponse: {
-                            data: Buffer.from(JSON.stringify({
-                                response_id: responseId,
-                                sections: [
-                                    {
-                                        view_model: {
-                                            primitive: {
-                                                __typename: "GenAIaeacdsnwHtmlPrimitive",
-                                                payload: htmlCode,
-                                                trusted_sources: []
-                                            },
-                                            __typename: "GenAISingleLayoutViewModel"
-                                        }
-                                    }
-                                ]
-                            })).toString('base64')
-                        },
-                        contextInfo: {
-                            forwardingScore: 1,
-                            isForwarded: true,
-                            forwardedAiBotMessageInfo: {
-                                botJid: "867051314767696@bot"
-                            },
-                            forwardOrigin: 4
-                        }
-                    }
-                }
-            }
-        };
-
-        await sock.relayMessage(target, payload, {});
+        console.log(`[render] Sent ${primitives.length} primitives`);
         return true;
 
     } catch (error) {
-        console.error('[render] relay failed:', error?.message || error);
+        console.error('[render] Error:', error?.message || error);
 
         try {
             await sock.sendMessage(target, {
-                text: `❌ Failed to render\n⚠️ ${error?.message || 'Unknown error'}`
+                text: `❌ Failed to send AI Rich\n━━━━━━━━━━━━━━━━━━━\n⚠️ Error: ${error?.message || 'Unknown error'}`
             }, { quoted: ctx.msg });
             return false;
-        } catch (sendErr) {
+        } catch (e) {
             return false;
         }
     }
 };
 
+// ═══════════════════════════════════════════════════════════
+// EXPORT
+// ═══════════════════════════════════════════════════════════
 renderCommand.name = 'render';
 renderCommand.aliases = ['html', 'view', 'code', 'airich'];
 renderCommand.category = 'tools';
-renderCommand.description = '📄 Render HTML as AI Rich';
+renderCommand.description = '📄 Render AIRich primitives as bot message';
 
+// Expose AIRich class for external use
 renderCommand.AIRich = AIRich;
 
 module.exports = renderCommand;
