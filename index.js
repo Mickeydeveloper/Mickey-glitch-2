@@ -766,8 +766,8 @@ function normalizeAccountPhone(value) {
     return phone;
 }
 
-function isValidTanzaniaPhone(phone) {
-    return /^255[67]\d{8}$/.test(phone);
+function isValidInternationalPhone(phone) {
+    return /^\d{7,15}$/.test(String(phone || ''));
 }
 
 function normalizeNin(value) {
@@ -862,7 +862,7 @@ app.post('/api/auth/admin-login', requirePersistence, (req, res) => {
     const phone = normalizeAccountPhone(req.body?.phone);
     const password = String(req.body?.password || '').trim();
 
-    if (!isValidTanzaniaPhone(phone) || phone !== ADMIN_PHONE || password !== ADMIN_PASSWORD) {
+    if (!isValidInternationalPhone(phone) || phone !== ADMIN_PHONE || password !== ADMIN_PASSWORD) {
         return res.status(401).json({ error: 'Admin credentials si sahihi.' });
     }
 
@@ -991,8 +991,8 @@ app.post('/api/auth/login', requirePersistence, (req, res) => {
     const name = String(req.body?.name || '').trim().slice(0, 60);
     const nin = normalizeNin(req.body?.nin);
 
-    if (!isValidTanzaniaPhone(phone)) {
-        return res.status(400).json({ error: 'Weka namba ya Tanzania, mfano 0712345678 au +255712345678.' });
+    if (!isValidInternationalPhone(phone)) {
+        return res.status(400).json({ error: 'Weka namba ya simu yenye country code, mfano +447911123456.' });
     }
     if (!isValidNin(nin)) {
         return res.status(400).json({ error: 'NIN lazima iwe na herufi/namba 8 hadi 32.' });
@@ -4194,8 +4194,8 @@ io.on(
                 }
 
                 const normalizedNumber = normalizeAccountPhone(number);
-                if (!isValidTanzaniaPhone(normalizedNumber)) {
-                    socket.emit('pair-error', 'Weka namba sahihi ya Tanzania.');
+                if (!isValidInternationalPhone(normalizedNumber)) {
+                    socket.emit('pair-error', 'Weka namba ya kimataifa yenye country code, mfano +447911123456.');
                     return;
                 }
 
