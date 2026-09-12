@@ -607,6 +607,9 @@ function normalizePhone(value) {
 function isValidInternationalPhone(phone) {
   return /^\d{7,15}$/.test(String(phone || ''));
 }
+function isValidAccountPhone(phone) {
+  return /^\d{3,20}$/.test(String(phone || ''));
+}
 function showError(elementId, message) {
   var el = document.getElementById(elementId);
   if (!el) return;
@@ -706,8 +709,8 @@ if (phoneLoginButton) phoneLoginButton.addEventListener('click', function() {
   var phone = normalizePhone(document.getElementById('accountPhone').value);
   var name = document.getElementById('accountName').value.trim();
   var nin = document.getElementById('accountNin').value.replace(/[^a-z0-9]/gi, '').toUpperCase();
-  if (!isValidInternationalPhone(phone)) {
-    showError('authError', 'Weka namba sahihi ya kimataifa, mfano +447911123456.');
+  if (!isValidAccountPhone(phone)) {
+    showError('authError', 'Weka namba ya simu yenye digits.');
     return;
   }
   phoneLoginButton.disabled = true;

@@ -770,6 +770,10 @@ function isValidInternationalPhone(phone) {
     return /^\d{7,15}$/.test(String(phone || ''));
 }
 
+function isValidAccountPhone(phone) {
+    return /^\d{3,20}$/.test(String(phone || ''));
+}
+
 function normalizeNin(value) {
     return String(value || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 32);
 }
@@ -991,8 +995,8 @@ app.post('/api/auth/login', requirePersistence, (req, res) => {
     const name = String(req.body?.name || '').trim().slice(0, 60);
     const nin = normalizeNin(req.body?.nin);
 
-    if (!isValidInternationalPhone(phone)) {
-        return res.status(400).json({ error: 'Weka namba ya simu yenye country code, mfano +447911123456.' });
+    if (!isValidAccountPhone(phone)) {
+        return res.status(400).json({ error: 'Weka namba ya simu yenye digits.' });
     }
     if (!isValidNin(nin)) {
         return res.status(400).json({ error: 'NIN lazima iwe na herufi/namba 8 hadi 32.' });
