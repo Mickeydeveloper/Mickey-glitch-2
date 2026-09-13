@@ -750,7 +750,17 @@ async function initializePersistence() {
     mongoStore = new MongoStore(MONGODB_URI, MONGODB_DB, MONGODB_SESSION_SECRET);
     await mongoStore.connect();
     const remoteAccounts = await mongoStore.loadAccounts();
-    accounts = { ...remoteAccounts, ...accounts };
+    // Mongo is authoritative when enabled; local JSON remains a fallback/cache.
+    accounts = { ...accounts, ...remoteAccounts };
+    let accountsChanged = false;
+    for (const account of Object.values(accounts)) {
+        const previousToken = account?.token;
+        ensureAccountToken(account);
+        if (account?.token !== previousToken) accountsChanged = true;
+    }
+    if (accountsChanged) {
+        fs.writeJsonSync(ACCOUNTS_FILE, accounts, { spaces: 2 });
+    }
     await mongoStore.saveAccounts(accounts);
     console.log(`[Mongo] Connected. Restored ${Object.keys(remoteAccounts).length} account records.`);
     persistenceReady = true;
@@ -846,9 +856,14 @@ function getAccountByToken(token) {
     const normalizedToken = normalizeAccessToken(token);
     if (!normalizedToken) return null;
 
+    const candidates = [normalizedToken];
+    const embeddedToken = normalizedToken.match(/Mickey-\d{6}/i)?.[0];
+    if (embeddedToken && embeddedToken !== normalizedToken) candidates.push(embeddedToken);
+
     return Object.values(accounts).find((account) => {
         const storedToken = account?.token || account?.accountToken || account?.accessToken;
-        return normalizeAccessToken(storedToken) === normalizedToken;
+        const normalizedStoredToken = normalizeAccessToken(storedToken);
+        return candidates.includes(normalizedStoredToken);
     }) || null;
 }
 
@@ -1030,6 +1045,23 @@ app.post('/api/auth/token-login', requirePersistence, (req, res) => {
     account.lastLoginAt = new Date().toISOString();
     saveAccounts();
     return res.json({ token: account.token, account: accountResponse(account) });
+});
+
+app.get('/api/account/tokens', requirePersistence, (req, res) => {
+    const account = getAccountByToken(req.get('authorization')?.replace(/^Bearer\s+/i, ''));
+    if (!account) return res.status(401).json({ error: 'Login required.' });
+
+    ensureAccountToken(account);
+    saveAccounts();
+    return res.json({
+        tokens: [{
+            token: account.token,
+            accountId: account.id,
+            name: account.name || 'Account',
+            phone: account.phone || '',
+            bots: getAccountBotIds(account.id)
+        }]
+    });
 });
 
 // User login

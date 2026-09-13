@@ -344,6 +344,18 @@
   </div>
 </div>
 
+<div id="tokenVaultModal" style="display:none;position:fixed;inset:0;z-index:55;background:rgba(5,7,12,.78);align-items:center;justify-content:center;padding:20px;">
+  <div class="auth-card" style="width:min(520px,100%);">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+      <h2 style="font-size:1.35rem;margin:0;"><i class="fas fa-key" style="color:var(--lime);"></i> Bot tokens</h2>
+      <button class="icon-btn" id="closeTokenVaultBtn" type="button" title="Close"><i class="fas fa-xmark"></i></button>
+    </div>
+    <p class="subtitle">Tokens za account yako na bots zilizounganishwa. Bonyeza copy kuhifadhi details.</p>
+    <div id="tokenVaultList" style="display:grid;gap:10px;"></div>
+    <div class="auth-error" id="tokenVaultError"></div>
+  </div>
+</div>
+
 <!-- ============================================================
      SIDEBAR
      ============================================================ -->
@@ -404,6 +416,7 @@
     <div class="hero-cta">
       <a href="#connect" class="btn btn-primary"><i class="fas fa-bolt"></i> Connect a Bot</a>
       <a href="#bots" class="btn btn-ghost"><i class="fas fa-eye"></i> View Dashboard</a>
+      <button class="btn btn-ghost btn-sm" id="tokenVaultBtn" type="button"><i class="fas fa-key"></i> View tokens</button>
     </div>
   </section>
 
@@ -1038,6 +1051,55 @@ var refreshBotsBtn = document.getElementById('refreshBotsBtn');
 if (refreshBotsBtn) refreshBotsBtn.addEventListener('click', function(){
   if (socket) socket.emit('request-bot-state');
   showToast('Inasasisha bots...');
+});
+function openTokenVault() {
+  var modal = document.getElementById('tokenVaultModal');
+  var list = document.getElementById('tokenVaultList');
+  if (!modal || !list) return;
+  modal.style.display = 'flex';
+  list.innerHTML = '<div style="color:var(--text-2);">Inapakia tokens...</div>';
+  fetch('/api/account/tokens', { headers: { 'Authorization': 'Bearer ' + accountToken } })
+    .then(readJsonResponse)
+    .then(function(res) {
+      if (!res.ok) throw new Error(res.data.error || 'Token hazijapatikana.');
+      list.innerHTML = '';
+      (res.data.tokens || []).forEach(function(item) {
+        var card = document.createElement('div');
+        card.style.cssText = 'padding:14px;border:1px solid var(--stroke);border-radius:10px;background:rgba(255,255,255,.03);';
+        var details = document.createElement('div');
+        details.style.cssText = 'font-size:.75rem;color:var(--text-2);margin-bottom:8px;';
+        details.textContent = (item.name || 'Account') + (item.phone ? ' · ' + item.phone : '') + ' · ' + (item.bots || []).length + ' bot(s)';
+        var row = document.createElement('div');
+        row.style.cssText = 'display:flex;gap:8px;align-items:center;';
+        var token = document.createElement('code');
+        token.style.cssText = 'flex:1;color:var(--lime);word-break:break-all;';
+        token.textContent = item.token || '—';
+        var copy = document.createElement('button');
+        copy.className = 'btn btn-ghost btn-sm';
+        copy.type = 'button';
+        copy.innerHTML = '<i class="fas fa-copy"></i> Copy';
+        copy.addEventListener('click', function() {
+          var detailsText = 'Token: ' + (item.token || '') + '\nAccount: ' + (item.name || '') + '\nPhone: ' + (item.phone || '') + '\nBots: ' + (item.bots || []).join(', ');
+          navigator.clipboard.writeText(detailsText).then(function(){ showToast('Token details copied.'); });
+        });
+        row.appendChild(token);
+        row.appendChild(copy);
+        card.appendChild(details);
+        card.appendChild(row);
+        list.appendChild(card);
+      });
+    })
+    .catch(function(error) {
+      list.innerHTML = '';
+      showError('tokenVaultError', error.message || 'Token hazijapatikana.');
+    });
+}
+var tokenVaultBtn = document.getElementById('tokenVaultBtn');
+if (tokenVaultBtn) tokenVaultBtn.addEventListener('click', openTokenVault);
+var closeTokenVaultBtn = document.getElementById('closeTokenVaultBtn');
+if (closeTokenVaultBtn) closeTokenVaultBtn.addEventListener('click', function(){
+  var modal = document.getElementById('tokenVaultModal');
+  if (modal) modal.style.display = 'none';
 });
 var saveSettingsBtn = document.getElementById('saveSettingsBtn');
 if (saveSettingsBtn) saveSettingsBtn.addEventListener('click', function(){
