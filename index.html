@@ -289,96 +289,39 @@
 </div>
 
 <!-- ============================================================
-     AUTH SCREEN (User + Admin tabs)
+     BOT ACCESS SCREEN
      ============================================================ -->
 <section class="auth-screen" id="authScreen">
   <div class="auth-card">
     <div class="logo" style="margin-bottom:18px;">MG</div>
-    <div class="auth-kicker">Secure bot workspace</div>
-    <h2>Welcome back</h2>
-    <p class="subtitle">Sign in to manage your WhatsApp bots, pairing sessions, and automation settings.</p>
+    <div class="auth-kicker">Mickey Glitch Bot Control</div>
+    <h2>Control your bot</h2>
+    <p class="subtitle">Weka token ya bot kuingia. Kama huna token, pair WhatsApp hapa chini na token itatumwa baada ya kuunganishwa.</p>
 
-    <!-- Tabs -->
-    <div class="auth-tabs">
-      <button class="auth-tab active" data-tab="user" type="button">
-        <i class="fas fa-user"></i> User
-      </button>
-      <button class="auth-tab" data-tab="admin" type="button">
-        <i class="fas fa-shield-halved"></i> Admin
-      </button>
-    </div>
-
-    <!-- User Panel -->
     <form class="auth-panel active" id="userPanel">
       <div class="field">
-        <label for="accountEmail">Email address</label>
-        <input type="email" id="accountEmail" placeholder="you@example.com" autocomplete="email" required>
+        <label for="accountTokenInput">Bot access token</label>
+        <input type="password" id="accountTokenInput" placeholder="Mickey-123456" autocomplete="one-time-code">
       </div>
-      <div class="field" style="margin-top:12px;">
-        <label for="accountPhone">Phone number <span style="color:var(--text-3);font-weight:400;">(optional)</span></label>
-        <input type="tel" id="accountPhone" placeholder="+255 612 130 873" autocomplete="tel" inputmode="tel">
-      </div>
-      <div class="field" style="margin-top:12px;">
-        <label for="accountName">Name (new account)</label>
-        <input type="text" id="accountName" placeholder="Your name" autocomplete="name">
-      </div>
-      <div class="field" style="margin-top:12px;">
-        <label for="accountNin">NIN / National ID <span style="color:var(--text-3);font-weight:400;">(optional)</span></label>
-        <input type="text" id="accountNin" placeholder="e.g. 19901234567890123456" autocomplete="off" maxlength="32" spellcheck="false">
-      </div>
-      <button class="btn btn-ghost" id="phoneLoginButton" type="button" style="width:100%;margin-top:14px;">
-        <i class="fas fa-user-plus"></i> Create / login with email
+      <button class="btn btn-primary" id="userSubmit" type="submit" style="width:100%;margin-top:14px;">
+        <i class="fas fa-right-to-bracket"></i> Control bot
       </button>
-      <details class="auth-advanced">
-        <summary>Use an existing bot token instead</summary>
-        <div style="margin-top:16px;">
-          <div class="field">
-            <label for="accountTokenInput">Website access token</label>
-            <input type="password" id="accountTokenInput" placeholder="Paste your WhatsApp token" autocomplete="one-time-code">
-          </div>
-          <button class="btn btn-primary" id="userSubmit" type="submit" style="width:100%;">
-            <i class="fas fa-right-to-bracket"></i> Continue with token
-          </button>
-          <div class="field" style="margin-top:18px;padding-top:18px;border-top:1px solid var(--stroke);">
-            <label for="setupPhone">Pair WhatsApp first</label>
-            <input type="tel" id="setupPhone" placeholder="+447911123456" autocomplete="tel" inputmode="tel">
-          </div>
-          <button class="btn btn-ghost" id="loginPairButton" type="button" style="width:100%;margin-bottom:12px;">
-            <i class="fas fa-link"></i> Request pairing code
-          </button>
-          <div id="loginPairResult" style="display:none;margin-bottom:14px;padding:14px;border:1px dashed var(--orange);border-radius:12px;text-align:center;">
-            <div style="font-size:.75rem;color:var(--text-2);margin-bottom:6px;">WhatsApp pairing code</div>
-            <strong id="loginPairCode" style="font-family:'Space Grotesk',sans-serif;font-size:1.5rem;letter-spacing:.12em;color:var(--lime);">—</strong>
-            <div id="loginPairStatus" style="font-size:.75rem;color:var(--text-2);margin-top:6px;">Open WhatsApp Linked Devices and enter this code.</div>
-          </div>
-        </div>
-      </details>
+      <div style="margin:20px 0;border-top:1px solid var(--stroke);"></div>
+      <div class="field">
+        <label for="setupPhone">Huna token? Pair WhatsApp</label>
+        <input type="tel" id="setupPhone" placeholder="+255 612 130 873" autocomplete="tel" inputmode="tel">
+      </div>
+      <button class="btn btn-ghost" id="loginPairButton" type="button" style="width:100%;margin-top:12px;">
+        <i class="fas fa-link"></i> Pair bot mpya
+      </button>
+      <div id="loginPairResult" style="display:none;margin-top:14px;padding:14px;border:1px dashed var(--orange);border-radius:12px;text-align:center;">
+        <div style="font-size:.75rem;color:var(--text-2);margin-bottom:6px;">WhatsApp pairing code</div>
+        <strong id="loginPairCode" style="font-family:'Space Grotesk',sans-serif;font-size:1.5rem;letter-spacing:.12em;color:var(--lime);">—</strong>
+        <div id="loginPairStatus" style="font-size:.75rem;color:var(--text-2);margin-top:6px;">Open WhatsApp > Linked Devices and enter this code.</div>
+      </div>
       <div class="auth-error" id="authError"></div>
     </form>
-
-    <!-- Admin Panel -->
-    <form class="auth-panel" id="adminPanel">
-      <div class="field">
-        <label for="adminPhone">Admin phone number</label>
-        <input type="tel" id="adminPhone" value="+255 612 130 873" autocomplete="tel" inputmode="tel">
-      </div>
-      <div class="field">
-        <label for="adminEmail">Admin email</label>
-        <input type="email" id="adminEmail" placeholder="admin@example.com" autocomplete="email" required>
-      </div>
-      <div class="field" style="margin-top:18px;">
-        <label for="adminToken">Admin token</label>
-        <input type="password" id="adminToken" placeholder="Optional admin token" autocomplete="one-time-code">
-      </div>
-      <button class="btn btn-ghost" id="adminPhoneButton" type="button" style="width:100%;margin-top:14px;">
-        <i class="fas fa-phone"></i> Admin login with phone
-      </button>
-      <button class="btn btn-admin" id="adminSubmit" type="submit" style="width:100%;">
-        <i class="fas fa-shield-halved"></i> Admin login
-      </button>
-      <div class="auth-error" id="adminError"></div>
-    </form>
-    <div class="auth-trust"><span><i class="fas fa-database"></i> Account storage</span><span><i class="fas fa-shield-halved"></i> Protected session</span></div>
+    <div class="auth-trust"><span><i class="fas fa-robot"></i> Bot control</span><span><i class="fas fa-database"></i> Settings zinahifadhiwa</span></div>
   </div>
 </section>
 
@@ -520,6 +463,8 @@
     </div>
     <div class="settings-grid">
       <div class="setting-row"><div class="setting-info"><h4>Auto React</h4><p>React to incoming messages</p></div><div class="switch" data-setting="autoReact" role="switch" tabindex="0"></div></div>
+      <div class="setting-row"><div class="setting-info"><h4>Auto Reply</h4><p>Reply automatically to incoming messages</p></div><div class="switch" data-setting="autoReply" role="switch" tabindex="0"></div></div>
+      <div class="setting-row"><div class="setting-info"><h4>Anti Spam</h4><p>Limit repeated messages from users</p></div><div class="switch" data-setting="antiSpam" role="switch" tabindex="0"></div></div>
       <div class="setting-row"><div class="setting-info"><h4>Public Mode</h4><p>Allow commands from regular users</p></div><div class="switch active" data-setting="isPublic" role="switch" tabindex="0"></div></div>
       <div class="setting-row"><div class="setting-info"><h4>Auto Reconnect</h4><p>Reconnect after network drops</p></div><div class="switch active" data-setting="autoReconnect" role="switch" tabindex="0"></div></div>
       <div class="setting-row"><div class="setting-info"><h4>Message Logging</h4><p>Keep message history in memory</p></div><div class="switch active" data-setting="logMessages" role="switch" tabindex="0"></div></div>
@@ -687,23 +632,7 @@ function applyUserToUI(user) {
 }
 
 /* ============================================================
-   AUTH TABS
-   ============================================================ */
-document.querySelectorAll('.auth-tab').forEach(function(tab) {
-  tab.addEventListener('click', function() {
-    var target = tab.dataset.tab;
-    document.querySelectorAll('.auth-tab').forEach(function(t){ t.classList.remove('active'); });
-    document.querySelectorAll('.auth-panel').forEach(function(p){ p.classList.remove('active'); });
-    tab.classList.add('active');
-    var panel = document.getElementById(target + 'Panel');
-    if (panel) panel.classList.add('active');
-    clearError('authError');
-    clearError('adminError');
-  });
-});
-
-/* ============================================================
-   USER LOGIN
+  BOT TOKEN ACCESS
    ============================================================ */
 var userPanel = document.getElementById('userPanel');
 var userSubmit = document.getElementById('userSubmit');
@@ -743,28 +672,8 @@ function finishLogin(payload, message) {
   applyUserToUI(payload.account);
   if (socket) socket.emit('account-auth', accountToken);
   showToast(message || 'Umeingia kikamilifu!');
-  openBotLinkPrompt();
+  if (!payload.account || !payload.account.botCount) openBotLinkPrompt();
 }
-
-if (phoneLoginButton) phoneLoginButton.addEventListener('click', function() {
-  var email = String(document.getElementById('accountEmail').value || '').trim();
-  var phone = String(document.getElementById('accountPhone').value || '').trim();
-  var name = document.getElementById('accountName').value.trim();
-  var nin = document.getElementById('accountNin').value.replace(/[^a-z0-9]/gi, '').toUpperCase();
-  if (!email) {
-    showError('authError', 'Weka email ya account.');
-    return;
-  }
-  phoneLoginButton.disabled = true;
-  fetch('/api/auth/login', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ email: email, phone: phone, name: name, nin: nin }) })
-    .then(readJsonResponse)
-    .then(function(res) {
-      if (!res.ok) throw new Error(res.data.error || 'Account haikuweza kufunguliwa.');
-      finishLogin(res.data, 'Account imefunguliwa!');
-    })
-    .catch(function(err) { showError('authError', err.message); })
-    .finally(function() { phoneLoginButton.disabled = false; });
-});
 
 if (loginPairButton) loginPairButton.addEventListener('click', function() {
   var number = normalizePhone(document.getElementById('setupPhone').value);
@@ -811,68 +720,6 @@ userPanel.addEventListener('submit', function(e) {
     showError('authError', err.message || 'Kuna tatizo.');
     userSubmit.disabled = false;
     userSubmit.innerHTML = '<i class="fas fa-right-to-bracket"></i> Login with token';
-  });
-});
-
-/* ============================================================
-   ADMIN LOGIN
-   ============================================================ */
-var adminPanel = document.getElementById('adminPanel');
-var adminSubmit = document.getElementById('adminSubmit');
-var adminPhoneButton = document.getElementById('adminPhoneButton');
-
-if (adminPhoneButton) adminPhoneButton.addEventListener('click', function() {
-  var adminPhone = normalizePhone(document.getElementById('adminPhone').value || document.getElementById('accountPhone')?.value);
-  if (!adminPhone) {
-    showError('adminError', 'Weka digits za admin phone, mfano +255 612 130 873.');
-    return;
-  }
-  adminPhoneButton.disabled = true;
-  fetch('/api/auth/admin-phone-login', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ phone: adminPhone })
-  })
-  .then(readJsonResponse)
-  .then(function(res) {
-    if (!res.ok) throw new Error(res.data.error || 'Admin login imeshindikana.');
-    finishLogin(res.data, 'Karibu Admin!');
-  })
-  .catch(function(err) { showError('adminError', err.message); })
-  .finally(function() { adminPhoneButton.disabled = false; });
-});
-
-adminPanel.addEventListener('submit', function(e) {
-  e.preventDefault();
-  var email = document.getElementById('adminEmail').value.trim().toLowerCase();
-  var token = document.getElementById('adminToken').value
-    .replace(/[\s`'"“”‘’]+/g, '').trim();
-
-  if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
-    showError('adminError', 'Weka email sahihi ya admin.');
-    return;
-  }
-
-  adminSubmit.disabled = true;
-  adminSubmit.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Inathibitisha...';
-  clearError('adminError');
-
-  fetch('/api/auth/admin-email-login', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: email, token: token })
-  })
-  .then(readJsonResponse)
-  .then(function(res) {
-    if (!res.ok) throw new Error(res.data.error || 'Admin credentials si sahihi.');
-    finishLogin(res.data, 'Karibu Admin!');
-    adminSubmit.disabled = false;
-    adminSubmit.innerHTML = '<i class="fas fa-shield-halved"></i> Admin login';
-  })
-  .catch(function(err) {
-    showError('adminError', err.message || 'Kuna tatizo.');
-    adminSubmit.disabled = false;
-    adminSubmit.innerHTML = '<i class="fas fa-shield-halved"></i> Admin login';
   });
 });
 
@@ -1227,7 +1074,7 @@ function restoreSession() {
 }
 
 restoreSession().then(function(restored) {
-  if (!restored) document.getElementById('accountPhone')?.focus();
+  if (!restored) document.getElementById('accountTokenInput')?.focus();
 });
 
 fetch('/api/server-info')

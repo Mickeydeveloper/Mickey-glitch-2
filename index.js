@@ -661,9 +661,15 @@ let botData = {
 
 if (fs.existsSync(DATA_FILE)) {
     try {
-        botData = fs.readJsonSync(
-            DATA_FILE
-        );
+        const storedBotData = fs.readJsonSync(DATA_FILE);
+        botData = {
+            ...botData,
+            ...storedBotData,
+            statusSettings: {
+                ...botData.statusSettings,
+                ...(storedBotData.statusSettings || {})
+            }
+        };
     } catch (e) {
         console.error(
             '[Data] Failed to read bot_data.json:',

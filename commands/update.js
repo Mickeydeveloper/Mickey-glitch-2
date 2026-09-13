@@ -241,6 +241,7 @@ async function updateCommand(sock, chatId, message, zipUrl) {
                 'session',
                 'auth_info',
                 'auth_info_baileys',
+                'data',
                 '.git',
                 'temp_update'
             ]);
