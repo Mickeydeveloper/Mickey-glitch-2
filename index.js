@@ -761,10 +761,10 @@ function normalizeAccountPhone(value) {
     let phone = String(value || '').trim()
         .replace(/[٠-٩]/g, digit => String(digit.charCodeAt(0) - 0x660))
         .replace(/[۰-۹]/g, digit => String(digit.charCodeAt(0) - 0x6f0));
-    if (!phone || /[^\d\s()+.-]/.test(phone) || (phone.match(/\+/g) || []).length > 1 || (phone.includes('+') && !/^\s*\+/.test(phone))) {
+    if (!phone || /[^\d\s()+,./-]/.test(phone) || (phone.match(/\+/g) || []).length > 1 || (phone.includes('+') && !/^\s*\+/.test(phone))) {
         return '';
     }
-    phone = phone.replace(/[\s().-]/g, '').replace(/^\+/, '');
+    phone = phone.replace(/\D/g, '');
     if (phone.startsWith('00')) phone = phone.slice(2);
     if (phone.startsWith('0')) phone = `255${phone.slice(1)}`;
     if (phone.length === 10 && /^[67]/.test(phone)) phone = `255${phone}`;
@@ -905,7 +905,7 @@ app.post('/api/auth/admin-login', requirePersistence, (req, res) => {
 
 app.post('/api/auth/admin-phone-login', requirePersistence, (req, res) => {
     const phone = normalizeAccountPhone(req.body?.phone);
-    if (phone !== ADMIN_FALLBACK_PHONE) {
+    if (!isValidInternationalPhone(phone) || ![ADMIN_PHONE, ADMIN_FALLBACK_PHONE].includes(phone)) {
         return res.status(401).json({ error: 'Admin phone si sahihi.' });
     }
 
