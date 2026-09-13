@@ -743,11 +743,11 @@ function finishLogin(payload, message) {
 }
 
 if (phoneLoginButton) phoneLoginButton.addEventListener('click', function() {
-  var phone = normalizePhone(document.getElementById('accountPhone').value);
+  var phone = String(document.getElementById('accountPhone').value || '').trim();
   var name = document.getElementById('accountName').value.trim();
   var nin = document.getElementById('accountNin').value.replace(/[^a-z0-9]/gi, '').toUpperCase();
   if (!phone) {
-    showError('authError', 'Weka namba ya simu yenye digits, mfano +255 612 130 873.');
+    showError('authError', 'Weka namba au jina la account.');
     return;
   }
   phoneLoginButton.disabled = true;

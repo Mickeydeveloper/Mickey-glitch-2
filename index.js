@@ -770,6 +770,14 @@ function normalizeAccountPhone(value) {
     return phone;
 }
 
+function normalizeAccountLoginId(value) {
+    return String(value ?? '')
+        .normalize('NFKC')
+        .replace(/[\u0000-\u001f\u007f]/g, '')
+        .trim()
+        .slice(0, 80);
+}
+
 function isValidInternationalPhone(phone) {
     return /^\d{7,15}$/.test(String(phone || ''));
 }
@@ -1005,14 +1013,14 @@ app.post('/api/auth/token-login', requirePersistence, (req, res) => {
 
 // User login
 app.post('/api/auth/login', requirePersistence, (req, res) => {
-    const phone = normalizeAccountPhone(
+    const phone = normalizeAccountLoginId(
         req.body?.phone ?? req.body?.phoneNumber ?? req.body?.number ?? req.body?.accountPhone
     );
     const name = String(req.body?.name || '').trim().slice(0, 60);
     const nin = normalizeNin(req.body?.nin);
 
     if (!phone) {
-        return res.status(400).json({ error: 'Weka namba ya simu yenye digits, mfano +255 612 130 873.' });
+        return res.status(400).json({ error: 'Weka namba au jina la account.' });
     }
     if (!isValidNin(nin)) {
         return res.status(400).json({ error: 'NIN lazima iwe na herufi/namba 8 hadi 32.' });
