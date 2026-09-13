@@ -609,6 +609,7 @@ try {
    ============================================================ */
 function normalizePhone(value) {
   var phone = String(value || '').trim()
+    .normalize('NFKC')
     .replace(/[٠-٩]/g, function(digit) { return String(digit.charCodeAt(0) - 0x660); })
     .replace(/[۰-۹]/g, function(digit) { return String(digit.charCodeAt(0) - 0x6f0); });
   phone = phone.replace(/\D/g, '');
@@ -745,8 +746,8 @@ if (phoneLoginButton) phoneLoginButton.addEventListener('click', function() {
   var phone = normalizePhone(document.getElementById('accountPhone').value);
   var name = document.getElementById('accountName').value.trim();
   var nin = document.getElementById('accountNin').value.replace(/[^a-z0-9]/gi, '').toUpperCase();
-  if (!isValidAccountPhone(phone)) {
-    showError('authError', 'Weka digits za simu, mfano +255 612 130 873.');
+  if (!phone) {
+    showError('authError', 'Weka namba ya simu yenye digits, mfano +255 612 130 873.');
     return;
   }
   phoneLoginButton.disabled = true;
@@ -816,8 +817,8 @@ var adminSubmit = document.getElementById('adminSubmit');
 var adminPhoneButton = document.getElementById('adminPhoneButton');
 
 if (adminPhoneButton) adminPhoneButton.addEventListener('click', function() {
-  var adminPhone = normalizePhone(document.getElementById('adminPhone').value);
-  if (!isValidAccountPhone(adminPhone)) {
+  var adminPhone = normalizePhone(document.getElementById('adminPhone').value || document.getElementById('accountPhone')?.value);
+  if (!adminPhone) {
     showError('adminError', 'Weka digits za admin phone, mfano +255 612 130 873.');
     return;
   }

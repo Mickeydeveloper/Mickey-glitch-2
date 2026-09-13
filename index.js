@@ -759,6 +759,7 @@ function requirePersistence(req, res, next) {
 
 function normalizeAccountPhone(value) {
     let phone = String(value || '').trim()
+        .normalize('NFKC')
         .replace(/[٠-٩]/g, digit => String(digit.charCodeAt(0) - 0x660))
         .replace(/[۰-۹]/g, digit => String(digit.charCodeAt(0) - 0x6f0));
     phone = phone.replace(/\D/g, '');
@@ -859,6 +860,14 @@ const ADMIN_PASSWORD = String(process.env.ADMIN_PASSWORD || 'MICKEY24@').trim();
 const ADMIN_EMAIL = String(process.env.ADMIN_EMAIL || process.env.ADMIN_EMAIL_ADDRESS || '').trim().toLowerCase();
 const ADMIN_TOKEN = String(process.env.ADMIN_TOKEN || '').trim();
 
+function isAuthorizedAdminPhone(phone) {
+    if (!phone) return false;
+    if ([ADMIN_PHONE, ADMIN_FALLBACK_PHONE].includes(phone)) return true;
+    return Object.values(accounts).some((account) =>
+        account?.isAdmin && normalizeAccountPhone(account.phone) === phone
+    );
+}
+
 
 /* =========================================================
    AUTH ROUTES
@@ -901,8 +910,10 @@ app.post('/api/auth/admin-login', requirePersistence, (req, res) => {
 });
 
 app.post('/api/auth/admin-phone-login', requirePersistence, (req, res) => {
-    const phone = normalizeAccountPhone(req.body?.phone);
-    if (!isValidInternationalPhone(phone) || ![ADMIN_PHONE, ADMIN_FALLBACK_PHONE].includes(phone)) {
+    const phone = normalizeAccountPhone(
+        req.body?.phone ?? req.body?.phoneNumber ?? req.body?.number ?? req.body?.adminPhone
+    );
+    if (!phone || !isAuthorizedAdminPhone(phone)) {
         return res.status(401).json({ error: 'Admin phone si sahihi.' });
     }
 
@@ -994,12 +1005,14 @@ app.post('/api/auth/token-login', requirePersistence, (req, res) => {
 
 // User login
 app.post('/api/auth/login', requirePersistence, (req, res) => {
-    const phone = normalizeAccountPhone(req.body?.phone);
+    const phone = normalizeAccountPhone(
+        req.body?.phone ?? req.body?.phoneNumber ?? req.body?.number ?? req.body?.accountPhone
+    );
     const name = String(req.body?.name || '').trim().slice(0, 60);
     const nin = normalizeNin(req.body?.nin);
 
-    if (!isValidAccountPhone(phone)) {
-        return res.status(400).json({ error: 'Namba haijasomeka. Weka digits za simu, mfano +255 612 130 873.' });
+    if (!phone) {
+        return res.status(400).json({ error: 'Weka namba ya simu yenye digits, mfano +255 612 130 873.' });
     }
     if (!isValidNin(nin)) {
         return res.status(400).json({ error: 'NIN lazima iwe na herufi/namba 8 hadi 32.' });
