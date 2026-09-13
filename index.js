@@ -848,7 +848,9 @@ function ensureAccountToken(account) {
 
 function normalizeAccessToken(value) {
     return String(value || '')
-        .replace(/[\s`'"“”‘’]+/g, '')
+    .normalize('NFKC')
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    .replace(/[\s`'"“”‘’]+/g, '')
         .trim();
 }
 
@@ -861,9 +863,10 @@ function getAccountByToken(token) {
     if (embeddedToken && embeddedToken !== normalizedToken) candidates.push(embeddedToken);
 
     return Object.values(accounts).find((account) => {
-        const storedToken = account?.token || account?.accountToken || account?.accessToken;
-        const normalizedStoredToken = normalizeAccessToken(storedToken);
-        return candidates.includes(normalizedStoredToken);
+        const storedTokens = [account?.token, account?.accountToken, account?.accessToken]
+            .filter(Boolean)
+            .map(normalizeAccessToken);
+        return storedTokens.some((storedToken) => candidates.includes(storedToken));
     }) || null;
 }
 

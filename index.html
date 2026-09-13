@@ -705,7 +705,9 @@ if (loginPairButton) loginPairButton.addEventListener('click', function() {
 });
 userPanel.addEventListener('submit', function(e) {
   e.preventDefault();
-  var token = document.getElementById('accountTokenInput').value.trim();
+  var rawToken = document.getElementById('accountTokenInput').value;
+  var tokenMatch = rawToken.match(/Mickey-\d{6}/i);
+  var token = tokenMatch ? tokenMatch[0] : rawToken.replace(/[\s`'"“”‘’]+/g, '').trim();
 
   if (!token) {
     showError('authError', 'Bandika website token uliyotumiwa WhatsApp.');
@@ -713,6 +715,7 @@ userPanel.addEventListener('submit', function(e) {
   }
 
   userSubmit.disabled = true;
+  document.getElementById('accountTokenInput').value = token;
   userSubmit.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Inaingia...';
   clearError('authError');
 
