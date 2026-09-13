@@ -758,7 +758,13 @@ function requirePersistence(req, res, next) {
 }
 
 function normalizeAccountPhone(value) {
-    let phone = String(value || '').trim().replace(/\D/g, '');
+    let phone = String(value || '').trim()
+        .replace(/[٠-٩]/g, digit => String(digit.charCodeAt(0) - 0x660))
+        .replace(/[۰-۹]/g, digit => String(digit.charCodeAt(0) - 0x6f0));
+    if (!phone || /[^\d\s()+.-]/.test(phone) || (phone.match(/\+/g) || []).length > 1 || (phone.includes('+') && !/^\s*\+/.test(phone))) {
+        return '';
+    }
+    phone = phone.replace(/[\s().-]/g, '').replace(/^\+/, '');
     if (phone.startsWith('00')) phone = phone.slice(2);
     if (phone.startsWith('0')) phone = `255${phone.slice(1)}`;
     if (phone.length === 10 && /^[67]/.test(phone)) phone = `255${phone}`;
@@ -996,7 +1002,7 @@ app.post('/api/auth/login', requirePersistence, (req, res) => {
     const nin = normalizeNin(req.body?.nin);
 
     if (!isValidAccountPhone(phone)) {
-        return res.status(400).json({ error: 'Weka namba ya simu yenye digits.' });
+        return res.status(400).json({ error: 'Weka namba halali, mfano +255 612 130 873.' });
     }
     if (!isValidNin(nin)) {
         return res.status(400).json({ error: 'NIN lazima iwe na herufi/namba 8 hadi 32.' });
@@ -4270,6 +4276,11 @@ io.on(
 
                 sessions[userId].tgChatId =
                     null;
+
+                socket.emit('pair-account', {
+                    token: socket.account.token,
+                    account: accountResponse(socket.account)
+                });
 
                 await sessions[userId]
                     .initialize(normalizedNumber);

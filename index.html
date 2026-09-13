@@ -376,11 +376,18 @@
 
 <div id="botLinkModal" style="display:none;position:fixed;inset:0;z-index:50;background:rgba(5,7,12,.78);align-items:center;justify-content:center;padding:20px;">
   <div class="auth-card" style="width:min(440px,100%);">
-    <h2 style="font-size:1.35rem;">Una bot tayari?</h2>
-    <p class="subtitle">Weka token ya bot ili iunganishwe na account hii moja kwa moja.</p>
+    <h2 id="botLinkTitle" style="font-size:1.35rem;">Unganisha bot yako</h2>
+    <p class="subtitle" id="botLinkSubtitle">Weka token ya bot au pair WhatsApp mpya. Dashboard itafunguka bot ikisha-connect.</p>
     <div class="field"><label for="linkBotToken">Bot token</label><input type="password" id="linkBotToken" placeholder="Mickey-123456" autocomplete="one-time-code"></div>
     <button class="btn btn-primary" id="linkBotButton" type="button" style="width:100%;margin-top:16px;"><i class="fas fa-link"></i> Unganisha bot</button>
-    <button class="btn btn-ghost" id="skipBotLink" type="button" style="width:100%;margin-top:10px;">Endelea bila bot</button>
+    <div style="margin:18px 0;border-top:1px solid var(--stroke);"></div>
+    <div class="field"><label for="linkBotPhone">Huna token? Weka namba ya WhatsApp</label><input type="tel" id="linkBotPhone" placeholder="+255 612 130 873" autocomplete="tel" inputmode="tel"></div>
+    <button class="btn btn-ghost" id="pairBotButton" type="button" style="width:100%;margin-top:12px;"><i class="fas fa-mobile-screen-button"></i> Pair bot mpya</button>
+    <div id="linkPairResult" style="display:none;margin-top:14px;padding:14px;border:1px dashed var(--orange);border-radius:12px;text-align:center;">
+      <div style="font-size:.75rem;color:var(--text-2);margin-bottom:6px;">WhatsApp pairing code</div>
+      <strong id="linkPairCode" style="font-family:'Space Grotesk',sans-serif;font-size:1.5rem;letter-spacing:.12em;color:var(--lime);">—</strong>
+      <div id="linkPairStatus" style="font-size:.75rem;color:var(--text-2);margin-top:6px;">Subiri bot i-connect...</div>
+    </div>
     <div class="auth-error" id="botLinkError"></div>
   </div>
 </div>
@@ -536,7 +543,7 @@
       <div class="connect-card">
         <h3><i class="fas fa-list-check"></i> How it works</h3>
         <div class="steps">
-          <div class="step"><div class="step-num">1</div><div class="step-txt">Enter your WhatsApp number with country code (no +, no spaces).</div></div>
+          <div class="step"><div class="step-num">1</div><div class="step-txt">Enter your WhatsApp number with country code. You can use +, spaces, or dashes.</div></div>
           <div class="step"><div class="step-num">2</div><div class="step-txt">Click <strong>Request Pairing Code</strong> to generate a secure code.</div></div>
           <div class="step"><div class="step-num">3</div><div class="step-txt">Open WhatsApp → Settings → Linked Devices → Link a Device.</div></div>
           <div class="step"><div class="step-num">4</div><div class="step-txt">Paste the 8-digit code when prompted. Done!</div></div>
@@ -597,7 +604,11 @@ try {
    HELPERS
    ============================================================ */
 function normalizePhone(value) {
-  var phone = String(value || '').trim().replace(/\D/g, '');
+  var phone = String(value || '').trim()
+    .replace(/[٠-٩]/g, function(digit) { return String(digit.charCodeAt(0) - 0x660); })
+    .replace(/[۰-۹]/g, function(digit) { return String(digit.charCodeAt(0) - 0x6f0); });
+  if (!phone || /[^\d\s()+.-]/.test(phone) || (phone.match(/\+/g) || []).length > 1 || (phone.indexOf('+') >= 0 && !/^\s*\+/.test(phone))) return '';
+  phone = phone.replace(/[\s().-]/g, '').replace(/^\+/, '');
   if (phone.startsWith('00')) phone = phone.slice(2);
   if (phone.startsWith('0')) phone = '255' + phone.slice(1);
   if (phone.length === 10 && /^[67]/.test(phone)) phone = '255' + phone;
@@ -690,6 +701,28 @@ var userPanel = document.getElementById('userPanel');
 var userSubmit = document.getElementById('userSubmit');
 var loginPairButton = document.getElementById('loginPairButton');
 var phoneLoginButton = document.getElementById('phoneLoginButton');
+var waitingBotId = '';
+
+function setBotLinkWaiting(message) {
+  var title = document.getElementById('botLinkTitle');
+  var subtitle = document.getElementById('botLinkSubtitle');
+  if (title) title.textContent = 'Bot ina-connect...';
+  if (subtitle) subtitle.textContent = message || 'Subiri WhatsApp i-connect. Dashboard itafunguka ikimaliza.';
+  var modal = document.getElementById('botLinkModal');
+  if (modal) modal.style.display = 'flex';
+  var linkButton = document.getElementById('linkBotButton');
+  var pairButton = document.getElementById('pairBotButton');
+  if (linkButton) linkButton.disabled = true;
+  if (pairButton) pairButton.disabled = true;
+}
+
+function finishBotConnection(botIds) {
+  if (!waitingBotId || !botIds || botIds.indexOf(waitingBotId) < 0) return;
+  waitingBotId = '';
+  var modal = document.getElementById('botLinkModal');
+  if (modal) modal.style.display = 'none';
+  showToast('Bot ime-connect. Karibu kwenye dashboard!');
+}
 
 function openBotLinkPrompt() {
   var modal = document.getElementById('botLinkModal');
@@ -710,7 +743,7 @@ if (phoneLoginButton) phoneLoginButton.addEventListener('click', function() {
   var name = document.getElementById('accountName').value.trim();
   var nin = document.getElementById('accountNin').value.replace(/[^a-z0-9]/gi, '').toUpperCase();
   if (!isValidAccountPhone(phone)) {
-    showError('authError', 'Weka namba ya simu yenye digits.');
+    showError('authError', 'Weka namba halali, mfano +255 612 130 873.');
     return;
   }
   phoneLoginButton.disabled = true;
@@ -830,7 +863,7 @@ adminPanel.addEventListener('submit', function(e) {
 });
 
 var linkBotButton = document.getElementById('linkBotButton');
-var skipBotLink = document.getElementById('skipBotLink');
+var pairBotButton = document.getElementById('pairBotButton');
 if (linkBotButton) linkBotButton.addEventListener('click', function() {
   var botToken = document.getElementById('linkBotToken').value
     .replace(/[\s`'"“”‘’]+/g, '').trim();
@@ -848,15 +881,24 @@ if (linkBotButton) linkBotButton.addEventListener('click', function() {
   .then(function(res) {
     if (!res.ok) throw new Error(res.data.error || 'Bot haijaunganishwa.');
     applyUserToUI(res.data.account);
-    document.getElementById('botLinkModal').style.display = 'none';
-    showToast('Bot imeunganishwa na account!');
+    waitingBotId = (res.data.account.botIds || []).slice(-1)[0] || '';
+    setBotLinkWaiting('Token imekubaliwa. Subiri bot i-connect kabla ya kuingia dashboard.');
     if (socket) socket.emit('account-auth', accountToken);
   })
   .catch(function(err) { showError('botLinkError', err.message); })
-  .finally(function() { linkBotButton.disabled = false; });
+  .finally(function() { linkBotButton.disabled = Boolean(waitingBotId); });
 });
-if (skipBotLink) skipBotLink.addEventListener('click', function() {
-  document.getElementById('botLinkModal').style.display = 'none';
+if (pairBotButton) pairBotButton.addEventListener('click', function() {
+  var number = normalizePhone(document.getElementById('linkBotPhone').value);
+  if (!isValidInternationalPhone(number)) {
+    showError('botLinkError', 'Weka namba halali ya WhatsApp, mfano +255 612 130 873.');
+    return;
+  }
+  pairBotButton.disabled = true;
+  pairBotButton.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Inaunda pairing code...';
+  var result = document.getElementById('linkPairResult');
+  if (result) result.style.display = 'block';
+  if (socket) socket.emit('pair-request', { number: number });
 });
 
 /* ============================================================
@@ -903,7 +945,18 @@ if (socket) {
       if (u) u.textContent = state.stats.totalUsers || 0;
       if (m) m.textContent = state.stats.totalMessages || 0;
     }
+    finishBotConnection((state.bots || []).filter(function(bot) { return bot.running; }).map(function(bot) { return bot.id; }));
     renderBots(state.bots || []);
+  });
+
+  socket.on('pair-account', function(payload) {
+    if (!payload || !payload.token || !payload.account) return;
+    accountToken = payload.token;
+    localStorage.setItem('mickey_account_token', accountToken);
+    applyUserToUI(payload.account);
+    waitingBotId = (payload.account.botIds || []).slice(-1)[0] || '';
+    setBotLinkWaiting('Pairing code iko hapa chini. Ikitumika, subiri bot i-connect.');
+    socket.emit('account-auth', accountToken);
   });
 
   socket.on('dashboard-stats', function(stats) {
@@ -925,6 +978,12 @@ if (socket) {
     if (loginCode) loginCode.textContent = code || '—';
     var loginStatus = document.getElementById('loginPairStatus');
     if (loginStatus) loginStatus.textContent = 'Ingiza code hii kwenye WhatsApp > Linked Devices. Token itatumwa baada ya kuunganishwa.';
+    var linkPairCode = document.getElementById('linkPairCode');
+    if (linkPairCode) linkPairCode.textContent = code || '—';
+    var linkPairStatus = document.getElementById('linkPairStatus');
+    if (linkPairStatus) linkPairStatus.textContent = 'Ingiza code hii kwenye WhatsApp. Subiri bot i-connect...';
+    var pairButton = document.getElementById('pairBotButton');
+    if (pairButton) pairButton.innerHTML = '<i class="fas fa-hourglass-half"></i> Inasubiri connection...';
     var pc = document.getElementById('pairingCode');
     if (pc) pc.innerText = code;
     setStatus('Pairing code imetengenezwa. Link ndani ya sekunde 60.', 'success');
@@ -937,6 +996,10 @@ if (socket) {
     if (loginButton) { loginButton.disabled = false; loginButton.innerHTML = '<i class="fas fa-link"></i> Pair WhatsApp from login'; }
     var loginStatus = document.getElementById('loginPairStatus');
     if (loginStatus) loginStatus.textContent = msg || 'Pairing imeshindikana.';
+    var pairButton = document.getElementById('pairBotButton');
+    if (pairButton) { pairButton.disabled = false; pairButton.innerHTML = '<i class="fas fa-mobile-screen-button"></i> Pair bot mpya'; }
+    var linkPairStatus = document.getElementById('linkPairStatus');
+    if (linkPairStatus) linkPairStatus.textContent = msg || 'Pairing imeshindikana.';
     setStatus(msg || 'Imeshindikana.', 'error');
   });
 
@@ -946,7 +1009,7 @@ if (socket) {
       if (pc) { pc.innerText = 'LINKED'; pc.style.color = 'var(--success)'; }
       setStatus('Device imeunganishwa!', 'success');
       showToast('Connected!');
-      setTimeout(function(){ location.reload(); }, 3000);
+      if (s.user === waitingBotId) finishBotConnection([s.user]);
     }
   });
 }
