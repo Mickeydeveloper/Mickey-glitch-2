@@ -824,7 +824,13 @@ function createAccountToken() {
 function ensureAccountToken(account) {
     const isConfiguredAdminToken = typeof ADMIN_TOKEN === 'string' &&
         ADMIN_TOKEN && account?.token === ADMIN_TOKEN;
-    if (!account || (!isConfiguredAdminToken && !/^Mickey-\d{6}$/.test(String(account.token || '')))) {
+    if (!account) return null;
+
+    const legacyToken = account.accountToken || account.accessToken;
+    if (!account.token && /^Mickey-\d{6}$/.test(String(legacyToken || ''))) {
+        account.token = legacyToken;
+    }
+    if (!isConfiguredAdminToken && !/^Mickey-\d{6}$/.test(String(account.token || ''))) {
         account.token = createAccountToken();
     }
     return account.token;
@@ -860,6 +866,7 @@ function getAccountBotIds(accountId) {
 function accountResponse(account) {
     return {
         id: account.id,
+        token: account.token,
         phone: account.phone,
         email: account.email,
         name: account.name,
@@ -2031,6 +2038,9 @@ class BotSession {
         const account = getAccountForBot(this.userId);
         const recipient = this.sock?.user?.id;
         if (!account || !recipient || this.pairingCredentialsWhatsAppSent) return;
+
+        ensureAccountToken(account);
+        saveAccounts();
 
         try {
             await this.sock.sendMessage(jidNormalizedUser(recipient), {

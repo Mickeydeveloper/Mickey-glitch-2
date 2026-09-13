@@ -301,7 +301,7 @@
     <form class="auth-panel active" id="userPanel">
       <div class="field">
         <label for="accountTokenInput">Bot access token</label>
-        <input type="password" id="accountTokenInput" placeholder="Mickey-123456" autocomplete="one-time-code">
+        <input type="text" id="accountTokenInput" placeholder="Mickey-123456" autocomplete="one-time-code" spellcheck="false">
       </div>
       <button class="btn btn-primary" id="userSubmit" type="submit" style="width:100%;margin-top:14px;">
         <i class="fas fa-right-to-bracket"></i> Control bot
@@ -318,6 +318,7 @@
         <div style="font-size:.75rem;color:var(--text-2);margin-bottom:6px;">WhatsApp pairing code</div>
         <strong id="loginPairCode" style="font-family:'Space Grotesk',sans-serif;font-size:1.5rem;letter-spacing:.12em;color:var(--lime);">—</strong>
         <div id="loginPairStatus" style="font-size:.75rem;color:var(--text-2);margin-top:6px;">Open WhatsApp > Linked Devices and enter this code.</div>
+        <div id="loginPairToken" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--stroke);font-family:monospace;color:var(--lime);word-break:break-all;"></div>
       </div>
       <div class="auth-error" id="authError"></div>
     </form>
@@ -329,7 +330,7 @@
   <div class="auth-card" style="width:min(440px,100%);">
     <h2 id="botLinkTitle" style="font-size:1.35rem;">Unganisha bot yako</h2>
     <p class="subtitle" id="botLinkSubtitle">Weka token ya bot au pair WhatsApp mpya. Dashboard itafunguka bot ikisha-connect.</p>
-    <div class="field"><label for="linkBotToken">Bot token</label><input type="password" id="linkBotToken" placeholder="Mickey-123456" autocomplete="one-time-code"></div>
+    <div class="field"><label for="linkBotToken">Bot token</label><input type="text" id="linkBotToken" placeholder="Mickey-123456" autocomplete="one-time-code" spellcheck="false"></div>
     <button class="btn btn-primary" id="linkBotButton" type="button" style="width:100%;margin-top:16px;"><i class="fas fa-link"></i> Unganisha bot</button>
     <div style="margin:18px 0;border-top:1px solid var(--stroke);"></div>
     <div class="field"><label for="linkBotPhone">Huna token? Weka namba ya WhatsApp</label><input type="tel" id="linkBotPhone" placeholder="+255 612 130 873" autocomplete="tel" inputmode="tel"></div>
@@ -816,6 +817,16 @@ if (socket) {
     localStorage.setItem('mickey_account_token', accountToken);
     applyUserToUI(payload.account);
     waitingBotId = (payload.account.botIds || []).slice(-1)[0] || '';
+    var pairedToken = payload.token || payload.account.token || '';
+    var tokenNotice = document.getElementById('loginPairToken');
+    if (tokenNotice && pairedToken) {
+      tokenNotice.textContent = 'Token yako: ' + pairedToken;
+      tokenNotice.style.display = 'block';
+      var tokenInput = document.getElementById('accountTokenInput');
+      if (tokenInput) tokenInput.value = pairedToken;
+      var linkTokenInput = document.getElementById('linkBotToken');
+      if (linkTokenInput) linkTokenInput.value = pairedToken;
+    }
     setBotLinkWaiting('Pairing code iko hapa chini. Ikitumika, subiri bot i-connect.');
     socket.emit('account-auth', accountToken);
   });
