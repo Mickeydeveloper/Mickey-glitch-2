@@ -311,8 +311,12 @@
     <!-- User Panel -->
     <form class="auth-panel active" id="userPanel">
       <div class="field">
-        <label for="accountPhone">International phone number</label>
-        <input type="tel" id="accountPhone" placeholder="+447911123456" autocomplete="tel" inputmode="tel">
+        <label for="accountEmail">Email address</label>
+        <input type="email" id="accountEmail" placeholder="you@example.com" autocomplete="email" required>
+      </div>
+      <div class="field" style="margin-top:12px;">
+        <label for="accountPhone">Phone number <span style="color:var(--text-3);font-weight:400;">(optional)</span></label>
+        <input type="tel" id="accountPhone" placeholder="+255 612 130 873" autocomplete="tel" inputmode="tel">
       </div>
       <div class="field" style="margin-top:12px;">
         <label for="accountName">Name (new account)</label>
@@ -323,7 +327,7 @@
         <input type="text" id="accountNin" placeholder="e.g. 19901234567890123456" autocomplete="off" maxlength="32" spellcheck="false">
       </div>
       <button class="btn btn-ghost" id="phoneLoginButton" type="button" style="width:100%;margin-top:14px;">
-        <i class="fas fa-user-plus"></i> Create / login with phone
+        <i class="fas fa-user-plus"></i> Create / login with email
       </button>
       <details class="auth-advanced">
         <summary>Use an existing bot token instead</summary>
@@ -743,15 +747,16 @@ function finishLogin(payload, message) {
 }
 
 if (phoneLoginButton) phoneLoginButton.addEventListener('click', function() {
+  var email = String(document.getElementById('accountEmail').value || '').trim();
   var phone = String(document.getElementById('accountPhone').value || '').trim();
   var name = document.getElementById('accountName').value.trim();
   var nin = document.getElementById('accountNin').value.replace(/[^a-z0-9]/gi, '').toUpperCase();
-  if (!phone) {
-    showError('authError', 'Weka namba au jina la account.');
+  if (!email) {
+    showError('authError', 'Weka email ya account.');
     return;
   }
   phoneLoginButton.disabled = true;
-  fetch('/api/auth/login', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ phone: phone, name: name, nin: nin }) })
+  fetch('/api/auth/login', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ email: email, phone: phone, name: name, nin: nin }) })
     .then(readJsonResponse)
     .then(function(res) {
       if (!res.ok) throw new Error(res.data.error || 'Account haikuweza kufunguliwa.');

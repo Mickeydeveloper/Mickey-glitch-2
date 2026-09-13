@@ -778,6 +778,14 @@ function normalizeAccountLoginId(value) {
         .slice(0, 80);
 }
 
+function normalizeAccountEmail(value) {
+    return normalizeAccountLoginId(value).toLowerCase();
+}
+
+function isValidAccountEmail(email) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || ''));
+}
+
 function isValidInternationalPhone(phone) {
     return /^\d{7,15}$/.test(String(phone || ''));
 }
@@ -1016,27 +1024,39 @@ app.post('/api/auth/login', requirePersistence, (req, res) => {
     const phone = normalizeAccountLoginId(
         req.body?.phone ?? req.body?.phoneNumber ?? req.body?.number ?? req.body?.accountPhone
     );
+    const email = normalizeAccountEmail(req.body?.email ?? req.body?.accountEmail);
     const name = String(req.body?.name || '').trim().slice(0, 60);
     const nin = normalizeNin(req.body?.nin);
 
-    if (!phone) {
-        return res.status(400).json({ error: 'Weka namba au jina la account.' });
+    if (!email && !phone) {
+        return res.status(400).json({ error: 'Weka email ya account.' });
+    }
+    if (email && !isValidAccountEmail(email)) {
+        return res.status(400).json({ error: 'Weka email sahihi ya account.' });
     }
     if (!isValidNin(nin)) {
         return res.status(400).json({ error: 'NIN lazima iwe na herufi/namba 8 hadi 32.' });
     }
 
-    const id = `account_${phone}`;
+    const existingAccount = email && Object.values(accounts).find((account) =>
+        normalizeAccountEmail(account.email) === email
+    );
+    const id = existingAccount?.id || (email
+        ? `account_email_${Buffer.from(email).toString('base64url')}`
+        : `account_${phone}`);
     const account = accounts[id] || {
         id,
         phone,
-        name: name || `Account ${phone}`,
+        email,
+        name: name || `Account ${email || phone}`,
         createdAt: new Date().toISOString()
     };
 
+    if (email) account.email = email;
+    if (phone) account.phone = phone;
     if (name) account.name = name;
     if (nin) account.nin = nin;
-    if (phone === ADMIN_PHONE) {
+    if (phone && phone === ADMIN_PHONE) {
         account.isAdmin = true;
         account.name = account.name || 'Admin Mickey';
     }
