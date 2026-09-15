@@ -47,9 +47,9 @@ async function getAudience(sock, chatId, msg, customJid = null) {
 async function autoStatusFromMedia(sock, chatId, msg) {
     try {
         // Only process if message is a reply to media
-        const quoted = msg?.quoted || msg?.msg?.contextInfo?.quotedMessage;
+        const quotedWrapper = msg?.quoted || msg?.msg?.contextInfo?.quotedMessage;
+        const quoted = quotedWrapper?.message || quotedWrapper;
         if (!quoted) return false;
-
         // Check if quoted has media
         let hasMedia = false;
         let mediaType = null;
@@ -93,7 +93,7 @@ async function autoStatusFromMedia(sock, chatId, msg) {
             ...(mediaMimetype ? { mimetype: mediaMimetype } : {}),
             ...(mediaType !== 'audio' && caption ? { caption: caption } : {}),
             contextInfo: {
-                isGroupStatus: isGroup,
+                isGroupStatus: false,
                 pairedMediaType: 'NOT_PAIRED_MEDIA',
                 statusAudienceMetadata: {
                     audienceType: 1,
@@ -143,9 +143,9 @@ const tostatusCommand = async (sock, chatId, senderId, text, msg) => {
 
         // ===== AUTO-STATUS CHECK =====
         // If reply to media and no special command, auto-post status
-        const quoted = msg?.quoted || msg?.msg?.contextInfo?.quotedMessage;
+        const quotedWrapper = ctx.quoted || msg?.quoted || msg?.msg?.contextInfo?.quotedMessage;
+        const quoted = quotedWrapper?.message || quotedWrapper;
         const hasQuotedMedia = quoted?.imageMessage || quoted?.videoMessage || quoted?.audioMessage || quoted?.documentMessage;
-
         // Check if this is an auto-status trigger (reply to media with any text)
         if (hasQuotedMedia && !normalizedArgs.some(a => a.match(/^\.?(tostatus|status|gs)/i))) {
             // Only auto-post if the message is not a command (starts with .)
@@ -300,7 +300,7 @@ const tostatusCommand = async (sock, chatId, senderId, text, msg) => {
                 ...(mediaMimetype ? { mimetype: mediaMimetype } : {}),
                 ...(mediaType !== 'audio' ? { caption: input } : {}),
                 contextInfo: {
-                    isGroupStatus: isGroup,
+                    isGroupStatus: false,
                     pairedMediaType: 'NOT_PAIRED_MEDIA',
                     statusAudienceMetadata: {
                         audienceType: 1,
@@ -313,7 +313,7 @@ const tostatusCommand = async (sock, chatId, senderId, text, msg) => {
             content = {
                 text: input,
                 contextInfo: {
-                    isGroupStatus: isGroup,
+                    isGroupStatus: false,
                     pairedMediaType: 'NOT_PAIRED_MEDIA',
                     statusAudienceMetadata: {
                         audienceType: 1,
@@ -343,7 +343,7 @@ const tostatusCommand = async (sock, chatId, senderId, text, msg) => {
         else if (!isGroup) targetMsg = 'contacts';
 
         await sock.sendMessage(target, {
-            text: `✅ Status sent to ${targetMsg}!\n━━━━━━━━━━━━━━━━━━━\n📝 "${input || 'Media'}"`
+            text: `✅ Bot WhatsApp Status imewekwa!\n━━━━━━━━━━━━━━━━━━━\n📝 "${input || 'Media'}"`
         }, { quoted: msg });
 
         console.log('[tostatus] Status sent successfully');
