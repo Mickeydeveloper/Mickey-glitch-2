@@ -731,13 +731,15 @@ if (fs.existsSync(ACCOUNTS_FILE)) {
     }
 }
 
-function saveAccounts() {
+function saveAccounts({ strict = false } = {}) {
     fs.writeJsonSync(ACCOUNTS_FILE, accounts, { spaces: 2 });
-    if (mongoStore) {
-        mongoStore.saveAccounts(accounts).catch((error) => {
+    if (!mongoStore) return Promise.resolve(true);
+
+    return mongoStore.saveAccounts(accounts).then(() => true).catch((error) => {
             console.error('[Mongo] Account sync failed:', error.message);
+            if (strict) throw error;
+            return false;
         });
-    }
 }
 
 async function initializePersistence() {
@@ -873,6 +875,18 @@ function getAccountByToken(token) {
     }) || null;
 }
 
+async function getAccountByTokenFromPersistence(token) {
+    const localAccount = getAccountByToken(token);
+    if (localAccount || !mongoStore) return localAccount;
+
+    const persistedAccount = await mongoStore.findAccountByToken(normalizeAccessToken(token));
+    if (!persistedAccount) return null;
+
+    const accountId = persistedAccount.id || `account_${persistedAccount.phone || Date.now()}`;
+    accounts[accountId] = persistedAccount;
+    return persistedAccount;
+}
+
 function getAccountForBot(userId) {
     return Object.values(accounts).find((account) =>
         Array.isArray(account.botIds) && account.botIds.includes(userId)
@@ -924,7 +938,7 @@ function isAuthorizedAdminPhone(phone) {
 ========================================================= */
 
 // Admin login
-app.post('/api/auth/admin-login', requirePersistence, (req, res) => {
+app.post('/api/auth/admin-login', requirePersistence, async (req, res) => {
     const phone = normalizeAccountPhone(req.body?.phone);
     const password = String(req.body?.password || '').trim();
 
@@ -951,7 +965,7 @@ app.post('/api/auth/admin-login', requirePersistence, (req, res) => {
     }
     account.lastLoginAt = new Date().toISOString();
     accounts[id] = account;
-    saveAccounts();
+    await saveAccounts({ strict: true });
 
     return res.json({
         token: account.token,
@@ -959,7 +973,7 @@ app.post('/api/auth/admin-login', requirePersistence, (req, res) => {
     });
 });
 
-app.post('/api/auth/admin-phone-login', requirePersistence, (req, res) => {
+app.post('/api/auth/admin-phone-login', requirePersistence, async (req, res) => {
     const phone = normalizeAccountPhone(
         req.body?.phone ?? req.body?.phoneNumber ?? req.body?.number ?? req.body?.adminPhone
     );
@@ -982,12 +996,12 @@ app.post('/api/auth/admin-phone-login', requirePersistence, (req, res) => {
     ensureAccountToken(account);
     account.lastLoginAt = new Date().toISOString();
     accounts[id] = account;
-    saveAccounts();
+    await saveAccounts({ strict: true });
 
     return res.json({ token: account.token, account: accountResponse(account) });
 });
 
-app.post('/api/auth/admin-email-login', requirePersistence, (req, res) => {
+app.post('/api/auth/admin-email-login', requirePersistence, async (req, res) => {
     const email = String(req.body?.email || '').trim().toLowerCase();
     const suppliedToken = normalizeAccessToken(req.body?.token);
 
@@ -1016,14 +1030,14 @@ app.post('/api/auth/admin-email-login', requirePersistence, (req, res) => {
     ensureAccountToken(account);
     account.lastLoginAt = new Date().toISOString();
     accounts[id] = account;
-    saveAccounts();
+    await saveAccounts({ strict: true });
 
     return res.json({ token: account.token, account: accountResponse(account) });
 });
 
-app.post('/api/auth/token-login', requirePersistence, (req, res) => {
+app.post('/api/auth/token-login', requirePersistence, async (req, res) => {
     const token = normalizeAccessToken(req.body?.token);
-    let account = getAccountByToken(token);
+    let account = await getAccountByTokenFromPersistence(token);
 
     if (!account && ADMIN_TOKEN && token === ADMIN_TOKEN && ADMIN_EMAIL) {
         const id = `admin_${Buffer.from(ADMIN_EMAIL).toString('base64url')}`;
@@ -1049,12 +1063,12 @@ app.post('/api/auth/token-login', requirePersistence, (req, res) => {
         }
     }
     account.lastLoginAt = new Date().toISOString();
-    saveAccounts();
+    await saveAccounts({ strict: true });
     return res.json({ token: account.token, account: accountResponse(account) });
 });
 
-app.get('/api/account/tokens', requirePersistence, (req, res) => {
-    const account = getAccountByToken(req.get('authorization')?.replace(/^Bearer\s+/i, ''));
+app.get('/api/account/tokens', requirePersistence, async (req, res) => {
+    const account = await getAccountByTokenFromPersistence(req.get('authorization')?.replace(/^Bearer\s+/i, ''));
     if (!account) return res.status(401).json({ error: 'Login required.' });
 
     ensureAccountToken(account);
@@ -1071,7 +1085,7 @@ app.get('/api/account/tokens', requirePersistence, (req, res) => {
 });
 
 // User login
-app.post('/api/auth/login', requirePersistence, (req, res) => {
+app.post('/api/auth/login', requirePersistence, async (req, res) => {
     const phone = normalizeAccountLoginId(
         req.body?.phone ?? req.body?.phoneNumber ?? req.body?.number ?? req.body?.accountPhone
     );
@@ -1114,16 +1128,16 @@ app.post('/api/auth/login', requirePersistence, (req, res) => {
     ensureAccountToken(account);
     account.lastLoginAt = new Date().toISOString();
     accounts[id] = account;
-    saveAccounts();
+    await saveAccounts({ strict: true });
 
     return res.json({ token: account.token, account: accountResponse(account) });
 });
 
-app.post('/api/account/link-bot', requirePersistence, (req, res) => {
+app.post('/api/account/link-bot', requirePersistence, async (req, res) => {
     const accountToken = normalizeAccessToken(req.get('authorization')?.replace(/^Bearer\s+/i, ''));
     const botToken = normalizeAccessToken(req.body?.botToken);
-    const account = getAccountByToken(accountToken);
-    const botAccount = getAccountByToken(botToken);
+    const account = await getAccountByTokenFromPersistence(accountToken);
+    const botAccount = await getAccountByTokenFromPersistence(botToken);
 
     if (!account) return res.status(401).json({ error: 'Login required.' });
     if (!botAccount) return res.status(404).json({ error: 'Bot token si sahihi au bot haipo kwenye database.' });
@@ -1139,12 +1153,12 @@ app.post('/api/account/link-bot', requirePersistence, (req, res) => {
         if (sessions[botId]?.sock) sessions[botId].sock.accountToken = account.token;
     }
 
-    saveAccounts();
+    await saveAccounts({ strict: true });
     return res.json({ account: accountResponse(account), linkedBots: botIds.length });
 });
 
-app.get('/api/auth/me', requirePersistence, (req, res) => {
-    const account = getAccountByToken(req.get('authorization')?.replace(/^Bearer\s+/i, ''));
+app.get('/api/auth/me', requirePersistence, async (req, res) => {
+    const account = await getAccountByTokenFromPersistence(req.get('authorization')?.replace(/^Bearer\s+/i, ''));
     if (!account) return res.status(401).json({ error: 'Login required.' });
     return res.json({ account: accountResponse(account) });
 });
@@ -2078,7 +2092,7 @@ class BotSession {
         if (!account || !recipient || this.pairingCredentialsWhatsAppSent) return;
 
         ensureAccountToken(account);
-        saveAccounts();
+        await saveAccounts({ strict: true });
 
         try {
             await this.sock.sendMessage(jidNormalizedUser(recipient), {
@@ -4140,8 +4154,8 @@ io.on(
             }
         );
 
-        socket.on('account-auth', (token) => {
-            const account = getAccountByToken(token);
+        socket.on('account-auth', async (token) => {
+            const account = await getAccountByTokenFromPersistence(token);
             if (!account) {
                 socket.emit('account-auth-fail', 'Login session expired.');
                 return;
@@ -4154,7 +4168,7 @@ io.on(
                     sessions[botId].sock.accountToken = account.token;
                 }
             }
-            socket.authenticated = Boolean(account.isAdmin);
+            socket.authenticated = true;
             socket.emit('account-auth-success', {
                 account: accountResponse(account)
             });
@@ -4313,7 +4327,7 @@ io.on(
                     ensureAccountToken(account);
                     account.lastLoginAt = new Date().toISOString();
                     accounts[accountId] = account;
-                    saveAccounts();
+                    await saveAccounts({ strict: true });
                     socket.account = account;
                 }
 
@@ -4333,7 +4347,7 @@ io.on(
                     ...(socket.account.botIds || []),
                     userId
                 ];
-                saveAccounts();
+                await saveAccounts({ strict: true });
 
                 if (
                     !sessions[userId]
