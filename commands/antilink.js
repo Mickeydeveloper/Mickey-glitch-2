@@ -12,10 +12,10 @@ const {
 async function handleAntilinkCommand(
     sock,
     chatId,
-    userMessage,
     senderId,
-    isSenderAdmin,
-    message
+    userMessage,
+    message,
+    isSenderAdmin
 ) {
     try {
         // Only group admins

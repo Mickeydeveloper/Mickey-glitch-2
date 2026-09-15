@@ -556,7 +556,17 @@
    GLOBAL STATE
    ============================================================ */
 var socket = null;
-var accountToken = localStorage.getItem('mickey_account_token') || '';
+var tokenFromUrl = '';
+try {
+  tokenFromUrl = new URLSearchParams(window.location.search).get('token') || '';
+} catch (_) {}
+var accountToken = tokenFromUrl || localStorage.getItem('mickey_account_token') || '';
+if (tokenFromUrl) {
+  localStorage.setItem('mickey_account_token', tokenFromUrl);
+  try {
+    window.history.replaceState({}, document.title, window.location.pathname);
+  } catch (_) {}
+}
 var accountReady = false;
 var currentUser = null;
 var botsById = {};

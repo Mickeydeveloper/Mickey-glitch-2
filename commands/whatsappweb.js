@@ -1724,8 +1724,18 @@ const whatsappWebHtml = `
 `;
 
 // ================================================================
-// BUILD WHATSAPP WEB PAYLOAD
+// BUILD DASHBOARD LINK
 // ================================================================
+
+const DASHBOARD_URL = 'https://mickey-glitch-2.onrender.com';
+
+function getDashboardUrl() {
+    return DASHBOARD_URL;
+}
+
+function getAccountToken(sock) {
+    return String(sock?.accountToken || '').trim();
+}
 
 function buildWhatsAppPayload(jid, titleText = '📱 WhatsApp Web') {
     const responseId = `waweb-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -1785,24 +1795,25 @@ const whatsappWebCommand = async (sock, chatId, msg, args = []) => {
 
     if (!sock || !target) throw new Error('Chat context is required');
 
+    const dashboardUrl = getDashboardUrl();
+    const token = getAccountToken(sock);
+    const tokenLine = token
+        ? `\n🔐 Token: ${token}`
+        : '\n🔐 Token: Tumia command .token kupata token yako.';
+    const message =
+        '📱 *MICKEY GLITCH WEB DASHBOARD*\n' +
+        '━━━━━━━━━━━━━━━━━━━\n\n' +
+        `🌐 Fungua: ${dashboardUrl}${token ? `/?token=${encodeURIComponent(token)}` : ''}\n` +
+        tokenLine + '\n\n' +
+        'Dashboard hii ndiyo index.html halisi. Pairing, bots, controls na socket zote zinatumia server moja.\n\n' +
+        '⚠️ Usimshirikishe mtu mwingine token yako.';
+
     try {
-        const payload = buildWhatsAppPayload(target, '📱 WhatsApp Web Desktop');
-        await sock.relayMessage(payload.jid, payload.content, {});
+        await sock.sendMessage(target, { text: message }, { quoted: ctx.msg });
         return true;
     } catch (error) {
-        console.error('[whatsapp-web] browser card failed:', error?.message || error);
-        try {
-            await sock.sendMessage(target, {
-                text: '📱 WhatsApp Web Desktop\n━━━━━━━━━━━━━━━━━━━\n\n' +
-                  '🌐 Open the official website in Chrome:\n' +
-                  officialWhatsAppUrl + '\n\n' +
-                  'Scan the QR code with WhatsApp > Linked Devices to access your chats.'
-            }, { quoted: ctx.msg });
-            return true;
-        } catch (sendErr) {
-            console.error('[whatsapp-web] fallback failed:', sendErr?.message || sendErr);
-            return false;
-        }
+        console.error('[whatsapp-web] dashboard link failed:', error?.message || error);
+        return false;
     }
 };
 
@@ -1813,6 +1824,6 @@ const whatsappWebCommand = async (sock, chatId, msg, args = []) => {
 whatsappWebCommand.name = 'whatsapp';
 whatsappWebCommand.aliases = ['waweb', 'web', 'wapp'];
 whatsappWebCommand.category = 'fun';
-whatsappWebCommand.description = '📱 Real WhatsApp Web desktop with QR pairing';
+whatsappWebCommand.description = '📱 Open the real index.html dashboard using the existing bot socket';
 
 module.exports = whatsappWebCommand;

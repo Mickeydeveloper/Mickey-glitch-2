@@ -452,6 +452,10 @@ const {
     handleConnection
 } = require('./commands/connection');
 
+const {
+    handleLinkDetection
+} = require('./commands/antilink');
+
 
 /* =========================================================
    EXPRESS / SOCKET.IO
@@ -2895,6 +2899,16 @@ class BotSession {
                                             buttonCommand ||
                                             ''
                                         ).trim();
+
+                                    if (!isMe && isGroup && text) {
+                                        await handleLinkDetection(
+                                            this.sock,
+                                            from,
+                                            msg,
+                                            text,
+                                            msg.key.participant
+                                        );
+                                    }
 
 
                                     if (
