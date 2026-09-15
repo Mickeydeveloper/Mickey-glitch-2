@@ -871,7 +871,9 @@ function getAccountByToken(token) {
         const storedTokens = [account?.token, account?.accountToken, account?.accessToken]
             .filter(Boolean)
             .map(normalizeAccessToken);
-        return storedTokens.some((storedToken) => candidates.includes(storedToken));
+        return storedTokens.some((storedToken) => candidates.some((candidate) =>
+            storedToken.toLowerCase() === candidate.toLowerCase()
+        ));
     }) || null;
 }
 
@@ -879,12 +881,14 @@ async function getAccountByTokenFromPersistence(token) {
     const localAccount = getAccountByToken(token);
     if (localAccount || !mongoStore) return localAccount;
 
-    const persistedAccount = await mongoStore.findAccountByToken(normalizeAccessToken(token));
-    if (!persistedAccount) return null;
+    const result = await mongoStore.findAccountByToken(normalizeAccessToken(token));
+    if (!result?.account) return null;
 
-    const accountId = persistedAccount.id || `account_${persistedAccount.phone || Date.now()}`;
-    accounts[accountId] = persistedAccount;
-    return persistedAccount;
+    const account = result.account;
+    const accountId = result.accountId || account.id || `account_${account.phone || Date.now()}`;
+    account.id = account.id || accountId;
+    accounts[accountId] = account;
+    return account;
 }
 
 function getAccountForBot(userId) {
