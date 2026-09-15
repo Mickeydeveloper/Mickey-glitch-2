@@ -24,6 +24,11 @@ module.exports = {
         timezone: 'Africa/Dar_es_Salaam',
         label: 'East Africa Time'
     },
+  acrcloud: {
+    host: 'identify-eu-west-1.acrcloud.com',
+    access_key: '250b268b836bc2186fbf49c9a31f904d',
+    access_secret: '2nArZpgRhyRoFCZuYMnlhqixwuSjei4QE14vMhkg'
+  },
     getBotIdentity() {
         return {
             name: this.botName || this.appBrand || 'MICKEY GLITCH 2',
