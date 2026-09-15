@@ -197,7 +197,6 @@ function loadCommandRegistry() {
         'coin',
         'donate',
         'emojimix',
-        'getpp',
         'imagine',
         'instagram',
         'pair',
