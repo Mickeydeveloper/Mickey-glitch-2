@@ -34,6 +34,7 @@ const {
     fetchLatestBaileysVersion,
     makeCacheableSignalKeyStore,
     downloadContentFromMessage,
+    generateWAMessageFromContent,
     normalizeMessageContent,
     jidNormalizedUser,
     Browsers,
@@ -49,6 +50,19 @@ const {
 } = require('./lib/sessionRecovery');
 const { createCtx } = require('./lib/messageBuilder');
 const { MongoStore } = require('./lib/mongoStore');
+
+function isPlainConversationMessage(content) {
+    return content &&
+        typeof content === 'object' &&
+        typeof content.text === 'string' &&
+        Object.keys(content).every(key =>
+            key === 'text' || key === 'messageContextInfo'
+        );
+}
+
+function getConversationText(content) {
+    return String(content.text || '');
+}
 
 
 /* =========================================================
@@ -2538,13 +2552,32 @@ class BotSession {
                             }
                         }
 
-                        return rawSendMessage(
-                            safeJid,
-                            addBotMessageContext(
-                                content
-                            ),
-                            safeOptions
-                        );
+                        const preparedContent = addBotMessageContext(content);
+                        if (isPlainConversationMessage(preparedContent) && rawRelayMessage) {
+                            try {
+                                const generated = generateWAMessageFromContent(
+                                    safeJid,
+                                    { conversation: getConversationText(preparedContent) },
+                                    { userJid: this.sock.user?.id || safeJid }
+                                );
+
+                                return rawRelayMessage(
+                                    safeJid,
+                                    generated.message,
+                                    {
+                                        ...addBotRelayNodes(safeOptions),
+                                        messageId: generated.key.id
+                                    }
+                                );
+                            } catch (conversationError) {
+                                console.error(
+                                    '[Message] Conversation relay failed, using standard send:',
+                                    conversationError.message
+                                );
+                            }
+                        }
+
+                        return rawSendMessage(safeJid, preparedContent, safeOptions);
                     };
 
 
