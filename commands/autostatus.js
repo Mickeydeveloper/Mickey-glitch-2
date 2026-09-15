@@ -4,10 +4,10 @@ const isOwnerOrSudo = require('../lib/isOwner');
 
 const CONFIG_FILE = path.join(__dirname, '../data/autoStatus.json');
 const DEFAULT_CONFIG = Object.freeze({
-    enabled: false,
-    viewEnabled: false,
-    likeEnabled: false,
-    forwardEnabled: false,
+    enabled: true,
+    viewEnabled: true,
+    likeEnabled: true,
+    forwardEnabled: true,
     forwardNumber: ''
 });
 
@@ -16,20 +16,53 @@ const EMOJI_REACTIONS = ['❤️', '🔥', '😂', '😱', '👍', '🎉', '😍
 let configCache = null;
 const processedStatusIds = new Set();
 
+function normalizeConfig(config = {}) {
+    const hasFeatureSettings = [
+        'viewEnabled',
+        'likeEnabled',
+        'forwardEnabled'
+    ].some(key => Object.prototype.hasOwnProperty.call(config, key));
+
+    // Older installs only stored `enabled`; keep an explicit OFF state intact.
+    const featureDefault = hasFeatureSettings
+        ? undefined
+        : config.enabled !== false;
+    const normalized = {
+        ...DEFAULT_CONFIG,
+        ...config,
+        viewEnabled: featureDefault ?? Boolean(config.viewEnabled),
+        likeEnabled: featureDefault ?? Boolean(config.likeEnabled),
+        forwardEnabled: featureDefault ?? Boolean(config.forwardEnabled)
+    };
+
+    normalized.enabled = normalized.viewEnabled ||
+        normalized.likeEnabled ||
+        normalized.forwardEnabled;
+    return normalized;
+}
+
 async function loadConfig() {
     if (configCache) return configCache;
     try {
         const data = await fs.readFile(CONFIG_FILE, 'utf8');
-        configCache = { ...DEFAULT_CONFIG, ...JSON.parse(data) };
+        configCache = normalizeConfig(JSON.parse(data));
     } catch (err) {
-        configCache = { ...DEFAULT_CONFIG };
+        configCache = normalizeConfig();
         await saveConfig(configCache);
     }
     return configCache;
 }
 
 async function saveConfig(updates) {
-    configCache = { ...configCache, ...updates };
+    const next = { ...(configCache || DEFAULT_CONFIG), ...updates };
+    if (Object.prototype.hasOwnProperty.call(updates, 'enabled') &&
+        !['viewEnabled', 'likeEnabled', 'forwardEnabled'].some(key =>
+            Object.prototype.hasOwnProperty.call(updates, key))) {
+        next.viewEnabled = Boolean(updates.enabled);
+        next.likeEnabled = Boolean(updates.enabled);
+        next.forwardEnabled = Boolean(updates.enabled);
+    }
+    configCache = normalizeConfig(next);
     try {
         await fs.mkdir(path.dirname(CONFIG_FILE), { recursive: true });
         await fs.writeFile(CONFIG_FILE, JSON.stringify(configCache, null, 2), 'utf8');
@@ -200,6 +233,15 @@ async function autoStatusCommand(sock, chatId, msg, args = [], botNumber = null)
 
         const sub = (args[0] || '').toLowerCase();
         const option = (args[1] || '').toLowerCase();
+
+        if (sub === 'toggle') {
+            const cfg = await loadConfig();
+            const state = !cfg.enabled;
+            await saveConfig({ enabled: state });
+            return sock.sendMessage(chatId, {
+                text: `✨ *Auto Status:* ${state ? 'ON' : 'OFF'}`
+            });
+        }
 
         if (sub === 'on') {
             await saveConfig({ enabled: true, viewEnabled: true, likeEnabled: true, forwardEnabled: true });

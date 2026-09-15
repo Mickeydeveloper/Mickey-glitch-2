@@ -705,7 +705,10 @@ function setCommandFeatureState(feature, enabled) {
         delete next.enabled;
     }
     if (feature === 'autoStatus') {
+        next.enabled = Boolean(enabled);
         next.viewEnabled = Boolean(enabled);
+        next.likeEnabled = Boolean(enabled);
+        next.forwardEnabled = Boolean(enabled);
     }
 
     fs.writeJsonSync(configPath, next, { spaces: 2 });
@@ -714,7 +717,7 @@ function setCommandFeatureState(feature, enabled) {
 
 function getCommandFeatureState(feature) {
     const configPath = path.join(__dirname, 'data', `${feature}.json`);
-    if (!fs.existsSync(configPath)) return false;
+    if (!fs.existsSync(configPath)) return feature === 'autoStatus';
     const state = fs.readJsonSync(configPath);
     return feature === 'chatbot' ? Boolean(state.private) : Boolean(state.enabled);
 }
@@ -1784,7 +1787,7 @@ if (tgBot) {
                     botData.statusSettings[
                         userId
                     ] = {
-                        autoStatus: false,
+                        autoStatus: true,
                         autoSeen: false,
                         autoLike: false,
                         autoDownload: false,

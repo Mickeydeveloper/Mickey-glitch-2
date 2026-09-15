@@ -49,7 +49,7 @@ module.exports = async (sock, chatId, message) => {
         const dataDir = './data';
 
         const mode = readJsonSafe(`${dataDir}/messageCount.json`, { isPublic: true });
-        const autoStatus = readJsonSafe(`${dataDir}/autoStatus.json`, { enabled: false });
+        const autoStatus = readJsonSafe(`${dataDir}/autoStatus.json`, { enabled: true });
         const autoread = readJsonSafe(`${dataDir}/autoread.json`, { enabled: false });
         const autorecording = readJsonSafe(`${dataDir}/autorecording.json`, { enabled: false });
         const autotyping = readJsonSafe(`${dataDir}/autotyping.json`, { enabled: false });
