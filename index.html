@@ -49,7 +49,7 @@
   .auth-advanced summary::-webkit-details-marker{display:none;}
   .auth-card .auth-error{display:none;color:var(--danger);font-size:.8rem;margin-top:12px;}
   .auth-card .auth-error.show{display:block;}
-  .auth-screen{display:flex;}
+  .auth-screen{display:none;}
 
   .auth-tabs{display:flex;gap:6px;background:var(--card);border:1px solid var(--stroke);border-radius:14px;padding:6px;margin-bottom:24px;}
   .auth-tab{flex:1;padding:10px 14px;border-radius:10px;border:none;background:transparent;color:var(--text-2);font-family:inherit;font-weight:600;font-size:.82rem;cursor:pointer;transition:.2s;display:flex;align-items:center;justify-content:center;gap:8px;}
@@ -543,8 +543,8 @@
    ============================================================ */
 var socket = null;
 var accountToken = localStorage.getItem('mickey_account_token') || '';
-var accountReady = false;
-var currentUser = null;
+var currentUser = { name: 'MICKEY Control', isAdmin: true, botLimit: 999, botCount: 0 };
+var accountReady = true;
 var botsById = {};
 
 try {
@@ -629,6 +629,11 @@ function applyUserToUI(user) {
   if (badge) badge.textContent = (user.botCount || 0) + '/' + (user.botLimit || 2);
 
   document.body.classList.add('authenticated');
+}
+
+function requestPairAccessKey() {
+  var accessKey = window.prompt('Weka pairing access key:');
+  return accessKey === null ? null : accessKey.trim();
 }
 
 /* ============================================================
@@ -738,11 +743,13 @@ if (pairBotButton) pairBotButton.addEventListener('click', function() {
     showError('botLinkError', 'Weka namba halali ya WhatsApp, mfano +255 612 130 873.');
     return;
   }
+  var accessKey = requestPairAccessKey();
+  if (accessKey === null) return;
   pairBotButton.disabled = true;
   pairBotButton.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Inaunda pairing code...';
   var result = document.getElementById('linkPairResult');
   if (result) result.style.display = 'block';
-  if (socket) socket.emit('pair-request', { number: number });
+  if (socket) socket.emit('pair-request', { number: number, accessKey: accessKey });
 });
 
 /* ============================================================
@@ -762,7 +769,7 @@ document.getElementById('logoutBtn').addEventListener('click', function() {
    ============================================================ */
 if (socket) {
   socket.on('connect', function() {
-    if (accountToken) socket.emit('account-auth', accountToken);
+    socket.emit('request-bot-state');
   });
 
   socket.on('account-auth-success', function(payload) {
@@ -969,16 +976,17 @@ function copyCode() {
 var requestBtn = document.getElementById('requestPairing');
 if (requestBtn) {
   requestBtn.addEventListener('click', function() {
-    if (!accountReady) { setStatus('Login kwanza.', 'error'); return; }
     var number = normalizePhone(document.getElementById('phone').value);
     if (!isValidInternationalPhone(number)) {
       setStatus('Namba si sahihi. Tumia country code, mfano +447911123456', 'error');
       return;
     }
+    var accessKey = requestPairAccessKey();
+    if (accessKey === null) return;
     requestBtn.disabled = true;
     requestBtn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Inatuma...';
     setStatus('Inatuma ombi la pairing...', 'warn');
-    if (socket) socket.emit('pair-request', { number: number });
+    if (socket) socket.emit('pair-request', { number: number, accessKey: accessKey });
   });
 }
 

