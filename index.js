@@ -4342,6 +4342,48 @@ io.on(
             }
         );
 
+        socket.on('test-command', async ({ userId, target, command } = {}) => {
+            try {
+                if (!socket.account?.botIds?.includes(userId)) {
+                    socket.emit('test-command-result', { ok: false, error: 'Bot haijaidhinishwa.' });
+                    return;
+                }
+
+                const session = sessions[userId];
+                const normalizedTarget = normalizeAccountPhone(target);
+                const text = String(command || '').trim();
+
+                if (!session?.sock || !session.isConnected) {
+                    socket.emit('test-command-result', { ok: false, error: 'Bot haijaunganishwa.' });
+                    return;
+                }
+                if (!isValidInternationalPhone(normalizedTarget)) {
+                    socket.emit('test-command-result', { ok: false, error: 'Weka namba halali yenye country code.' });
+                    return;
+                }
+                if (!text || text.length > 4096) {
+                    socket.emit('test-command-result', { ok: false, error: 'Command haipo au ni ndefu sana.' });
+                    return;
+                }
+
+                const targetJid = `${normalizedTarget}@s.whatsapp.net`;
+                await session.sock.sendMessage(targetJid, { text });
+                session.sendLog(`Test command sent to ${targetJid}: ${text}`, 'success');
+                socket.emit('test-command-result', {
+                    ok: true,
+                    target: targetJid,
+                    command: text,
+                    sentAt: new Date().toISOString()
+                });
+            } catch (error) {
+                console.error('[test-command] Failed:', error);
+                socket.emit('test-command-result', {
+                    ok: false,
+                    error: error?.message || 'Imeshindikana kutuma test command.'
+                });
+            }
+        });
+
         socket.on(
             'update-bot-settings',
             ({ userId, settings: incomingSettings } = {}) => {

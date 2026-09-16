@@ -61,8 +61,9 @@
 
   .field{display:flex;flex-direction:column;gap:6px;margin-bottom:16px;}
   .field label{font-size:.78rem;font-weight:600;color:var(--text-2);}
-  .field input,.field select{padding:12px 16px;border-radius:12px;background:var(--card);border:1px solid var(--stroke);color:var(--text);font-family:inherit;font-size:.88rem;transition:.2s;}
-  .field input:focus,.field select:focus{outline:none;border-color:var(--orange);background:rgba(255,255,255,.05);}
+  .field input,.field select,.field textarea{padding:12px 16px;border-radius:12px;background:var(--card);border:1px solid var(--stroke);color:var(--text);font-family:inherit;font-size:.88rem;transition:.2s;}
+  .field textarea{resize:vertical;min-height:96px;line-height:1.5;}
+  .field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--orange);background:rgba(255,255,255,.05);}
   .field input::placeholder{color:var(--text-3);}
   .field input[aria-invalid="true"]{border-color:var(--danger);}
 
@@ -94,6 +95,30 @@
   .nav-item.active::before{content:'';position:absolute;left:-20px;top:50%;transform:translateY(-50%);width:3px;height:20px;background:var(--orange);border-radius:0 3px 3px 0;}
   .nav-item i{width:20px;text-align:center;font-size:1rem;}
   .nav-item .badge{margin-left:auto;background:var(--orange);color:#fff;font-size:.65rem;font-weight:700;padding:2px 8px;border-radius:10px;}
+  .nav-item[data-tab]{cursor:pointer;}
+  .nav-item[data-tab]::after{content:'›';margin-left:auto;color:var(--text-3);opacity:0;transition:.2s;}
+  .nav-item[data-tab]:hover::after,.nav-item[data-tab].active::after{opacity:1;}
+  .tab-panel{display:none;animation:tabIn .28s ease both;}
+  .tab-panel.active{display:block;}
+  @keyframes tabIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+  .workspace-head{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;flex-wrap:wrap;margin-bottom:26px;}
+  .workspace-kicker{font-size:.7rem;color:var(--cyan);font-weight:800;letter-spacing:.16em;text-transform:uppercase;margin-bottom:8px;}
+  .workspace-head h2{font-family:'Space Grotesk',sans-serif;font-size:2rem;letter-spacing:-.04em;}
+  .workspace-head p{color:var(--text-3);font-size:.88rem;margin-top:5px;}
+  .test-shell{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(280px,.85fr);gap:18px;align-items:start;}
+  .test-card{padding:24px;border-radius:18px;background:linear-gradient(145deg,rgba(0,229,255,.075),rgba(255,255,255,.025));border:1px solid rgba(0,229,255,.2);}
+  .test-card h3{font-family:'Space Grotesk',sans-serif;font-size:1.05rem;margin-bottom:5px;}
+  .test-card .hint{color:var(--text-3);font-size:.78rem;margin-bottom:20px;}
+  .test-log{min-height:310px;max-height:420px;overflow:auto;padding:16px;border-radius:14px;background:#070d14;border:1px solid var(--stroke);font-family:'Space Grotesk',monospace;font-size:.78rem;}
+  .test-log-empty{color:var(--text-3);text-align:center;padding:70px 18px;}
+  .test-entry{padding:10px 0;border-bottom:1px solid rgba(255,255,255,.07);}
+  .test-entry:last-child{border-bottom:0;}
+  .test-entry .meta{color:var(--text-3);font-size:.68rem;margin-bottom:4px;}
+  .test-entry.success{color:var(--success);}.test-entry.error{color:var(--danger);}
+  .quick-commands{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;}
+  .quick-command{padding:7px 10px;border-radius:8px;border:1px solid var(--stroke);background:rgba(255,255,255,.04);color:var(--text-2);font:inherit;font-size:.72rem;cursor:pointer;}
+  .quick-command:hover{border-color:var(--cyan);color:var(--text);}
+  @media(max-width:900px){.test-shell{grid-template-columns:1fr;}}
 
   .admin-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:50px;font-size:.65rem;font-weight:700;background:rgba(200,255,0,.15);color:var(--lime);border:1px solid rgba(200,255,0,.3);letter-spacing:.05em;text-transform:uppercase;margin-left:auto;}
 
@@ -244,8 +269,8 @@
   .auth-card h2{font-size:2rem;letter-spacing:-.04em;}
   .auth-card p.subtitle{max-width:30rem;line-height:1.5;}
   .auth-tabs{background:rgba(0,0,0,.2);}
-  .field input,.field select{background:rgba(4,8,14,.45);border-color:rgba(255,255,255,.14);}
-  .field input:focus,.field select:focus{box-shadow:0 0 0 3px rgba(255,107,26,.12);}
+  .field input,.field select,.field textarea{background:rgba(4,8,14,.45);border-color:rgba(255,255,255,.14);}
+  .field input:focus,.field select:focus,.field textarea:focus{box-shadow:0 0 0 3px rgba(255,107,26,.12);}
   .btn{min-height:46px;}
   .btn-primary{background:linear-gradient(135deg,#ff7a2f,#f23b7d);}
   .btn-admin{background:linear-gradient(135deg,#d5ff36,#8ed000);}
@@ -355,14 +380,15 @@
   </div>
 
   <div class="nav-section-label">Main</div>
-  <a href="#dashboard" class="nav-item active"><i class="fas fa-th-large"></i> Dashboard</a>
-  <a href="#bots" class="nav-item">
+  <a href="#dashboard" class="nav-item active" data-tab="dashboard"><i class="fas fa-th-large"></i> Dashboard</a>
+  <a href="#bots" class="nav-item" data-tab="bots">
     <i class="fas fa-robot"></i> Bots <span class="badge" id="botsBadge">0</span>
   </a>
+  <a href="#test" class="nav-item" data-tab="test"><i class="fas fa-flask"></i> Test Command</a>
 
   <div class="nav-section-label">Configure</div>
-  <a href="#settings" class="nav-item"><i class="fas fa-sliders-h"></i> Settings</a>
-  <a href="#connect" class="nav-item"><i class="fas fa-link"></i> Connect</a>
+  <a href="#settings" class="nav-item" data-tab="settings"><i class="fas fa-sliders-h"></i> Settings</a>
+  <a href="#connect" class="nav-item" data-tab="connect"><i class="fas fa-link"></i> Connect</a>
 
   <div style="margin-top:auto;display:flex;flex-direction:column;gap:8px;">
     <button class="btn btn-ghost btn-sm" id="logoutBtn" style="width:100%;">
@@ -395,13 +421,13 @@
     </div>
   </header>
 
-  <section class="hero" id="dashboard">
+  <section class="hero tab-panel active" id="dashboard" data-panel="dashboard">
     <div class="hero-badge"><span class="live"></span> System Operational · All Nodes Online</div>
     <h1>Control your <span class="grad">WhatsApp bots</span><br>from one place.</h1>
     <p class="lead">A premium automation platform for managing, monitoring and scaling WhatsApp bots with real-time analytics and enterprise-grade reliability.</p>
     <div class="hero-cta">
-      <a href="#connect" class="btn btn-primary"><i class="fas fa-bolt"></i> Connect a Bot</a>
-      <a href="#bots" class="btn btn-ghost"><i class="fas fa-eye"></i> View Dashboard</a>
+      <a href="#connect" data-tab="connect" class="btn btn-primary"><i class="fas fa-bolt"></i> Connect a Bot</a>
+      <a href="#bots" data-tab="bots" class="btn btn-ghost"><i class="fas fa-eye"></i> View Bots</a>
       <button class="btn btn-ghost btn-sm" id="tokenVaultBtn" type="button"><i class="fas fa-key"></i> View tokens</button>
     </div>
   </section>
@@ -437,7 +463,7 @@
     </div>
   </section>
 
-  <section class="section" id="bots">
+  <section class="section tab-panel" id="bots" data-panel="bots">
     <div class="section-head">
       <div class="section-title">
         <h2>Your Bots</h2>
@@ -450,7 +476,34 @@
     <div class="bots-grid" id="botDashboard"></div>
   </section>
 
-  <section class="section" id="settings">
+  <section class="section tab-panel" id="test" data-panel="test">
+    <div class="workspace-head">
+      <div>
+        <div class="workspace-kicker">Bot laboratory</div>
+        <h2>Test Command</h2>
+        <p>Tuma command kupitia bot iliyounganishwa na uone matokeo kwenye WhatsApp.</p>
+      </div>
+      <span class="status-pill online"><span class="ind"></span>Live pipeline</span>
+    </div>
+    <div class="test-shell">
+      <div class="test-card">
+        <h3><i class="fas fa-paper-plane" style="color:var(--cyan);"></i> Send a real test</h3>
+        <p class="hint">Command itatumwa kama message halisi kwa namba ya test uliyochagua.</p>
+        <div class="field"><label for="testBot">Connected bot</label><select id="testBot"></select></div>
+        <div class="field"><label for="testTarget">Test WhatsApp number</label><input type="tel" id="testTarget" placeholder="255712345678" inputmode="tel"></div>
+        <div class="field"><label for="testCommand">Command message</label><textarea id="testCommand" rows="4" placeholder=".ping"></textarea></div>
+        <button class="btn btn-primary" id="sendTestCommand" type="button" style="width:100%;"><i class="fas fa-vial"></i> Send test command</button>
+        <div class="quick-commands"><button class="quick-command" type="button" data-command=".ping">.ping</button><button class="quick-command" type="button" data-command=".menu">.menu</button><button class="quick-command" type="button" data-command=".alive">.alive</button></div>
+      </div>
+      <div class="test-card">
+        <h3><i class="fas fa-terminal" style="color:var(--lime);"></i> Test activity</h3>
+        <p class="hint">Delivery and validation events from the bot control socket.</p>
+        <div class="test-log" id="testLog"><div class="test-log-empty">Hakuna test bado. Chagua bot na tuma command.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section tab-panel" id="settings" data-panel="settings">
     <div class="section-head">
       <div class="section-title">
         <h2>Bot Settings</h2>
@@ -485,7 +538,7 @@
     </div>
   </section>
 
-  <section class="section" id="connect">
+  <section class="section tab-panel" id="connect" data-panel="connect">
     <div class="section-head">
       <div class="section-title">
         <h2>Connect to WhatsApp</h2>
@@ -529,9 +582,10 @@
 </div>
 
 <nav class="mobile-nav">
-  <a href="#dashboard" class="active"><i class="fas fa-th-large"></i>Home</a>
-  <a href="#bots"><i class="fas fa-robot"></i>Bots</a>
-  <a href="#settings"><i class="fas fa-cog"></i>Settings</a>
+  <a href="#dashboard" class="active" data-tab="dashboard"><i class="fas fa-th-large"></i>Home</a>
+  <a href="#bots" data-tab="bots"><i class="fas fa-robot"></i>Bots</a>
+  <a href="#test" data-tab="test"><i class="fas fa-flask"></i>Test</a>
+  <a href="#settings" data-tab="settings"><i class="fas fa-cog"></i>Settings</a>
 </nav>
 
 <div id="toast">Copied!</div>
@@ -916,8 +970,14 @@ function renderBots(botsArray) {
         '<div class="metric"><div class="v">' + (bot.phoneNumber || '—') + '</div><div class="l">Number</div></div>' +
         '<div class="metric"><div class="v">' + (bot.paired ? 'Yes' : 'No') + '</div><div class="l">Paired</div></div>' +
         '<div class="metric"><div class="v">' + (bot.running ? 'Live' : 'Idle') + '</div><div class="l">Runtime</div></div>' +
-      '</div>';
+      '</div>' +
+      '<div class="bot-actions"><button class="btn btn-primary btn-sm bot-test-btn" type="button" data-bot-id="' + bot.id + '"><i class="fas fa-flask"></i> Test</button></div>';
     grid.appendChild(card);
+    card.querySelector('.bot-test-btn').addEventListener('click', function() {
+      activateTab('test');
+      var testBot = document.getElementById('testBot');
+      if (testBot) testBot.value = bot.id;
+    });
   });
 
   var ab = document.getElementById('activeBots');
@@ -925,6 +985,15 @@ function renderBots(botsArray) {
 
   var b = document.getElementById('botsBadge');
   if (b) b.textContent = botsArray.length + '/' + (currentUser?.botLimit || 2);
+
+  var testBot = document.getElementById('testBot');
+  if (testBot) {
+    var previousBot = testBot.value;
+    testBot.innerHTML = botsArray.map(function(bot) {
+      return '<option value="' + bot.id + '">' + (bot.name || bot.id) + ' · ' + (bot.running ? 'Online' : 'Offline') + '</option>';
+    }).join('');
+    if (botsArray.some(function(bot) { return bot.id === previousBot; })) testBot.value = previousBot;
+  }
 
   // Update settings select
   var sel = document.getElementById('settingsBot');
@@ -997,13 +1066,26 @@ var sidebar = document.getElementById('sidebar');
 var menuBtn = document.getElementById('menuBtn');
 if (menuBtn) menuBtn.addEventListener('click', function(){ sidebar.classList.toggle('open'); });
 
-document.querySelectorAll('.nav-item, .mobile-nav a').forEach(function(a){
-  a.addEventListener('click', function(){
-    document.querySelectorAll('.nav-item, .mobile-nav a').forEach(function(x){ x.classList.remove('active'); });
-    a.classList.add('active');
-    if (window.innerWidth < 1024 && sidebar) sidebar.classList.remove('open');
+function activateTab(tabName) {
+  document.querySelectorAll('[data-panel]').forEach(function(panel) {
+    panel.classList.toggle('active', panel.dataset.panel === tabName);
+  });
+  document.querySelectorAll('[data-tab]').forEach(function(item) {
+    item.classList.toggle('active', item.dataset.tab === tabName);
+  });
+  if (sidebar && window.innerWidth < 1024) sidebar.classList.remove('open');
+  try { history.replaceState(null, '', '#' + tabName); } catch (_) {}
+}
+
+document.querySelectorAll('[data-tab]').forEach(function(a){
+  a.addEventListener('click', function(event){
+    if (a.dataset.tab) {
+      event.preventDefault();
+      activateTab(a.dataset.tab);
+    }
   });
 });
+activateTab((window.location.hash || '#dashboard').slice(1) || 'dashboard');
 document.querySelectorAll('.switch').forEach(function(sw){
   function toggleSwitch() {
     var enabled = !sw.classList.contains('active');
@@ -1018,6 +1100,55 @@ document.querySelectorAll('.switch').forEach(function(sw){
 var settingsBot = document.getElementById('settingsBot');
 if (settingsBot) settingsBot.addEventListener('change', function(){
   if (botsById[settingsBot.value]) loadBotSettings(botsById[settingsBot.value]);
+});
+
+function appendTestLog(message, type) {
+  var log = document.getElementById('testLog');
+  if (!log) return;
+  var empty = log.querySelector('.test-log-empty');
+  if (empty) empty.remove();
+  var row = document.createElement('div');
+  row.className = 'test-entry ' + (type || '');
+  var meta = document.createElement('div');
+  meta.className = 'meta';
+  meta.textContent = new Date().toLocaleTimeString();
+  row.appendChild(meta);
+  row.appendChild(document.createTextNode(message));
+  log.prepend(row);
+}
+
+document.querySelectorAll('.quick-command').forEach(function(button) {
+  button.addEventListener('click', function() {
+    var input = document.getElementById('testCommand');
+    if (input) input.value = button.dataset.command || '';
+  });
+});
+
+var sendTestCommand = document.getElementById('sendTestCommand');
+if (sendTestCommand) sendTestCommand.addEventListener('click', function() {
+  var botId = document.getElementById('testBot')?.value || '';
+  var target = document.getElementById('testTarget')?.value || '';
+  var command = document.getElementById('testCommand')?.value || '';
+  if (!botId || !target || !command.trim()) {
+    appendTestLog('Chagua bot, weka namba ya test na command.', 'error');
+    return;
+  }
+  sendTestCommand.disabled = true;
+  sendTestCommand.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Sending...';
+  appendTestLog('Inatuma ' + command.trim() + ' kupitia ' + botId + '...', '');
+  if (socket) socket.emit('test-command', { userId: botId, target: target, command: command.trim() });
+});
+
+if (socket) socket.on('test-command-result', function(result) {
+  if (sendTestCommand) {
+    sendTestCommand.disabled = false;
+    sendTestCommand.innerHTML = '<i class="fas fa-vial"></i> Send test command';
+  }
+  if (result && result.ok) {
+    appendTestLog('Sent successfully to ' + result.target + ': ' + result.command, 'success');
+  } else {
+    appendTestLog((result && result.error) || 'Test command failed.', 'error');
+  }
 });
 var refreshBtn = document.getElementById('refreshBtn');
 if (refreshBtn) refreshBtn.addEventListener('click', function(){
