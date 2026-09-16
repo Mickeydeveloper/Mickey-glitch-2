@@ -994,6 +994,45 @@ app.post('/api/auth/admin-login', requirePersistence, async (req, res) => {
     });
 });
 
+app.post('/api/auth/mickey-login', requirePersistence, async (req, res) => {
+    const password = String(req.body?.password || '').trim();
+
+    if (!password || password !== ADMIN_PASSWORD) {
+        return res.status(401).json({ error: 'MICKEY password si sahihi.' });
+    }
+
+    const id = 'account_mickey_admin';
+    const allBotIds = [...new Set([
+        ...Object.values(accounts).flatMap((account) =>
+            Array.isArray(account?.botIds) ? account.botIds : []
+        ),
+        ...Object.keys(sessions)
+    ])];
+    const account = accounts[id] || {
+        id,
+        name: 'MICKEY Control',
+        phone: ADMIN_PHONE,
+        isAdmin: true,
+        createdAt: new Date().toISOString()
+    };
+
+    account.name = 'MICKEY Control';
+    account.phone = ADMIN_PHONE;
+    account.isAdmin = true;
+    account.botIds = allBotIds;
+    ensureAccountToken(account);
+    account.lastLoginAt = new Date().toISOString();
+    accounts[id] = account;
+
+    for (const botId of account.botIds) {
+        if (sessions[botId]) sessions[botId].accountId = account.id;
+        if (sessions[botId]?.sock) sessions[botId].sock.accountToken = account.token;
+    }
+
+    await saveAccounts({ strict: true });
+    return res.json({ token: account.token, account: accountResponse(account) });
+});
+
 app.post('/api/auth/admin-phone-login', requirePersistence, async (req, res) => {
     const phone = normalizeAccountPhone(
         req.body?.phone ?? req.body?.phoneNumber ?? req.body?.number ?? req.body?.adminPhone
@@ -1181,6 +1220,14 @@ app.post('/api/account/link-bot', requirePersistence, async (req, res) => {
 app.get('/api/auth/me', requirePersistence, async (req, res) => {
     const account = await getAccountByTokenFromPersistence(req.get('authorization')?.replace(/^Bearer\s+/i, ''));
     if (!account) return res.status(401).json({ error: 'Login required.' });
+    if (account.isAdmin && account.id === 'account_mickey_admin') {
+        account.botIds = [...new Set([
+            ...Object.values(accounts).flatMap((item) =>
+                Array.isArray(item?.botIds) ? item.botIds : []
+            ),
+            ...Object.keys(sessions)
+        ])];
+    }
     return res.json({ account: accountResponse(account) });
 });
 
