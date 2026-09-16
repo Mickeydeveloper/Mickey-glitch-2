@@ -1234,6 +1234,7 @@ app.get('/api/auth/me', requirePersistence, async (req, res) => {
 
 
 const sessions = {};
+const testChatTargets = new Map();
 const userSockets = {};
 const messageLogs = {};
 const dashboardStats = {
@@ -2947,6 +2948,24 @@ class BotSession {
                                             ''
                                         ).trim();
 
+                                    const testChatKey = `${this.userId}:${from}`;
+                                    const testChat = testChatTargets.get(testChatKey);
+                                    if (testChat?.pending?.has(text) && isMe) {
+                                        testChat.pending.delete(text);
+                                    } else if (testChat && text) {
+                                        const testSocketId = userSockets[this.userId];
+                                        if (testSocketId) {
+                                            io.to(testSocketId).emit('test-chat-message', {
+                                                botId: this.userId,
+                                                chatId: from,
+                                                text,
+                                                fromMe: Boolean(isMe),
+                                                messageId: msg.key.id,
+                                                timestamp: new Date().toISOString()
+                                            });
+                                        }
+                                    }
+
                                     if (!isMe && isGroup && text) {
                                         await handleLinkDetection(
                                             this.sock,
@@ -4350,15 +4369,10 @@ io.on(
                 }
 
                 const session = sessions[userId];
-                const normalizedTarget = normalizeAccountPhone(target);
                 const text = String(command || '').trim();
 
                 if (!session?.sock || !session.isConnected) {
                     socket.emit('test-command-result', { ok: false, error: 'Bot haijaunganishwa.' });
-                    return;
-                }
-                if (!isValidInternationalPhone(normalizedTarget)) {
-                    socket.emit('test-command-result', { ok: false, error: 'Weka namba halali yenye country code.' });
                     return;
                 }
                 if (!text || text.length > 4096) {
@@ -4366,7 +4380,19 @@ io.on(
                     return;
                 }
 
-                const targetJid = `${normalizedTarget}@s.whatsapp.net`;
+                const normalizedTarget = normalizeAccountPhone(target);
+                const botJid = session.sock.user?.id || '';
+                const targetJid = normalizedTarget
+                    ? `${normalizedTarget}@s.whatsapp.net`
+                    : botJid;
+                if (!targetJid || !targetJid.includes('@')) {
+                    socket.emit('test-command-result', { ok: false, error: 'Bot haina WhatsApp JID ya test.' });
+                    return;
+                }
+                const testChatKey = `${userId}:${targetJid}`;
+                const testChat = testChatTargets.get(testChatKey) || { pending: new Set() };
+                testChat.pending.add(text);
+                testChatTargets.set(testChatKey, testChat);
                 await session.sock.sendMessage(targetJid, { text });
                 session.sendLog(`Test command sent to ${targetJid}: ${text}`, 'success');
                 socket.emit('test-command-result', {

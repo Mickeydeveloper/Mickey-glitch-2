@@ -100,6 +100,7 @@
   .nav-item[data-tab]:hover::after,.nav-item[data-tab].active::after{opacity:1;}
   .tab-panel{display:none;animation:tabIn .28s ease both;}
   .tab-panel.active{display:block;}
+  .stats-grid.tab-panel.active{display:grid;}
   @keyframes tabIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
   .workspace-head{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;flex-wrap:wrap;margin-bottom:26px;}
   .workspace-kicker{font-size:.7rem;color:var(--cyan);font-weight:800;letter-spacing:.16em;text-transform:uppercase;margin-bottom:8px;}
@@ -118,7 +119,27 @@
   .quick-commands{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;}
   .quick-command{padding:7px 10px;border-radius:8px;border:1px solid var(--stroke);background:rgba(255,255,255,.04);color:var(--text-2);font:inherit;font-size:.72rem;cursor:pointer;}
   .quick-command:hover{border-color:var(--cyan);color:var(--text);}
-  @media(max-width:900px){.test-shell{grid-template-columns:1fr;}}
+  .wa-shell{display:grid;grid-template-columns:280px minmax(0,1fr);height:620px;overflow:hidden;border:1px solid var(--stroke);border-radius:18px;background:#0b141a;box-shadow:0 24px 70px rgba(0,0,0,.28);}
+  .wa-list{background:#101b22;border-right:1px solid var(--stroke);display:flex;flex-direction:column;min-width:0;}
+  .wa-list-head{padding:18px;border-bottom:1px solid var(--stroke);display:flex;align-items:center;justify-content:space-between;}
+  .wa-list-head strong{font-family:'Space Grotesk',sans-serif;font-size:1.05rem;}
+  .wa-search{margin:12px;padding:10px 12px;border-radius:10px;background:#17242c;color:var(--text-2);border:1px solid transparent;font:inherit;font-size:.76rem;}
+  .wa-chat-item{display:flex;align-items:center;gap:11px;padding:12px 14px;border:0;background:transparent;color:var(--text);text-align:left;cursor:pointer;border-bottom:1px solid rgba(255,255,255,.04);}
+  .wa-chat-item:hover,.wa-chat-item.active{background:#1b2b34;}
+  .wa-avatar{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;flex:0 0 auto;background:linear-gradient(135deg,var(--cyan),var(--lime));color:#071014;font-weight:800;}
+  .wa-chat-meta{min-width:0;}.wa-chat-meta strong{display:block;font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}.wa-chat-meta span{display:block;color:var(--text-3);font-size:.68rem;margin-top:2px;}
+  .wa-chat{display:flex;flex-direction:column;min-width:0;background:#0b171d;background-image:radial-gradient(rgba(255,255,255,.035) 1px,transparent 1px);background-size:18px 18px;}
+  .wa-chat-head{height:72px;padding:12px 18px;display:flex;align-items:center;gap:12px;background:#17252c;border-bottom:1px solid var(--stroke);}
+  .wa-chat-head strong{font-size:.9rem;display:block;}.wa-chat-head span{font-size:.7rem;color:var(--success);}
+  .wa-messages{flex:1;overflow:auto;padding:24px;display:flex;flex-direction:column;gap:7px;}
+  .wa-empty{margin:auto;text-align:center;color:var(--text-3);font-size:.78rem;max-width:260px;line-height:1.6;}
+  .wa-bubble{max-width:min(76%,520px);padding:9px 12px 6px;border-radius:9px;color:#e9f1f4;font-size:.84rem;line-height:1.45;box-shadow:0 1px 1px rgba(0,0,0,.18);white-space:pre-wrap;word-break:break-word;}
+  .wa-bubble.in{align-self:flex-start;background:#1c2a31;border-top-left-radius:3px;}.wa-bubble.out{align-self:flex-end;background:#005c4b;border-top-right-radius:3px;}
+  .wa-bubble time{display:block;text-align:right;color:rgba(255,255,255,.5);font-size:.62rem;margin-top:4px;}
+  .wa-typing{display:none;padding:0 22px 7px;color:var(--text-3);font-size:.68rem;}.wa-typing.show{display:block;}
+  .wa-compose{display:flex;align-items:flex-end;gap:8px;padding:11px 14px;background:#17252c;border-top:1px solid var(--stroke);}.wa-compose textarea{flex:1;min-height:42px;max-height:110px;resize:none;border-radius:12px;padding:11px 13px;background:#23343c;border:1px solid transparent;color:var(--text);font:inherit;font-size:.82rem;}.wa-compose textarea:focus{outline:none;border-color:var(--cyan);}.wa-icon-btn{width:40px;height:40px;border-radius:50%;border:0;background:transparent;color:var(--text-2);cursor:pointer;font-size:1rem;}.wa-icon-btn:hover{color:var(--text);background:rgba(255,255,255,.07);}
+  .wa-tools{display:flex;gap:6px;padding:8px 14px;background:#101b22;border-top:1px solid var(--stroke);}.wa-tools select,.wa-tools input{flex:1;min-width:0;padding:8px 10px;border-radius:8px;background:#17242c;color:var(--text-2);border:1px solid var(--stroke);font:inherit;font-size:.7rem;}
+  @media(max-width:900px){.test-shell{grid-template-columns:1fr;}.wa-shell{grid-template-columns:1fr;height:calc(100vh - 210px);min-height:520px;}.wa-list{display:none;}.wa-bubble{max-width:88%;}}
 
   .admin-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:50px;font-size:.65rem;font-weight:700;background:rgba(200,255,0,.15);color:var(--lime);border:1px solid rgba(200,255,0,.3);letter-spacing:.05em;text-transform:uppercase;margin-left:auto;}
 
@@ -432,7 +453,7 @@
     </div>
   </section>
 
-  <section class="stats-grid">
+  <section class="stats-grid tab-panel active" data-panel="dashboard">
     <div class="stat-tile">
       <div class="stat-head">
         <div class="stat-icon"><i class="fas fa-robot"></i></div>
@@ -485,20 +506,19 @@
       </div>
       <span class="status-pill online"><span class="ind"></span>Live pipeline</span>
     </div>
-    <div class="test-shell">
-      <div class="test-card">
-        <h3><i class="fas fa-paper-plane" style="color:var(--cyan);"></i> Send a real test</h3>
-        <p class="hint">Command itatumwa kama message halisi kwa namba ya test uliyochagua.</p>
-        <div class="field"><label for="testBot">Connected bot</label><select id="testBot"></select></div>
-        <div class="field"><label for="testTarget">Test WhatsApp number</label><input type="tel" id="testTarget" placeholder="255712345678" inputmode="tel"></div>
-        <div class="field"><label for="testCommand">Command message</label><textarea id="testCommand" rows="4" placeholder=".ping"></textarea></div>
-        <button class="btn btn-primary" id="sendTestCommand" type="button" style="width:100%;"><i class="fas fa-vial"></i> Send test command</button>
-        <div class="quick-commands"><button class="quick-command" type="button" data-command=".ping">.ping</button><button class="quick-command" type="button" data-command=".menu">.menu</button><button class="quick-command" type="button" data-command=".alive">.alive</button></div>
-      </div>
-      <div class="test-card">
-        <h3><i class="fas fa-terminal" style="color:var(--lime);"></i> Test activity</h3>
-        <p class="hint">Delivery and validation events from the bot control socket.</p>
-        <div class="test-log" id="testLog"><div class="test-log-empty">Hakuna test bado. Chagua bot na tuma command.</div></div>
+    <div class="wa-shell">
+      <aside class="wa-list">
+        <div class="wa-list-head"><strong>Chats</strong><button class="wa-icon-btn" type="button" title="New chat"><i class="fas fa-pen-to-square"></i></button></div>
+        <input class="wa-search" type="search" placeholder="Search chats...">
+        <button class="wa-chat-item active" type="button"><div class="wa-avatar">BT</div><div class="wa-chat-meta"><strong id="waChatName">Bot test chat</strong><span id="waChatPreview">Ready to test</span></div></button>
+      </aside>
+      <div class="wa-chat">
+        <header class="wa-chat-head"><div class="wa-avatar" id="waBotAvatar">BT</div><div><strong id="waHeaderName">Select a connected bot</strong><span id="waHeaderStatus">● Live test channel</span></div><button class="wa-icon-btn" type="button" title="More options" style="margin-left:auto;"><i class="fas fa-ellipsis-vertical"></i></button></header>
+        <div class="wa-tools"><select id="testBot" aria-label="Connected bot"></select><input id="testTarget" type="tel" placeholder="Optional target number" inputmode="tel" aria-label="Optional target number"></div>
+        <div class="wa-messages" id="waMessages"><div class="wa-empty" id="waEmpty"><i class="fas fa-comments" style="font-size:2rem;color:var(--cyan);display:block;margin-bottom:12px;"></i>Send a command below. Bot replies will appear here like WhatsApp.</div></div>
+        <div class="wa-typing" id="waTyping">bot is typing...</div>
+        <div class="wa-tools"><button class="quick-command" type="button" data-command=".ping">.ping</button><button class="quick-command" type="button" data-command=".menu">.menu</button><button class="quick-command" type="button" data-command=".alive">.alive</button></div>
+        <form class="wa-compose" id="testComposer"><button class="wa-icon-btn" type="button" title="Attach"><i class="fas fa-paperclip"></i></button><textarea id="testCommand" rows="1" placeholder="Type a command" aria-label="Command message"></textarea><button class="wa-icon-btn" type="button" title="Emoji"><i class="far fa-face-smile"></i></button><button class="wa-icon-btn" id="sendTestCommand" type="submit" title="Send"><i class="fas fa-paper-plane"></i></button></form>
       </div>
     </div>
   </section>
@@ -993,6 +1013,7 @@ function renderBots(botsArray) {
       return '<option value="' + bot.id + '">' + (bot.name || bot.id) + ' · ' + (bot.running ? 'Online' : 'Offline') + '</option>';
     }).join('');
     if (botsArray.some(function(bot) { return bot.id === previousBot; })) testBot.value = previousBot;
+    updateWhatsAppHeader();
   }
 
   // Update settings select
@@ -1102,19 +1123,29 @@ if (settingsBot) settingsBot.addEventListener('change', function(){
   if (botsById[settingsBot.value]) loadBotSettings(botsById[settingsBot.value]);
 });
 
-function appendTestLog(message, type) {
-  var log = document.getElementById('testLog');
-  if (!log) return;
-  var empty = log.querySelector('.test-log-empty');
+function updateWhatsAppHeader() {
+  var select = document.getElementById('testBot');
+  var bot = select && botsById[select.value];
+  var name = bot ? (bot.name || bot.id) : 'Select a connected bot';
+  var header = document.getElementById('waHeaderName');
+  var avatar = document.getElementById('waBotAvatar');
+  if (header) header.textContent = name;
+  if (avatar) avatar.textContent = name.split(/\s+/).map(function(part) { return part[0]; }).join('').slice(0, 2).toUpperCase();
+}
+
+function appendWhatsAppMessage(text, fromMe) {
+  var messages = document.getElementById('waMessages');
+  if (!messages) return;
+  var empty = document.getElementById('waEmpty');
   if (empty) empty.remove();
-  var row = document.createElement('div');
-  row.className = 'test-entry ' + (type || '');
-  var meta = document.createElement('div');
-  meta.className = 'meta';
-  meta.textContent = new Date().toLocaleTimeString();
-  row.appendChild(meta);
-  row.appendChild(document.createTextNode(message));
-  log.prepend(row);
+  var bubble = document.createElement('div');
+  bubble.className = 'wa-bubble ' + (fromMe ? 'out' : 'in');
+  bubble.appendChild(document.createTextNode(text));
+  var time = document.createElement('time');
+  time.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + (fromMe ? '  ✓✓' : '');
+  bubble.appendChild(time);
+  messages.appendChild(bubble);
+  messages.scrollTop = messages.scrollHeight;
 }
 
 document.querySelectorAll('.quick-command').forEach(function(button) {
@@ -1124,31 +1155,46 @@ document.querySelectorAll('.quick-command').forEach(function(button) {
   });
 });
 
+var testBotSelect = document.getElementById('testBot');
+if (testBotSelect) testBotSelect.addEventListener('change', updateWhatsAppHeader);
+var testComposer = document.getElementById('testComposer');
 var sendTestCommand = document.getElementById('sendTestCommand');
-if (sendTestCommand) sendTestCommand.addEventListener('click', function() {
+if (testComposer) testComposer.addEventListener('submit', function(event) {
+  event.preventDefault();
   var botId = document.getElementById('testBot')?.value || '';
   var target = document.getElementById('testTarget')?.value || '';
   var command = document.getElementById('testCommand')?.value || '';
-  if (!botId || !target || !command.trim()) {
-    appendTestLog('Chagua bot, weka namba ya test na command.', 'error');
+  if (!botId || !command.trim()) {
+    showToast('Chagua bot na andika command.');
     return;
   }
   sendTestCommand.disabled = true;
-  sendTestCommand.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Sending...';
-  appendTestLog('Inatuma ' + command.trim() + ' kupitia ' + botId + '...', '');
+  appendWhatsAppMessage(command.trim(), true);
+  document.getElementById('testCommand').value = '';
+  document.getElementById('waTyping').classList.add('show');
   if (socket) socket.emit('test-command', { userId: botId, target: target, command: command.trim() });
+});
+var testCommandInput = document.getElementById('testCommand');
+if (testCommandInput) testCommandInput.addEventListener('keydown', function(event) {
+  if (event.key === 'Enter' && !event.shiftKey) {
+    event.preventDefault();
+    testComposer?.requestSubmit();
+  }
 });
 
 if (socket) socket.on('test-command-result', function(result) {
   if (sendTestCommand) {
     sendTestCommand.disabled = false;
-    sendTestCommand.innerHTML = '<i class="fas fa-vial"></i> Send test command';
   }
-  if (result && result.ok) {
-    appendTestLog('Sent successfully to ' + result.target + ': ' + result.command, 'success');
-  } else {
-    appendTestLog((result && result.error) || 'Test command failed.', 'error');
-  }
+  document.getElementById('waTyping')?.classList.remove('show');
+  if (!result || !result.ok) appendWhatsAppMessage('⚠️ ' + ((result && result.error) || 'Test command failed.'), false);
+});
+
+if (socket) socket.on('test-chat-message', function(message) {
+  document.getElementById('waTyping')?.classList.remove('show');
+  appendWhatsAppMessage(message.text || '', message.fromMe);
+  var preview = document.getElementById('waChatPreview');
+  if (preview) preview.textContent = message.text || 'New message';
 });
 var refreshBtn = document.getElementById('refreshBtn');
 if (refreshBtn) refreshBtn.addEventListener('click', function(){
