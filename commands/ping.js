@@ -66,14 +66,18 @@ _Mickey Glitch Technology™_`;
                 .button('🧠 AI', '.ai')
                 .setFooter('Tap a quick action');
 
-            await buttonBuilder.send(ctx.chatId, { quoted: ctx._msg, fallbackText: text });
+            await buttonBuilder.send(ctx.chatId, {
+                quoted: ctx._msg,
+                fallbackText: text,
+                secureMetaServiceLabel: true
+            });
 
             return;
         } catch (builderError) {
             console.error('Ping builder error:', builderError);
         }
 
-        await ctx.reply(text);
+        await ctx.reply(text, { secureMetaServiceLabel: true });
     } catch (error) {
         console.error('Ping Error:', error);
         await ctx.reply('❌ *Error:* Tafadhali jaribu tena.');
