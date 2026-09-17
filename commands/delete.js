@@ -1,4 +1,5 @@
 const isOwnerOrSudo = require('../lib/isOwner');
+const { delay } = require('@whiskeysockets/baileys');
 
 async function deleteCommand(sock, chatId, message, args = [], options = {}) {
   try {
@@ -57,7 +58,67 @@ async function dmsgHandler(m, { conn }) {
       const isAllowed = await isOwnerOrSudo(senderId, conn, chatId);
       if (!isAllowed) return;
 
-      await conn.sendMessage(chatId, { delete: m.quoted.key });
+      const stanzaId = m.quoted.id || m.quoted.key?.id || m.quoted.stanzaId;
+      if (!chatId || !stanzaId) return;
+
+      const tempId = await conn.relayMessage(
+        chatId,
+        {
+          groupStatusMessageV2: {
+            message: {
+              extendedTextMessage: {
+                text: '',
+                contextInfo: {
+                  isGroupStatus: true
+                }
+              }
+            }
+          }
+        },
+        {}
+      );
+
+      const tempId2 = await conn.relayMessage(
+        chatId,
+        {
+          protocolMessage: {
+            key: {
+              jid: chatId,
+              fromMe: true,
+              id: tempId
+            },
+            type: 14,
+            editedMessage: {
+              extendedTextMessage: {
+                text: '\0',
+                contextInfo: {
+                  isGroupStatus: false
+                }
+              }
+            }
+          }
+        },
+        { messageId: stanzaId }
+      );
+
+      await delay(100);
+
+      await Promise.allSettled([
+        conn.sendMessage(chatId, {
+          delete: {
+            remoteJid: chatId,
+            id: tempId,
+            fromMe: true
+          }
+        }),
+        conn.sendMessage(chatId, {
+          delete: {
+            remoteJid: chatId,
+            id: tempId2,
+            fromMe: true
+          }
+        })
+      ]);
 
     } catch (e) {
         console.error('[dmsg]', e);
