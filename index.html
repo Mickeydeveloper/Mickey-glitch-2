@@ -278,6 +278,17 @@
   .connect-card{background:linear-gradient(145deg,rgba(255,107,26,.12),rgba(0,229,255,.035));box-shadow:0 18px 42px rgba(0,0,0,.16);}
   .pair-result{box-shadow:0 18px 42px rgba(0,0,0,.14);}
   .logs-container{background:rgba(3,7,12,.72);}
+  .dashboard-strip{display:grid;grid-template-columns:minmax(0,1.4fr) repeat(2,minmax(150px,.6fr));gap:14px;padding:0 40px 36px;}
+  .pulse-card{display:flex;align-items:center;gap:14px;min-height:74px;padding:16px 18px;border:1px solid rgba(0,229,255,.16);border-radius:18px;background:linear-gradient(135deg,rgba(0,229,255,.08),rgba(255,255,255,.025));}
+  .pulse-card strong{display:block;font-size:.9rem;}
+  .pulse-card small{display:block;color:var(--text-3);font-size:.72rem;margin-top:2px;}
+  .pulse-icon{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:rgba(0,229,255,.1);color:var(--cyan);}
+  .monitor-value{font-family:'Space Grotesk',sans-serif;font-size:1.15rem;font-weight:700;}
+  .monitor-label{display:block;color:var(--text-3);font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;}
+  .search-bar input.is-filtering{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,229,255,.1);}
+  .empty-state{grid-column:1/-1;padding:42px 24px;text-align:center;border:1px dashed rgba(255,255,255,.16);border-radius:18px;color:var(--text-3);background:rgba(255,255,255,.025);}
+  .empty-state i{display:block;color:var(--cyan);font-size:1.5rem;margin-bottom:10px;}
+  @media(max-width:900px){.dashboard-strip{grid-template-columns:1fr 1fr;padding:0 24px 30px;}.dashboard-strip .pulse-card:first-child{grid-column:1/-1;}}
   @media(max-width:768px){
     .auth-screen{padding:16px;align-items:flex-start;padding-top:28px;}
     .auth-card{padding:26px 20px;border-radius:20px;}
@@ -287,6 +298,8 @@
     .section-head{align-items:stretch;}
     .section-head .field{min-width:100% !important;}
     .connect-card,.pair-result{padding:22px;}
+    .dashboard-strip{grid-template-columns:1fr;padding:0 18px 24px;}
+    .dashboard-strip .pulse-card:first-child{grid-column:auto;}
   }
 </style>
 </head>
@@ -392,7 +405,7 @@
     <button class="menu-btn" id="menuBtn"><i class="fas fa-bars"></i></button>
     <div class="search-bar">
       <i class="fas fa-search"></i>
-      <input type="text" placeholder="Search bots...">
+      <input type="search" id="botSearch" placeholder="Search bots..." aria-label="Search bots">
     </div>
     <div class="topbar-actions">
       <button class="icon-btn" title="Notifications"><i class="fas fa-bell"></i><span class="dot"></span></button>
@@ -447,6 +460,15 @@
       <div class="stat-num" id="totalMessages">0</div>
       <div class="stat-lbl">Messages Handled</div>
     </div>
+  </section>
+
+  <section class="dashboard-strip tab-panel active" data-panel="dashboard" aria-label="Live monitor">
+    <div class="pulse-card">
+      <div class="pulse-icon"><i class="fas fa-wave-square"></i></div>
+      <div><strong id="monitorState">Monitoring active bots</strong><small id="lastSync">Waiting for first sync...</small></div>
+    </div>
+    <div class="pulse-card"><div><span class="monitor-value" id="onlineRate">0%</span><span class="monitor-label">Online rate</span></div></div>
+    <div class="pulse-card"><div><span class="monitor-value" id="refreshCountdown">30s</span><span class="monitor-label">Next refresh</span></div></div>
   </section>
 
   <section class="section tab-panel" id="bots" data-panel="bots">
@@ -558,6 +580,9 @@ var accountToken = localStorage.getItem('mickey_account_token') || '';
 var currentUser = { name: 'MICKEY Control', isAdmin: true, botLimit: 999, botCount: 0 };
 var accountReady = true;
 var botsById = {};
+var latestBots = [];
+var refreshTimer = null;
+var refreshSeconds = 30;
 
 try {
   socket = io();
@@ -810,6 +835,7 @@ if (socket) {
     }
     finishBotConnection((state.bots || []).filter(function(bot) { return bot.running; }).map(function(bot) { return bot.id; }));
     renderBots(state.bots || []);
+    updateMonitor(state.bots || []);
   });
 
   socket.on('pair-account', function(payload) {
@@ -894,8 +920,17 @@ function renderBots(botsArray) {
   var grid = document.getElementById('botDashboard');
   if (!grid) return;
 
-  if (!botsArray || botsArray.length === 0) {
-    grid.innerHTML = '<div style="grid-column:1/-1;padding:36px;text-align:center;color:var(--text-3);">Hakuna bot zilizounganishwa. Nenda kwenye Connect.</div>';
+  latestBots = Array.isArray(botsArray) ? botsArray : [];
+  var query = (document.getElementById('botSearch')?.value || '').trim().toLowerCase();
+  var visibleBots = latestBots.filter(function(bot) {
+    if (!query) return true;
+    return [bot.name, bot.id, bot.phoneNumber].some(function(value) {
+      return String(value || '').toLowerCase().includes(query);
+    });
+  });
+
+  if (latestBots.length === 0) {
+    grid.innerHTML = '<div class="empty-state"><i class="fas fa-robot"></i>Hakuna bot zilizounganishwa.<br>Nenda kwenye Connect kuanza.</div>';
     var ab = document.getElementById('activeBots');
     if (ab) ab.textContent = '0';
     var b = document.getElementById('botsBadge');
@@ -903,13 +938,20 @@ function renderBots(botsArray) {
     return;
   }
 
+  if (visibleBots.length === 0) {
+    grid.innerHTML = '<div class="empty-state"><i class="fas fa-magnifying-glass"></i>Hakuna bot inayolingana na "' + query.replace(/[&<>]/g, '') + '".</div>';
+    return;
+  }
+
   grid.innerHTML = '';
-  var pairedCount = 0;
+  var pairedCount = latestBots.filter(function(bot) { return bot.paired; }).length;
   botsById = {};
 
-  botsArray.forEach(function(bot) {
+  latestBots.forEach(function(bot) {
     botsById[bot.id] = bot;
-    if (bot.paired) pairedCount++;
+  });
+
+  visibleBots.forEach(function(bot) {
     var card = document.createElement('div');
     card.className = 'bot-card';
     var status = bot.running ? 'online' : (bot.connecting ? 'connecting' : 'offline');
@@ -936,19 +978,37 @@ function renderBots(botsArray) {
   if (ab) ab.textContent = pairedCount;
 
   var b = document.getElementById('botsBadge');
-  if (b) b.textContent = botsArray.length + '/' + (currentUser?.botLimit || 2);
+  if (b) b.textContent = latestBots.length + '/' + (currentUser?.botLimit || 2);
 
   // Update settings select
   var sel = document.getElementById('settingsBot');
   if (sel) {
-    sel.innerHTML = botsArray.map(function(bot){
+    sel.innerHTML = latestBots.map(function(bot){
       return '<option value="' + bot.id + '">' + (bot.name || bot.id) + ' · ' + (bot.running ? 'Running' : 'Offline') + '</option>';
     }).join('');
-    if (botsArray.length) {
-      sel.value = sel.value || botsArray[0].id;
-      loadBotSettings(botsById[sel.value] || botsArray[0]);
+    if (latestBots.length) {
+      sel.value = sel.value || latestBots[0].id;
+      loadBotSettings(botsById[sel.value] || latestBots[0]);
     }
   }
+}
+
+function updateMonitor(botsArray) {
+  var total = botsArray.length;
+  var online = botsArray.filter(function(bot) { return bot.running; }).length;
+  var rate = document.getElementById('onlineRate');
+  var sync = document.getElementById('lastSync');
+  var state = document.getElementById('monitorState');
+  if (rate) rate.textContent = total ? Math.round((online / total) * 100) + '%' : '0%';
+  if (sync) sync.textContent = 'Last sync · ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  if (state) state.textContent = online ? online + ' bot' + (online === 1 ? '' : 's') + ' online' : 'No active bots';
+  refreshSeconds = 30;
+}
+
+function requestBotRefresh(message) {
+  if (socket) socket.emit('request-bot-state');
+  refreshSeconds = 30;
+  if (message) showToast(message);
 }
 
 function loadBotSettings(bot) {
@@ -1047,14 +1107,24 @@ if (settingsBot) settingsBot.addEventListener('change', function(){
 
 var refreshBtn = document.getElementById('refreshBtn');
 if (refreshBtn) refreshBtn.addEventListener('click', function(){
-  if (socket) socket.emit('request-bot-state');
-  showToast('Inasasisha...');
+  requestBotRefresh('Inasasisha...');
 });
 var refreshBotsBtn = document.getElementById('refreshBotsBtn');
 if (refreshBotsBtn) refreshBotsBtn.addEventListener('click', function(){
-  if (socket) socket.emit('request-bot-state');
-  showToast('Inasasisha bots...');
+  requestBotRefresh('Inasasisha bots...');
 });
+var botSearch = document.getElementById('botSearch');
+if (botSearch) botSearch.addEventListener('input', function() {
+  botSearch.classList.toggle('is-filtering', Boolean(botSearch.value.trim()));
+  renderBots(latestBots);
+});
+
+refreshTimer = window.setInterval(function() {
+  refreshSeconds = Math.max(0, refreshSeconds - 1);
+  var countdown = document.getElementById('refreshCountdown');
+  if (countdown) countdown.textContent = refreshSeconds + 's';
+  if (refreshSeconds === 0) requestBotRefresh();
+}, 1000);
 function openTokenVault() {
   var modal = document.getElementById('tokenVaultModal');
   var list = document.getElementById('tokenVaultList');
