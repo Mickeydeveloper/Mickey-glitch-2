@@ -38,13 +38,13 @@ const sendOwnerRichResponse = async (sock, chatId, msg) => {
                                 messageType: 1,
                                 gridImageMetadata: {
                                     gridImageUrl: {
-                                        imagePreviewUrl: "https://raw.githubusercontent.com/Mickeymozy/Mickey-Vip/main/Privacy/privacy3.jpg"
+                                        imagePreviewUrl: "https://raw.githubusercontent.com/Mickeymozy/Mickey-Vip/main/Privacy/privacy2.jpg"
                                     },
                                     imageUrls: [
                                         {
-                                            imagePreviewUrl: "https://raw.githubusercontent.com/Mickeymozy/Mickey-Vip/main/Privacy/privacy3.jpg",
-                                            imageHighResUrl: "https://raw.githubusercontent.com/Mickeymozy/Mickey-Vip/main/Privacy/privacy3.jpg",
-                                            sourceUrl: "https://files.catbox.moe/5tgkff.jpg"
+                                            imagePreviewUrl: "https://raw.githubusercontent.com/Mickeymozy/Mickey-Vip/main/Privacy/privacy2.jpg",
+                                            imageHighResUrl: "https://raw.githubusercontent.com/Mickeymozy/Mickey-Vip/main/Privacy/privacy2.jpg",
+                                            sourceUrl: "https://raw.githubusercontent.com/Mickeymozy/Mickey-Vip/main/Privacy/privacy1.jpg"
                                         }
                                     ]
                                 }
@@ -62,7 +62,7 @@ const sendOwnerRichResponse = async (sock, chatId, msg) => {
                                         "view_model": {
                                             "primitive": {
                                                 "media": {
-                                                    "url": "https://raw.githubusercontent.com/Mickeymozy/Mickey-Vip/main/Privacy/privacy3.jpg",
+                                                    "url": "https://raw.githubusercontent.com/Mickeymozy/Mickey-Vip/main/Privacy/privacy2.jpg",
                                                     "mime_type": "image/png",
                                                     "width": 16,
                                                     "height": 9
@@ -89,8 +89,8 @@ const sendOwnerRichResponse = async (sock, chatId, msg) => {
                                                 "action_type": "FOLLOW",
                                                 "is_verified": true,
                                                 "image": {
-                                                    "url": "https://files.catbox.moe/5tgkff.jpg",
-                                                    "url_fallback": "https://files.catbox.moe/5tgkff.jpg"
+                                                    "url": "https://raw.githubusercontent.com/Mickeymozy/Mickey-Vip/main/Privacy/privacy2.jpg",
+                                                    "url_fallback": "https://raw.githubusercontent.com/Mickeymozy/Mickey-Vip/main/Privacy/privacy2.jpg"
                                                 }
                                             },
                                             "__typename": "GenAISingleLayoutViewModel"
