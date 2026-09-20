@@ -4918,10 +4918,11 @@ const PORT =
     );
 
 
-server.listen(
-    PORT,
-    HOST,
-    async () => {
+async function startServer() {
+    server.listen(
+        PORT,
+        HOST,
+        async () => {
 
         const displayHost =
             process.env.SERVER_IP ||
@@ -4955,6 +4956,17 @@ server.listen(
         );
 
         await initializePersistence();
-        await loadExistingSessions();
-    }
-);
+            await loadExistingSessions();
+        }
+    );
+}
+
+if (require.main === module && process.env.VERCEL !== '1') {
+    startServer();
+}
+
+module.exports = {
+    app,
+    server,
+    initializePersistence
+};
