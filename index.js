@@ -819,6 +819,20 @@ function normalizeAccountEmail(value) {
     return normalizeAccountLoginId(value).toLowerCase();
 }
 
+function hashAccountPassword(password, salt = crypto.randomBytes(16).toString('hex')) {
+    const hash = crypto.scryptSync(String(password), salt, 64).toString('hex');
+    return `${salt}:${hash}`;
+}
+
+function verifyAccountPassword(password, storedHash) {
+    const [salt, expected] = String(storedHash || '').split(':');
+    if (!salt || !expected) return false;
+    const actual = crypto.scryptSync(String(password), salt, 64).toString('hex');
+    const expectedBuffer = Buffer.from(expected, 'hex');
+    const actualBuffer = Buffer.from(actual, 'hex');
+    return expectedBuffer.length === actualBuffer.length && crypto.timingSafeEqual(expectedBuffer, actualBuffer);
+}
+
 function isValidAccountEmail(email) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || ''));
 }
@@ -929,7 +943,8 @@ function accountResponse(account) {
         hasNin: Boolean(account.nin),
         isAdmin: Boolean(account.isAdmin),
         botLimit: account.isAdmin ? 999 : 2,
-        botCount: getAccountBotIds(account.id).length
+        botCount: getAccountBotIds(account.id).length,
+        botIds: getAccountBotIds(account.id)
     };
 }
 
@@ -1152,6 +1167,7 @@ app.post('/api/auth/login', requirePersistence, async (req, res) => {
     const email = normalizeAccountEmail(req.body?.email ?? req.body?.accountEmail);
     const name = String(req.body?.name || '').trim().slice(0, 60);
     const nin = normalizeNin(req.body?.nin);
+    const password = String(req.body?.password || '');
 
     if (!email && !phone) {
         return res.status(400).json({ error: 'Weka email ya account.' });
@@ -1161,6 +1177,9 @@ app.post('/api/auth/login', requirePersistence, async (req, res) => {
     }
     if (!isValidNin(nin)) {
         return res.status(400).json({ error: 'NIN lazima iwe na herufi/namba 8 hadi 32.' });
+    }
+    if (password.length < 8 || password.length > 128) {
+        return res.status(400).json({ error: 'Password iwe na herufi angalau 8.' });
     }
 
     const existingAccount = email && Object.values(accounts).find((account) =>
@@ -1176,6 +1195,11 @@ app.post('/api/auth/login', requirePersistence, async (req, res) => {
         name: name || `Account ${email || phone}`,
         createdAt: new Date().toISOString()
     };
+
+    if (account.passwordHash && !verifyAccountPassword(password, account.passwordHash)) {
+        return res.status(401).json({ error: 'Email/phone au password si sahihi.' });
+    }
+    if (!account.passwordHash) account.passwordHash = hashAccountPassword(password);
 
     if (email) account.email = email;
     if (phone) account.phone = phone;
@@ -1193,6 +1217,36 @@ app.post('/api/auth/login', requirePersistence, async (req, res) => {
     return res.json({ token: account.token, account: accountResponse(account) });
 });
 
+app.post('/api/auth/register', requirePersistence, async (req, res) => {
+    const email = normalizeAccountEmail(req.body?.email);
+    const phone = normalizeAccountPhone(req.body?.phone);
+    const name = String(req.body?.name || '').trim().slice(0, 60);
+    const password = String(req.body?.password || '');
+
+    if (!isValidAccountEmail(email)) return res.status(400).json({ error: 'Weka email sahihi.' });
+    if (phone && !isValidInternationalPhone(phone)) return res.status(400).json({ error: 'Namba ya simu si sahihi.' });
+    if (password.length < 8 || password.length > 128) return res.status(400).json({ error: 'Password iwe na herufi angalau 8.' });
+    if (Object.values(accounts).some((account) => normalizeAccountEmail(account.email) === email)) {
+        return res.status(409).json({ error: 'Account yenye email hiyo tayari ipo. Ingia badala yake.' });
+    }
+
+    const id = `account_email_${Buffer.from(email).toString('base64url')}`;
+    const account = {
+        id,
+        email,
+        phone: phone || '',
+        name: name || `Account ${email}`,
+        passwordHash: hashAccountPassword(password),
+        botIds: [],
+        createdAt: new Date().toISOString(),
+        lastLoginAt: new Date().toISOString()
+    };
+    ensureAccountToken(account);
+    accounts[id] = account;
+    await saveAccounts({ strict: true });
+    return res.status(201).json({ token: account.token, account: accountResponse(account) });
+});
+
 app.post('/api/account/link-bot', requirePersistence, async (req, res) => {
     const accountToken = normalizeAccessToken(req.get('authorization')?.replace(/^Bearer\s+/i, ''));
     const botToken = normalizeAccessToken(req.body?.botToken);
@@ -1203,6 +1257,12 @@ app.post('/api/account/link-bot', requirePersistence, async (req, res) => {
     if (!botAccount) return res.status(404).json({ error: 'Bot token si sahihi au bot haipo kwenye database.' });
 
     const botIds = [...new Set(botAccount.botIds || [])];
+    const botLimit = account.isAdmin ? 999 : 2;
+    const existingBotIds = getAccountBotIds(account.id);
+    const newBotIds = botIds.filter((botId) => !existingBotIds.includes(botId));
+    if (existingBotIds.length + newBotIds.length > botLimit) {
+        return res.status(409).json({ error: `Account yako inaweza kuwa na bots ${botLimit} tu.` });
+    }
     account.botIds = [...new Set([...(account.botIds || []), ...botIds])];
     if (botAccount.id !== account.id) {
         botAccount.botIds = (botAccount.botIds || []).filter((botId) => !botIds.includes(botId));
@@ -1940,6 +2000,13 @@ app.use(
 
 app.use(
     express.static(__dirname)
+);
+
+app.get(
+    '/login',
+    (req, res) => {
+        res.sendFile(path.join(__dirname, 'login.html'));
+    }
 );
 
 app.get(
@@ -4237,8 +4304,8 @@ io.on(
             ...Object.keys(sessions)
         ])];
         accounts.account_mickey_admin = controlAccount;
-        socket.account = controlAccount;
-        socket.authenticated = true;
+        socket.account = null;
+        socket.authenticated = false;
 
         socket.on(
             'admin-auth',
@@ -4253,6 +4320,7 @@ io.on(
 
                     socket.authenticated =
                         true;
+                    socket.account = controlAccount;
 
                     socket.emit(
                         'admin-auth-success'
@@ -4418,6 +4486,11 @@ io.on(
                 accessKey
             }) => {
 
+                if (!socket.authenticated || !socket.account) {
+                    socket.emit('pair-error', 'Login kwanza ili u-deploy bot.');
+                    return;
+                }
+
                 if (String(accessKey || '').trim() !== PAIR_ACCESS_KEY) {
                     socket.emit('pair-error', 'Access key si sahihi.');
                     return;
@@ -4432,22 +4505,6 @@ io.on(
                 if (!isValidInternationalPhone(normalizedNumber)) {
                     socket.emit('pair-error', 'Weka namba ya kimataifa yenye country code, mfano +447911123456.');
                     return;
-                }
-
-                if (!socket.account) {
-                    const accountId = `account_${normalizedNumber}`;
-                    const account = accounts[accountId] || {
-                        id: accountId,
-                        phone: normalizedNumber,
-                        name: `Account ${normalizedNumber}`,
-                        createdAt: new Date().toISOString()
-                    };
-                    account.phone = normalizedNumber;
-                    ensureAccountToken(account);
-                    account.lastLoginAt = new Date().toISOString();
-                    accounts[accountId] = account;
-                    await saveAccounts({ strict: true });
-                    socket.account = account;
                 }
 
                 // Admin ana kikomo cha bots 999, user 2

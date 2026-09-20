@@ -135,6 +135,9 @@
   .hero h1 .grad{background:linear-gradient(135deg,var(--orange),var(--pink),var(--cyan));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;display:inline-block;}
   .hero p.lead{font-size:1.05rem;color:var(--text-2);max-width:620px;margin-bottom:32px;}
   .hero-cta{display:flex;gap:14px;flex-wrap:wrap;}
+  .account-overview{display:flex;align-items:center;gap:16px;max-width:660px;margin-top:28px;padding:16px 18px;border:1px solid rgba(0,229,255,.18);border-radius:18px;background:linear-gradient(110deg,rgba(0,229,255,.08),rgba(255,255,255,.025));}
+  .account-overview .quota{width:46px;height:46px;display:grid;place-items:center;border-radius:14px;background:rgba(200,255,0,.12);color:var(--lime);font-family:'Space Grotesk',sans-serif;font-weight:700;}
+  .account-overview strong{display:block;font-size:.9rem}.account-overview small{display:block;color:var(--text-3);font-size:.76rem;margin-top:2px}.account-overview .quota-bar{margin-left:auto;width:150px;height:7px;border-radius:10px;background:rgba(255,255,255,.1);overflow:hidden}.account-overview .quota-fill{height:100%;width:0;background:linear-gradient(90deg,var(--lime),var(--cyan));border-radius:inherit;transition:width .4s ease;}
 
   .stats-grid{padding:20px 40px 40px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;}
   .stat-tile{padding:24px;border-radius:var(--radius);background:linear-gradient(135deg,var(--card),rgba(255,255,255,0.01));border:1px solid var(--stroke);transition:.3s;}
@@ -332,6 +335,7 @@
         <i class="fas fa-shield-halved"></i> Ingia MICKEY Control
       </button>
       <div class="auth-error" id="authError"></div>
+      <a href="/login" style="display:block;text-align:center;margin-top:16px;color:var(--cyan);font-size:.78rem;text-decoration:none;">Mteja? Ingia au jisajili hapa</a>
     </form>
     <div class="auth-trust"><span><i class="fas fa-robot"></i> Bot control</span><span><i class="fas fa-database"></i> Settings zinahifadhiwa</span></div>
   </div>
@@ -428,6 +432,11 @@
       <a href="#connect" data-tab="connect" class="btn btn-primary"><i class="fas fa-bolt"></i> Connect a Bot</a>
       <a href="#bots" data-tab="bots" class="btn btn-ghost"><i class="fas fa-eye"></i> View Bots</a>
       <button class="btn btn-ghost btn-sm" id="tokenVaultBtn" type="button"><i class="fas fa-key"></i> View tokens</button>
+    </div>
+    <div class="account-overview" aria-live="polite">
+      <div class="quota" id="accountQuota">0/2</div>
+      <div><strong id="accountPlanName">Customer workspace</strong><small id="accountPlanHint">Deploy hadi WhatsApp bots mbili kwenye account hii.</small></div>
+      <div class="quota-bar" aria-hidden="true"><div class="quota-fill" id="accountQuotaFill"></div></div>
     </div>
   </section>
 
@@ -664,6 +673,17 @@ function applyUserToUI(user) {
 
   var badge = document.getElementById('botsBadge');
   if (badge) badge.textContent = (user.botCount || 0) + '/' + (user.botLimit || 2);
+
+  var quota = document.getElementById('accountQuota');
+  var quotaFill = document.getElementById('accountQuotaFill');
+  var quotaLimit = Number(user.botLimit || 2);
+  var quotaCount = Number(user.botCount || 0);
+  if (quota) quota.textContent = quotaCount + '/' + quotaLimit;
+  if (quotaFill) quotaFill.style.width = Math.min(100, Math.round((quotaCount / Math.max(1, quotaLimit)) * 100)) + '%';
+  var plan = document.getElementById('accountPlanName');
+  var hint = document.getElementById('accountPlanHint');
+  if (plan) plan.textContent = user.isAdmin ? 'MICKEY admin workspace' : 'Customer workspace';
+  if (hint) hint.textContent = user.isAdmin ? 'Admin access: manage all connected bots.' : (quotaCount >= quotaLimit ? 'Bot limit imefika. Tumia token ku-manage bots zako.' : 'Bado una nafasi ya deploy bot nyingine.');
 
   document.body.classList.add('authenticated');
 }
