@@ -486,7 +486,7 @@ if (!tgToken) {
     );
 }
 
-const tgBot = tgToken
+const tgBot = tgToken && process.env.VERCEL !== '1'
     ? new TelegramBot(
         tgToken,
         {
