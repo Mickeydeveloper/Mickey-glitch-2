@@ -652,9 +652,13 @@ function addBotRelayNodes(options = {}) {
    GLOBAL DATA
 ========================================================= */
 
-const AUTH_DIR = path.join(__dirname, 'auth_info');
-const DATA_FILE = path.join(__dirname, 'data', 'bot_data.json');
-const ACCOUNTS_FILE = path.join(__dirname, 'data', 'accounts.json');
+const RUNTIME_DIR = process.env.VERCEL === '1'
+    ? path.join('/tmp', 'mickey-glitch')
+    : __dirname;
+const AUTH_DIR = path.join(RUNTIME_DIR, 'auth_info');
+const DATA_DIR = path.join(RUNTIME_DIR, 'data');
+const DATA_FILE = path.join(DATA_DIR, 'bot_data.json');
+const ACCOUNTS_FILE = path.join(DATA_DIR, 'accounts.json');
 const MONGODB_URI = String(process.env.MONGODB_URI || process.env.MONGO_URI || '').trim();
 const MONGODB_DB = String(process.env.MONGODB_DB || 'mickey_glitch').trim();
 const MONGODB_SESSION_SECRET = String(process.env.MONGODB_SESSION_SECRET || process.env.SESSION_SECRET || '').trim();
@@ -662,7 +666,7 @@ let mongoStore = null;
 let persistenceReady = false;
 
 fs.ensureDirSync(AUTH_DIR);
-fs.ensureDirSync(path.dirname(DATA_FILE));
+fs.ensureDirSync(DATA_DIR);
 
 let botData = {
     antilinkGroups: {},
@@ -712,7 +716,7 @@ function saveBotData() {
 }
 
 function setCommandFeatureState(feature, enabled) {
-    const configPath = path.join(__dirname, 'data', `${feature}.json`);
+    const configPath = path.join(DATA_DIR, `${feature}.json`);
     const current = fs.existsSync(configPath) ? fs.readJsonSync(configPath) : {};
     const next = { ...current, enabled: Boolean(enabled) };
 
@@ -732,7 +736,7 @@ function setCommandFeatureState(feature, enabled) {
 }
 
 function getCommandFeatureState(feature) {
-    const configPath = path.join(__dirname, 'data', `${feature}.json`);
+    const configPath = path.join(DATA_DIR, `${feature}.json`);
     if (!fs.existsSync(configPath)) return feature === 'autoStatus';
     const state = fs.readJsonSync(configPath);
     return feature === 'chatbot' ? Boolean(state.private) : Boolean(state.enabled);
