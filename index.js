@@ -203,7 +203,6 @@ function loadCommandRegistry() {
         'status',
         'telebot',
         'unpair',
-        'url',
         'sudo'
     ]);
 

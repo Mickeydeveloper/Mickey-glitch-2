@@ -1,100 +1,174 @@
-const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
-const fs = require('fs');
-const path = require('path');
-const { UploadFileUgu, TelegraPh } = require('../lib/uploader');
+const crypto = require('crypto');
+const https = require('https');
+const { downloadContentFromMessage, normalizeMessageContent } = require('@whiskeysockets/baileys');
 
-async function getMediaBufferAndExt(message) {
-    const m = message.message || {};
-    if (m.imageMessage) {
-        const stream = await downloadContentFromMessage(m.imageMessage, 'image');
-        const chunks = [];
-        for await (const chunk of stream) chunks.push(chunk);
-        return { buffer: Buffer.concat(chunks), ext: '.jpg' };
+const MEDIA_CONFIG = {
+    image: { hkdf: 'WhatsApp Image Keys', mediaPath: '/mms/image' },
+    video: { hkdf: 'WhatsApp Video Keys', mediaPath: '/mms/video' },
+    audio: { hkdf: 'WhatsApp Audio Keys', mediaPath: '/mms/audio' },
+    document: { hkdf: 'WhatsApp Document Keys', mediaPath: '/mms/document' },
+    sticker: { hkdf: 'WhatsApp Image Keys', mediaPath: '/mms/sticker' }
+};
+
+function queryMediaConnection(conn) {
+    if (typeof conn?.query !== 'function') {
+        throw new Error('WhatsApp connection does not support media upload');
     }
-    if (m.videoMessage) {
-        const stream = await downloadContentFromMessage(m.videoMessage, 'video');
-        const chunks = [];
-        for await (const chunk of stream) chunks.push(chunk);
-        return { buffer: Buffer.concat(chunks), ext: '.mp4' };
+
+    return conn.query({
+        tag: 'iq',
+        attrs: {
+            id: conn.generateMessageTag?.() || Date.now().toString(),
+            to: 's.whatsapp.net',
+            type: 'set',
+            xmlns: 'w:m'
+        },
+        content: [{ tag: 'media_conn', attrs: {} }]
+    });
+}
+
+async function uploadToServer(conn, buffer, { hkdf, mediaPath, mediaKey = crypto.randomBytes(32) }) {
+    const expanded = Buffer.from(crypto.hkdfSync(
+        'sha256',
+        mediaKey,
+        Buffer.alloc(32),
+        Buffer.from(hkdf),
+        112
+    ));
+    const iv = expanded.subarray(0, 16);
+    const cipherKey = expanded.subarray(16, 48);
+    const macKey = expanded.subarray(48, 80);
+    const cipher = crypto.createCipheriv('aes-256-cbc', cipherKey, iv);
+    const encrypted = Buffer.concat([cipher.update(buffer), cipher.final()]);
+    const mac = crypto.createHmac('sha256', macKey)
+        .update(iv)
+        .update(encrypted)
+        .digest()
+        .subarray(0, 10);
+    const encBuffer = Buffer.concat([encrypted, mac]);
+    const fileSha256 = crypto.createHash('sha256').update(buffer).digest();
+    const fileEncSha256 = crypto.createHash('sha256').update(encBuffer).digest();
+    const iq = await queryMediaConnection(conn);
+    const mediaConn = iq.content?.find((value) => value.tag === 'media_conn');
+    if (!mediaConn) throw new Error('media_conn haikupatikana');
+
+    const auth = mediaConn.attrs?.auth;
+    const hosts = (mediaConn.content || [])
+        .filter((value) => value.tag === 'host')
+        .map((value) => value.attrs?.hostname)
+        .filter(Boolean);
+    if (!auth) throw new Error('auth ya media_conn haijapatikana');
+    if (!hosts.length) throw new Error('host ya upload haikupatikana');
+
+    const token = encodeURIComponent(fileEncSha256.toString('base64url'));
+    let lastError;
+    for (const host of hosts) {
+        try {
+            const json = await new Promise((resolve, reject) => {
+                const url = new URL(`https://${host}${mediaPath}/${token}?auth=${encodeURIComponent(auth)}&token=${token}`);
+                const request = https.request({
+                    hostname: url.hostname,
+                    port: 443,
+                    path: url.pathname + url.search,
+                    method: 'POST',
+                    headers: {
+                        Origin: 'https://web.whatsapp.com',
+                        Referer: 'https://web.whatsapp.com/',
+                        'Content-Type': 'application/octet-stream',
+                        'Content-Length': encBuffer.length
+                    }
+                }, (response) => {
+                    let body = '';
+                    response.setEncoding('utf8');
+                    response.on('data', (chunk) => { body += chunk; });
+                    response.on('end', () => {
+                        if (response.statusCode < 200 || response.statusCode >= 300) {
+                            reject(new Error(`Upload failed ${response.statusCode}: ${body}`));
+                            return;
+                        }
+                        try {
+                            resolve(JSON.parse(body));
+                        } catch {
+                            reject(new Error(`Upload response si JSON: ${body}`));
+                        }
+                    });
+                });
+                request.on('error', reject);
+                request.write(encBuffer);
+                request.end();
+            });
+            const directPath = json.direct_path || json.directPath || json.url || json.path;
+            if (!directPath) throw new Error('direct path haikupatikana');
+            return {
+                directPath,
+                mediaKey,
+                fileLength: buffer.length,
+                fileSha256,
+                fileEncSha256,
+                ...json,
+                url: /^https?:\/\//i.test(directPath) ? directPath : `https://mmg.whatsapp.net${directPath}`
+            };
+        } catch (error) {
+            lastError = error;
+        }
     }
-    if (m.audioMessage) {
-        const stream = await downloadContentFromMessage(m.audioMessage, 'audio');
-        const chunks = [];
-        for await (const chunk of stream) chunks.push(chunk);
-        // default mp3 for voice/ptt may be opus; still use .mp3 generically
-        return { buffer: Buffer.concat(chunks), ext: '.mp3' };
-    }
-    if (m.documentMessage) {
-        const stream = await downloadContentFromMessage(m.documentMessage, 'document');
-        const chunks = [];
-        for await (const chunk of stream) chunks.push(chunk);
-        const fileName = m.documentMessage.fileName || 'file.bin';
-        const ext = path.extname(fileName) || '.bin';
-        return { buffer: Buffer.concat(chunks), ext };
-    }
-    if (m.stickerMessage) {
-        const stream = await downloadContentFromMessage(m.stickerMessage, 'sticker');
-        const chunks = [];
-        for await (const chunk of stream) chunks.push(chunk);
-        return { buffer: Buffer.concat(chunks), ext: '.webp' };
+    throw lastError || new Error('Hosts zote za upload zimeshindwa');
+}
+
+async function downloadMedia(media, type) {
+    const stream = await downloadContentFromMessage(media, type);
+    const chunks = [];
+    for await (const chunk of stream) chunks.push(chunk);
+    const buffer = Buffer.concat(chunks);
+    return buffer.length ? buffer : null;
+}
+
+function getMedia(message) {
+    const content = normalizeMessageContent(message?.message) || message?.message || {};
+    for (const type of Object.keys(MEDIA_CONFIG)) {
+        const media = content[`${type}Message`];
+        if (media) return { media, type };
     }
     return null;
 }
 
-async function getQuotedMediaBufferAndExt(message) {
-    const quoted = message.message?.extendedTextMessage?.contextInfo?.quotedMessage || null;
+function getQuotedMedia(message) {
+    const quoted = message?.message?.extendedTextMessage?.contextInfo?.quotedMessage;
     if (!quoted) return null;
-    return getMediaBufferAndExt({ message: quoted });
+    return getMedia({ message: quoted });
 }
 
 async function urlCommand(sock, chatId, message) {
     try {
-        // Prefer current message media, else quoted media
-        let media = await getMediaBufferAndExt(message);
-        if (!media) media = await getQuotedMediaBufferAndExt(message);
+        let media = getMedia(message) || getQuotedMedia(message);
 
         if (!media) {
-            await sock.sendMessage(chatId, { text: 'Send or reply to a media (image, video, audio, sticker, document) to get a URL.' }, { quoted: message });
+            await sock.sendMessage(chatId, {
+                text: '*Tuma au reply media* (image, video, audio, sticker, document), kisha tumia `.tourl`.'
+            }, { quoted: message });
             return;
         }
 
-        const tempDir = path.join(__dirname, '../temp');
-        if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
-        const tempPath = path.join(tempDir, `${Date.now()}${media.ext}`);
-        fs.writeFileSync(tempPath, media.buffer);
+        await sock.sendMessage(chatId, { text: '⏳ *Ninapakia media WhatsApp...*' }, { quoted: message });
+        const buffer = await downloadMedia(media.media, media.type);
+        if (!buffer) throw new Error('Media buffer iko tupu');
 
-        let url = '';
-        try {
-            if (media.ext === '.jpg' || media.ext === '.png' || media.ext === '.webp') {
-                // Try TelegraPh for images/webp first (fast, simple)
-                try {
-                    url = await TelegraPh(tempPath);
-                } catch {
-                    // Fallback to Uguu for any file type
-                    const res = await UploadFileUgu(tempPath);
-                    url = typeof res === 'string' ? res : (res.url || res.url_full || JSON.stringify(res));
-                }
-            } else {
-                const res = await UploadFileUgu(tempPath);
-                url = typeof res === 'string' ? res : (res.url || res.url_full || JSON.stringify(res));
-            }
-        } finally {
-            setTimeout(() => {
-                try { if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath); } catch {}
-            }, 2000);
-        }
-
-        if (!url) {
-            await sock.sendMessage(chatId, { text: 'Failed to upload media.' }, { quoted: message });
-            return;
-        }
-
-        await sock.sendMessage(chatId, { text: `URL: ${url}` }, { quoted: message });
+        const uploaded = await uploadToServer(sock, buffer, MEDIA_CONFIG[media.type]);
+        await sock.sendMessage(chatId, {
+            text: `✅ *URL imepatikana:*\n${uploaded.url}`
+        }, { quoted: message });
     } catch (error) {
-        console.error('[URL] error:', error?.message || error);
-        await sock.sendMessage(chatId, { text: 'Failed to convert media to URL.' }, { quoted: message });
+        console.error('[TOURL] error:', error?.message || error);
+        await sock.sendMessage(chatId, {
+            text: `❌ Imeshindikana kupata URL: ${error?.message || 'unknown error'}`
+        }, { quoted: message });
     }
 }
+
+urlCommand.name = 'tourl';
+urlCommand.description = 'Upload WhatsApp media to the WhatsApp media server and return its URL';
+urlCommand.category = 'UTILITY';
+urlCommand.aliases = ['tourl', 'url'];
 
 module.exports = urlCommand;
 
