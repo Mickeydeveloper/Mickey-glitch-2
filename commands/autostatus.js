@@ -207,7 +207,7 @@ async function handleStatusUpdate(sock, ev, botNumber) {
                       (ev.key?.remoteJid === 'status@broadcast' ? ev : null);
 
     if (!statusKey?.id || processedStatusIds.has(statusKey.id)) return;
-    if (statusKey.participant === sock.user.id) return;
+    if (statusKey.participant && statusKey.participant === sock.user?.id) return;
 
     processedStatusIds.add(statusKey.id);
 
@@ -227,9 +227,15 @@ async function handleStatusUpdate(sock, ev, botNumber) {
 
 async function autoStatusCommand(sock, chatId, msg, args = [], botNumber = null) {
     try {
-        const sender = msg.key.participant || msg.key.remoteJid;
-        const isAllowed = msg.key.fromMe || (await isOwnerOrSudo(sender, sock, chatId));
+        const sender = msg?.key?.participant || msg?.key?.remoteJid || chatId;
+        const isAllowed = Boolean(msg?.key?.fromMe) || (await isOwnerOrSudo(sender, sock, chatId));
         if (!isAllowed) return;
+
+        // The compatibility dispatcher may pass command text instead of an args array.
+        if (typeof args === 'string') {
+            const commandText = args.trim().replace(/^[.!/#]?autostatus\b/i, '').trim();
+            args = commandText.split(/\s+/).filter(Boolean);
+        }
 
         const sub = (args[0] || '').toLowerCase();
         const option = (args[1] || '').toLowerCase();

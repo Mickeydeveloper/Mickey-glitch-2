@@ -260,6 +260,11 @@ async function handleLinkDetection(
     senderId
 ) {
     try {
+        if (!sock || !chatId || !message) {
+            console.warn('[ANTILINK] Missing socket, chat ID, or message.');
+            return;
+        }
+
         const antilinkSetting = await getAntilink(chatId);
 
         if (!antilinkSetting || !antilinkSetting.enabled) {
