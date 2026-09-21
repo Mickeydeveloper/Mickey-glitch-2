@@ -2057,7 +2057,7 @@ app.get(
             host,
             url:
                 `${protocol}://${host}`,
-            port: process.env.PORT || 25569
+            port: PORT
         });
     }
 );
@@ -4915,11 +4915,12 @@ const HOST =
     process.env.HOST ||
     '0.0.0.0';
 
+const SERVER_IP = '16.170.206.19';
+const configuredPort = Number.parseInt(process.env.PORT, 10);
 const PORT =
-    Number(
-        process.env.PORT ||
-        25569
-    );
+    Number.isInteger(configuredPort) && configuredPort > 0 && configuredPort <= 65535
+        ? configuredPort
+        : 3000;
 
 
 async function startServer() {
@@ -4928,20 +4929,8 @@ async function startServer() {
         HOST,
         async () => {
 
-        const displayHost =
-            process.env.SERVER_IP ||
-            process.env.P_SERVER_IP ||
-            (
-                HOST ===
-                '0.0.0.0'
-                    ? 'localhost'
-                    : HOST
-            );
-
-        const displayPort =
-            process.env.SERVER_PORT ||
-            process.env.P_SERVER_PORT ||
-            PORT;
+        const displayHost = SERVER_IP;
+        const displayPort = PORT;
 
         console.log(
             `🌑 ${botBrandName} v${settings.version} Server running on ${HOST}:${PORT}`
