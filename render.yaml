@@ -9,8 +9,12 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
-      - key: PORT
-        value: 10000
+      - key: LOW_RESOURCE_MODE
+        value: "true"
+      - key: ENABLE_TELEGRAM
+        value: "false"
+      - key: MAX_MEDIA_MB
+        value: "8"
       - key: MONGODB_URI
         sync: false
       - key: MONGODB_SESSION_SECRET

@@ -22,6 +22,12 @@ Health Check Path: /health
 
 Render supplies `PORT`; do not replace it with a hard-coded port.
 
+### Render bandwidth suspension
+
+`Workspace suspended: you've used the 5 GB of free bandwidth` is a Render account limit. Application code cannot unsuspend the workspace. Restore service by waiting for the monthly quota reset, upgrading the workspace, or contacting Render support. After service is restored, redeploy with the included `render.yaml` and keep `LOW_RESOURCE_MODE=true`.
+
+Low-resource mode disables Telegram polling unless `ENABLE_TELEGRAM=true`, leaves automatic status activity off unless explicitly configured, caches dashboard assets for one day, limits API request bodies, throttles abusive API traffic, and caps Axios media responses at 8 MB. Video, audio, sticker, and image commands can still use substantial bandwidth when users invoke them; these commands cannot be made bandwidth-free without disabling them.
+
 ## VPS with PM2
 
 ```bash

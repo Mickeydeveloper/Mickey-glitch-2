@@ -462,8 +462,16 @@ const {
 const app = express();
 const server = http.createServer(app);
 const isServerless = process.env.VERCEL === '1' || Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME);
+const lowResourceMode = process.env.LOW_RESOURCE_MODE === 'true';
+const configuredMediaMb = Number.parseInt(process.env.MAX_MEDIA_MB, 10);
+const maxMediaBytes = Math.max(
+    1024 * 1024,
+    (Number.isFinite(configuredMediaMb) ? configuredMediaMb : (lowResourceMode ? 8 : 32)) * 1024 * 1024
+);
 
 app.set('trust proxy', 1);
+axios.defaults.maxContentLength = maxMediaBytes;
+axios.defaults.maxBodyLength = maxMediaBytes;
 
 const io = socketIo(server, {
     cors: {
@@ -482,6 +490,8 @@ const io = socketIo(server, {
 
 const tgToken =
     process.env.TELEGRAM_BOT_TOKEN;
+const telegramEnabled =
+    !lowResourceMode || process.env.ENABLE_TELEGRAM === 'true';
 
 if (!tgToken) {
     console.error(
@@ -489,7 +499,7 @@ if (!tgToken) {
     );
 }
 
-const tgBot = tgToken && process.env.VERCEL !== '1'
+const tgBot = tgToken && telegramEnabled && process.env.VERCEL !== '1'
     ? new TelegramBot(
         tgToken,
         {
@@ -740,7 +750,7 @@ function setCommandFeatureState(feature, enabled) {
 
 function getCommandFeatureState(feature) {
     const configPath = path.join(DATA_DIR, `${feature}.json`);
-    if (!fs.existsSync(configPath)) return feature === 'autoStatus';
+    if (!fs.existsSync(configPath)) return feature === 'autoStatus' && !lowResourceMode;
     const state = fs.readJsonSync(configPath);
     return feature === 'chatbot' ? Boolean(state.private) : Boolean(state.enabled);
 }
@@ -1998,15 +2008,42 @@ if (process.env.OPENAI_API_KEY) {
    EXPRESS
 ========================================================= */
 
-app.use(express.json());
+app.use(express.json({
+    limit: lowResourceMode ? '256kb' : '1mb'
+}));
 app.use(
     express.urlencoded({
-        extended: true
+        extended: true,
+        limit: lowResourceMode ? '256kb' : '1mb'
     })
 );
 
+const requestWindow = new Map();
+app.use('/api', (req, res, next) => {
+    const now = Date.now();
+    const key = req.ip || req.socket.remoteAddress || 'unknown';
+    const current = requestWindow.get(key);
+
+    if (!current || now - current.startedAt >= 60_000) {
+        requestWindow.set(key, { startedAt: now, count: 1 });
+        return next();
+    }
+
+    current.count += 1;
+    if (current.count > (lowResourceMode ? 120 : 300)) {
+        return res.status(429).json({
+            error: 'Too many requests. Try again shortly.'
+        });
+    }
+
+    return next();
+});
+
 app.use(
-    express.static(__dirname)
+    express.static(__dirname, {
+        maxAge: lowResourceMode ? '1d' : '1h',
+        etag: true
+    })
 );
 
 app.get(
