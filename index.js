@@ -49,7 +49,6 @@ const {
     backupSignalState
 } = require('./lib/sessionRecovery');
 const { createCtx } = require('./lib/messageBuilder');
-const { MongoStore } = require('./lib/mongoStore');
 
 function isPlainConversationMessage(content) {
     return content &&
@@ -672,10 +671,6 @@ const AUTH_DIR = path.join(RUNTIME_DIR, 'auth_info');
 const DATA_DIR = path.join(RUNTIME_DIR, 'data');
 const DATA_FILE = path.join(DATA_DIR, 'bot_data.json');
 const ACCOUNTS_FILE = path.join(DATA_DIR, 'accounts.json');
-const MONGODB_URI = String(process.env.MONGODB_URI || process.env.MONGO_URI || '').trim();
-const MONGODB_DB = String(process.env.MONGODB_DB || 'mickey_glitch').trim();
-const MONGODB_SESSION_SECRET = String(process.env.MONGODB_SESSION_SECRET || process.env.SESSION_SECRET || '').trim();
-let mongoStore = null;
 let persistenceReady = false;
 
 fs.ensureDirSync(AUTH_DIR);
@@ -765,42 +760,21 @@ if (fs.existsSync(ACCOUNTS_FILE)) {
 }
 
 function saveAccounts({ strict = false } = {}) {
+    for (const account of Object.values(accounts)) {
+        ensureAccountToken(account);
+        ensurePairingAccessKey(account);
+    }
     fs.writeJsonSync(ACCOUNTS_FILE, accounts, { spaces: 2 });
-    if (!mongoStore) return Promise.resolve(true);
-
-    return mongoStore.saveAccounts(accounts).then(() => true).catch((error) => {
-            console.error('[Mongo] Account sync failed:', error.message);
-            if (strict) throw error;
-            return false;
-        });
+    return Promise.resolve(true);
 }
 
 async function initializePersistence() {
-    if (!MONGODB_URI) {
-        console.warn('[Mongo] MONGODB_URI is not configured. Using local JSON/session files.');
-        persistenceReady = true;
-        return;
-    }
-    if (!MONGODB_SESSION_SECRET) {
-        throw new Error('MONGODB_SESSION_SECRET is required when MongoDB persistence is enabled.');
-    }
-
-    mongoStore = new MongoStore(MONGODB_URI, MONGODB_DB, MONGODB_SESSION_SECRET);
-    await mongoStore.connect();
-    const remoteAccounts = await mongoStore.loadAccounts();
-    // Mongo is authoritative when enabled; local JSON remains a fallback/cache.
-    accounts = { ...accounts, ...remoteAccounts };
-    let accountsChanged = false;
     for (const account of Object.values(accounts)) {
-        const previousToken = account?.token;
         ensureAccountToken(account);
-        if (account?.token !== previousToken) accountsChanged = true;
+        ensurePairingAccessKey(account);
     }
-    if (accountsChanged) {
-        fs.writeJsonSync(ACCOUNTS_FILE, accounts, { spaces: 2 });
-    }
-    await mongoStore.saveAccounts(accounts);
-    console.log(`[Mongo] Connected. Restored ${Object.keys(remoteAccounts).length} account records.`);
+    fs.writeJsonSync(ACCOUNTS_FILE, accounts, { spaces: 2 });
+    console.log(`[Storage] Local account storage ready. Restored ${Object.keys(accounts).length} accounts.`);
     persistenceReady = true;
 }
 
@@ -883,6 +857,18 @@ function createAccountToken() {
     return token;
 }
 
+function createPairingAccessKey() {
+    return `MG-${crypto.randomBytes(5).toString('hex').toUpperCase()}`;
+}
+
+function ensurePairingAccessKey(account) {
+    if (!account) return null;
+    if (!/^MG-[A-F0-9]{10}$/.test(String(account.pairingAccessKey || ''))) {
+        account.pairingAccessKey = createPairingAccessKey();
+    }
+    return account.pairingAccessKey;
+}
+
 function ensureAccountToken(account) {
     const isConfiguredAdminToken = typeof ADMIN_TOKEN === 'string' &&
         ADMIN_TOKEN && account?.token === ADMIN_TOKEN;
@@ -925,17 +911,7 @@ function getAccountByToken(token) {
 }
 
 async function getAccountByTokenFromPersistence(token) {
-    const localAccount = getAccountByToken(token);
-    if (localAccount || !mongoStore) return localAccount;
-
-    const result = await mongoStore.findAccountByToken(normalizeAccessToken(token));
-    if (!result?.account) return null;
-
-    const account = result.account;
-    const accountId = result.accountId || account.id || `account_${account.phone || Date.now()}`;
-    account.id = account.id || accountId;
-    accounts[accountId] = account;
-    return account;
+    return getAccountByToken(token);
 }
 
 function getAccountForBot(userId) {
@@ -950,6 +926,8 @@ function getAccountBotIds(accountId) {
 }
 
 function accountResponse(account) {
+    ensureAccountToken(account);
+    ensurePairingAccessKey(account);
     return {
         id: account.id,
         token: account.token,
@@ -961,25 +939,24 @@ function accountResponse(account) {
         isAdmin: Boolean(account.isAdmin),
         botLimit: account.isAdmin ? 999 : 2,
         botCount: getAccountBotIds(account.id).length,
-        botIds: getAccountBotIds(account.id)
+        botIds: getAccountBotIds(account.id),
+        pairingAccessKey: account.pairingAccessKey
     };
 }
 
 
 /* =========================================================
-   ADMIN CREDENTIALS (hardcoded)
+    ADMIN CREDENTIALS (environment)
 ========================================================= */
 
-const ADMIN_PHONE = normalizeAccountPhone(process.env.ADMIN_PHONE || '255612130873');
-const ADMIN_FALLBACK_PHONE = '255612130873';
-const ADMIN_PASSWORD = String(process.env.ADMIN_PASSWORD || 'MICKEY').trim();
-const PAIR_ACCESS_KEY = '255';
+const ADMIN_PHONE = normalizeAccountPhone(process.env.ADMIN_PHONE || '');
+const ADMIN_PASSWORD = String(process.env.ADMIN_PASSWORD || '').trim();
 const ADMIN_EMAIL = String(process.env.ADMIN_EMAIL || process.env.ADMIN_EMAIL_ADDRESS || '').trim().toLowerCase();
 const ADMIN_TOKEN = String(process.env.ADMIN_TOKEN || '').trim();
 
 function isAuthorizedAdminPhone(phone) {
     if (!phone) return false;
-    if ([ADMIN_PHONE, ADMIN_FALLBACK_PHONE].includes(phone)) return true;
+    if (ADMIN_PHONE && phone === ADMIN_PHONE) return true;
     return Object.values(accounts).some((account) =>
         account?.isAdmin && normalizeAccountPhone(account.phone) === phone
     );
@@ -1030,7 +1007,7 @@ app.post('/api/auth/mickey-login', requirePersistence, async (req, res) => {
     const password = String(req.body?.password || '').trim();
 
     if (!password || password !== ADMIN_PASSWORD) {
-        return res.status(401).json({ error: 'MICKEY password si sahihi.' });
+        return res.status(401).json({ error: 'Admin password si sahihi.' });
     }
 
     const id = 'account_mickey_admin';
@@ -2056,12 +2033,7 @@ app.get(
 app.get(
     '/',
     (req, res) => {
-        res.sendFile(
-            path.join(
-                __dirname,
-                'index.html'
-            )
-        );
+        res.redirect('/login');
     }
 );
 
@@ -2477,10 +2449,6 @@ class BotSession {
             const { version } =
                 await fetchLatestBaileysVersion();
 
-            if (mongoStore) {
-                await mongoStore.restoreSession(this.userId, this.authPath);
-            }
-
             const {
                 state,
                 saveCreds
@@ -2888,7 +2856,6 @@ class BotSession {
                 'creds.update',
                 async () => {
                     await saveCreds();
-                    if (mongoStore) mongoStore.queueSessionSync(this.userId, this.authPath);
                 }
             );
 
@@ -4168,7 +4135,6 @@ class BotSession {
                         }
 
                         await this.sendWebsiteToken();
-                        if (mongoStore) mongoStore.queueSessionSync(this.userId, this.authPath);
 
 
                         if (
@@ -4266,7 +4232,6 @@ async function loadExistingSessions() {
                 );
 
             await fs.ensureDir(authPath);
-            if (mongoStore) await mongoStore.restoreSession(userId, authPath);
             const stats = await fs.stat(authPath);
 
             if (
@@ -4540,7 +4505,8 @@ io.on(
                     return;
                 }
 
-                if (String(accessKey || '').trim() !== PAIR_ACCESS_KEY) {
+                ensurePairingAccessKey(socket.account);
+                if (String(accessKey || '').trim().toUpperCase() !== socket.account.pairingAccessKey) {
                     socket.emit('pair-error', 'Access key si sahihi.');
                     return;
                 }
@@ -4865,7 +4831,7 @@ io.on(
                 for (
                     const [
                         sessionId,
-                        session
+                      session
                     ]
                     of Object.entries(
                         sessions

@@ -1,11 +1,11 @@
 # Mickey Glitch deployment
 
-The app binds to `0.0.0.0` and reads the platform-provided `PORT`. Set `MONGODB_URI` and `MONGODB_SESSION_SECRET` in every production environment because Vercel and most container hosts do not provide durable local storage.
+The app binds to `0.0.0.0` and reads the platform-provided `PORT`. Account data is stored in `data/accounts.json`, while WhatsApp credentials are stored in `auth_info/`. Use persistent disk on VPS, Pterodactyl, or Render if data must survive restarts.
 
 ## Vercel
 
 1. Import the repository and keep the included `vercel.json`.
-2. Add `MONGODB_URI`, `MONGODB_DB`, `MONGODB_SESSION_SECRET`, and the bot API secrets in Project Settings.
+2. Add admin credentials and bot API secrets in Project Settings.
 3. Deploy with `npm install` handled by Vercel.
 
 Vercel is suitable for the dashboard and API adapter. Long-lived WhatsApp and Telegram connections should run on Render, a VPS, or Pterodactyl.
@@ -38,11 +38,11 @@ pm2 save
 pm2 startup
 ```
 
-Put Nginx or Caddy in front of the process and proxy WebSocket requests to the same port. Set `PUBLIC_HOST` to the public hostname used in dashboard logs.
+Put Nginx or Caddy in front of the process and proxy WebSocket requests to the same port. Set `PUBLIC_HOST` to the public hostname used in dashboard logs. Mount persistent storage for `data/` and `auth_info/`.
 
 ## Pterodactyl
 
-Use the Node.js egg, set the startup command to `npm start`, and map the allocation port to the container's `PORT` variable. Upload the repository, run `npm ci --omit=dev`, then start the server. Keep `auth_info` and `data` on a persistent volume, or configure MongoDB for durable sessions and account data.
+Use the Node.js egg, set the startup command to `npm start`, and map the allocation port to the container's `PORT` variable. Upload the repository, run `npm ci --omit=dev`, then start the server. Keep `auth_info` and `data` on a persistent volume; this project does not connect to MongoDB for account storage.
 
 ## Environment essentials
 
@@ -51,6 +51,7 @@ NODE_ENV=production
 PORT=3000
 HOST=0.0.0.0
 PUBLIC_HOST=your-domain.example
-MONGODB_URI=mongodb+srv://...
-MONGODB_SESSION_SECRET=replace-with-a-long-random-value
+ADMIN_PHONE=255712345678
+ADMIN_PASSWORD=replace-with-a-long-random-password
+ADMIN_EMAIL=admin@example.com
 ```

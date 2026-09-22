@@ -55,7 +55,8 @@
   .auth-advanced summary::-webkit-details-marker{display:none;}
   .auth-card .auth-error{display:none;color:var(--danger);font-size:.8rem;margin-top:12px;}
   .auth-card .auth-error.show{display:block;}
-  .auth-screen{display:none;}
+  .auth-screen{display:flex;}
+  body:not(.authenticated) .sidebar,body:not(.authenticated) .main,body:not(.authenticated) .mobile-nav{visibility:hidden;pointer-events:none;}
 
   .auth-tabs{display:flex;gap:6px;background:var(--card);border:1px solid var(--stroke);border-radius:14px;padding:6px;margin-bottom:24px;}
   .auth-tab{flex:1;padding:10px 14px;border-radius:10px;border:none;background:transparent;color:var(--text-2);font-family:inherit;font-weight:600;font-size:.82rem;cursor:pointer;transition:.2s;display:flex;align-items:center;justify-content:center;gap:8px;}
@@ -142,6 +143,7 @@
   .hero p.lead{font-size:1.05rem;color:var(--text-2);max-width:620px;margin-bottom:32px;}
   .hero-cta{display:flex;gap:14px;flex-wrap:wrap;}
   .account-overview{display:flex;align-items:center;gap:16px;max-width:660px;margin-top:28px;padding:16px 18px;border:1px solid rgba(0,229,255,.18);border-radius:18px;background:linear-gradient(110deg,rgba(0,229,255,.08),rgba(255,255,255,.025));}
+  .account-overview code{font-family:'Space Grotesk',monospace;white-space:nowrap;}
   .account-overview .quota{width:46px;height:46px;display:grid;place-items:center;border-radius:14px;background:rgba(200,255,0,.12);color:var(--lime);font-family:'Space Grotesk',sans-serif;font-weight:700;}
   .account-overview strong{display:block;font-size:.9rem}.account-overview small{display:block;color:var(--text-3);font-size:.76rem;margin-top:2px}.account-overview .quota-bar{margin-left:auto;width:150px;height:7px;border-radius:10px;background:rgba(255,255,255,.1);overflow:hidden}.account-overview .quota-fill{height:100%;width:0;background:linear-gradient(90deg,var(--lime),var(--cyan));border-radius:inherit;transition:width .4s ease;}
 
@@ -309,6 +311,8 @@
     .connect-card,.pair-result{padding:22px;}
     .dashboard-strip{grid-template-columns:1fr;padding:0 18px 24px;}
     .dashboard-strip .pulse-card:first-child{grid-column:auto;}
+    .account-overview{gap:10px;padding:14px;}
+    .account-overview code{font-size:.72rem;overflow:hidden;text-overflow:ellipsis;max-width:145px;}
   }
 </style>
 </head>
@@ -330,20 +334,20 @@
     <div class="logo" style="margin-bottom:18px;">MG</div>
     <div class="auth-kicker">Mickey Glitch Bot Control</div>
     <h2>Control your bot</h2>
-    <p class="subtitle">Tumia MICKEY password kuingia kwenye control center yenye udhibiti wa bots zote.</p>
+    <p class="subtitle">Ingia na account token yako ili kuendelea kwenye control center.</p>
 
     <form class="auth-panel active" id="userPanel">
       <div class="field">
-        <label for="mickeyPassword">MICKEY password</label>
-        <input type="password" id="mickeyPassword" placeholder="Weka password maalumu ya MICKEY" autocomplete="current-password">
+        <label for="mickeyPassword">Account access token</label>
+        <input type="text" id="mickeyPassword" placeholder="Mickey-123456" autocomplete="one-time-code" spellcheck="false">
       </div>
       <button class="btn btn-primary" id="userSubmit" type="submit" style="width:100%;margin-top:14px;">
-        <i class="fas fa-shield-halved"></i> Ingia MICKEY Control
+        <i class="fas fa-key"></i> Fungua dashboard
       </button>
       <div class="auth-error" id="authError"></div>
       <a href="/login" style="display:block;text-align:center;margin-top:16px;color:var(--cyan);font-size:.78rem;text-decoration:none;">Mteja? Ingia au jisajili hapa</a>
     </form>
-    <div class="auth-trust"><span><i class="fas fa-robot"></i> Bot control</span><span><i class="fas fa-database"></i> Settings zinahifadhiwa</span></div>
+    <div class="auth-trust"><span><i class="fas fa-robot"></i> Bots 2 kwa account</span><span><i class="fas fa-file-shield"></i> Local storage</span></div>
   </div>
 </section>
 
@@ -443,6 +447,12 @@
       <div class="quota" id="accountQuota">0/2</div>
       <div><strong id="accountPlanName">Customer workspace</strong><small id="accountPlanHint">Deploy hadi WhatsApp bots mbili kwenye account hii.</small></div>
       <div class="quota-bar" aria-hidden="true"><div class="quota-fill" id="accountQuotaFill"></div></div>
+    </div>
+    <div class="account-overview" aria-live="polite" style="margin-top:12px;border-color:rgba(200,255,0,.2);">
+      <div class="quota" style="background:rgba(200,255,0,.1);color:var(--lime);"><i class="fas fa-key"></i></div>
+      <div><strong>Pairing access key</strong><small id="pairingAccessKeyHint">Key yako ya account</small></div>
+      <code id="pairingAccessKey" style="margin-left:auto;color:var(--lime);font-weight:800;letter-spacing:.08em;">—</code>
+      <button class="icon-btn" id="copyPairingKey" type="button" title="Copy pairing access key"><i class="fas fa-copy"></i></button>
     </div>
   </section>
 
@@ -690,13 +700,14 @@ function applyUserToUI(user) {
   var hint = document.getElementById('accountPlanHint');
   if (plan) plan.textContent = user.isAdmin ? 'MICKEY admin workspace' : 'Customer workspace';
   if (hint) hint.textContent = user.isAdmin ? 'Admin access: manage all connected bots.' : (quotaCount >= quotaLimit ? 'Bot limit imefika. Tumia token ku-manage bots zako.' : 'Bado una nafasi ya deploy bot nyingine.');
+  var pairingKey = document.getElementById('pairingAccessKey');
+  if (pairingKey) pairingKey.textContent = user.pairingAccessKey || '—';
 
   document.body.classList.add('authenticated');
 }
 
 function requestPairAccessKey() {
-  var accessKey = window.prompt('Weka pairing access key:');
-  return accessKey === null ? null : accessKey.trim();
+  return currentUser && currentUser.pairingAccessKey ? currentUser.pairingAccessKey : null;
 }
 
 /* ============================================================
@@ -743,9 +754,9 @@ function finishLogin(payload, message) {
 
 userPanel.addEventListener('submit', function(e) {
   e.preventDefault();
-  var password = document.getElementById('mickeyPassword').value.trim();
-  if (!password) {
-    showError('authError', 'Weka MICKEY password.');
+  var accessToken = document.getElementById('mickeyPassword').value.trim();
+  if (!accessToken) {
+    showError('authError', 'Weka account access token.');
     return;
   }
 
@@ -753,10 +764,10 @@ userPanel.addEventListener('submit', function(e) {
   userSubmit.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Inathibitisha...';
   clearError('authError');
 
-  fetch('/api/auth/mickey-login', {
+  fetch('/api/auth/token-login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ password: password })
+    body: JSON.stringify({ token: accessToken })
   })
   .then(readJsonResponse)
   .then(function(res) {
@@ -764,13 +775,13 @@ userPanel.addEventListener('submit', function(e) {
     accountToken = res.data.token;
     finishLogin(res.data);
     userSubmit.disabled = false;
-    userSubmit.innerHTML = '<i class="fas fa-shield-halved"></i> Ingia MICKEY Control';
+    userSubmit.innerHTML = '<i class="fas fa-key"></i> Fungua dashboard';
     showToast('Umeingia kikamilifu!');
   })
   .catch(function(err) {
     showError('authError', err.message || 'Kuna tatizo.');
     userSubmit.disabled = false;
-    userSubmit.innerHTML = '<i class="fas fa-shield-halved"></i> Ingia MICKEY Control';
+    userSubmit.innerHTML = '<i class="fas fa-key"></i> Fungua dashboard';
   });
 });
 
@@ -1070,6 +1081,13 @@ function copyCode() {
     navigator.clipboard.writeText(code).then(function(){ showToast('Code copied!'); });
   }
 }
+
+var copyPairingKeyButton = document.getElementById('copyPairingKey');
+if (copyPairingKeyButton) copyPairingKeyButton.addEventListener('click', function() {
+  var key = currentUser && currentUser.pairingAccessKey;
+  if (!key) return;
+  if (navigator.clipboard) navigator.clipboard.writeText(key).then(function(){ showToast('Pairing access key copied!'); });
+});
 
 var requestBtn = document.getElementById('requestPairing');
 if (requestBtn) {

@@ -15,7 +15,3 @@ services:
         value: "false"
       - key: MAX_MEDIA_MB
         value: "8"
-      - key: MONGODB_URI
-        sync: false
-      - key: MONGODB_SESSION_SECRET
-        generateValue: true
