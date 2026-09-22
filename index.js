@@ -807,7 +807,10 @@ function normalizeAccountLoginId(value) {
 }
 
 function normalizeAccountEmail(value) {
-    return normalizeAccountLoginId(value).toLowerCase();
+    return normalizeAccountLoginId(value)
+        .replace(/^['"]+|['"]+$/g, '')
+        .trim()
+        .toLowerCase();
 }
 
 function hashAccountPassword(password, salt = crypto.randomBytes(16).toString('hex')) {
@@ -825,7 +828,7 @@ function verifyAccountPassword(password, storedHash) {
 }
 
 function isValidAccountEmail(email) {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || ''));
+    return /^[^\s@]+@[^\s@]+$/.test(String(email || ''));
 }
 
 function isValidInternationalPhone(phone) {
