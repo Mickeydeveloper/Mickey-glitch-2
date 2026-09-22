@@ -1160,7 +1160,6 @@ app.post('/api/auth/login', requirePersistence, async (req, res) => {
     );
     const email = normalizeAccountEmail(req.body?.email ?? req.body?.accountEmail);
     const name = String(req.body?.name || '').trim().slice(0, 60);
-    const nin = normalizeNin(req.body?.nin);
     const password = String(req.body?.password || '');
 
     if (!email && !phone) {
@@ -1168,9 +1167,6 @@ app.post('/api/auth/login', requirePersistence, async (req, res) => {
     }
     if (email && !isValidAccountEmail(email)) {
         return res.status(400).json({ error: 'Weka email sahihi ya account.' });
-    }
-    if (!isValidNin(nin)) {
-        return res.status(400).json({ error: 'NIN lazima iwe na herufi/namba 8 hadi 32.' });
     }
     if (password.length < 8 || password.length > 128) {
         return res.status(400).json({ error: 'Password iwe na herufi angalau 8.' });
@@ -1193,12 +1189,15 @@ app.post('/api/auth/login', requirePersistence, async (req, res) => {
     if (account.passwordHash && !verifyAccountPassword(password, account.passwordHash)) {
         return res.status(401).json({ error: 'Email/phone au password si sahihi.' });
     }
+    if (!account.passwordHash && account.password !== undefined && String(account.password) !== password) {
+        return res.status(401).json({ error: 'Email/phone au password si sahihi.' });
+    }
     if (!account.passwordHash) account.passwordHash = hashAccountPassword(password);
+    delete account.password;
 
     if (email) account.email = email;
     if (phone) account.phone = phone;
     if (name) account.name = name;
-    if (nin) account.nin = nin;
     if (phone && phone === ADMIN_PHONE) {
         account.isAdmin = true;
         account.name = account.name || 'Admin Mickey';
