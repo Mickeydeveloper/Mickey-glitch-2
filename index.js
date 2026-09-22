@@ -461,6 +461,9 @@ const {
 
 const app = express();
 const server = http.createServer(app);
+const isServerless = process.env.VERCEL === '1' || Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME);
+
+app.set('trust proxy', 1);
 
 const io = socketIo(server, {
     cors: {
@@ -2028,7 +2031,12 @@ app.get(
 app.get(
     '/health',
     (req, res) => {
-        res.status(200).send('OK');
+        res.status(200).json({
+            status: 'ok',
+            service: 'mickey-glitch',
+            uptime: Math.round(process.uptime()),
+            persistence: persistenceReady ? 'ready' : 'starting'
+        });
     }
 );
 
@@ -4915,7 +4923,6 @@ const HOST =
     process.env.HOST ||
     '0.0.0.0';
 
-const SERVER_IP = '16.170.206.19';
 const configuredPort = Number.parseInt(process.env.PORT, 10);
 const PORT =
     Number.isInteger(configuredPort) && configuredPort > 0 && configuredPort <= 65535
@@ -4929,7 +4936,7 @@ async function startServer() {
         HOST,
         async () => {
 
-        const displayHost = SERVER_IP;
+        const displayHost = process.env.PUBLIC_HOST || HOST;
         const displayPort = PORT;
 
         console.log(
@@ -4954,8 +4961,18 @@ async function startServer() {
     );
 }
 
-if (require.main === module && process.env.VERCEL !== '1') {
+if (require.main === module && !isServerless) {
     startServer();
+}
+
+function shutdown(signal) {
+    console.log(`[Server] ${signal} received. Closing connections...`);
+    server.close(() => process.exit(0));
+}
+
+if (!isServerless) {
+    process.once('SIGTERM', () => shutdown('SIGTERM'));
+    process.once('SIGINT', () => shutdown('SIGINT'));
 }
 
 module.exports = {

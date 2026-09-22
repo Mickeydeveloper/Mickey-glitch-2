@@ -4,6 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#09111b">
+  <meta name="description" content="Ingia kwenye Mickey Glitch control center ya WhatsApp bots.">
+  <meta name="color-scheme" content="dark">
   <title>Login | Mickey Glitch</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -32,7 +34,7 @@
       <form class="panel active" id="loginPanel"><h2>Karibu tena</h2><p class="sub">Ingia kwenye control ya account yako.</p><div class="field"><label for="loginEmail">Email</label><input id="loginEmail" type="email" autocomplete="email" required placeholder="you@example.com"></div><div class="field"><label for="loginPassword">Password</label><div class="input-wrap"><input id="loginPassword" type="password" autocomplete="current-password" required minlength="8" placeholder="Angalau herufi 8"><button class="show-pass" type="button" data-target="loginPassword">Onesha</button></div></div><button class="btn" type="submit">Ingia kwenye dashboard</button><div class="error" id="loginError"></div></form>
       <form class="panel" id="registerPanel"><h2>Fungua account</h2><p class="sub">Anza na bot mbili bila gharama ya setup.</p><div class="field"><label for="registerName">Jina</label><input id="registerName" autocomplete="name" required placeholder="Jina lako"></div><div class="field"><label for="registerEmail">Email</label><input id="registerEmail" type="email" autocomplete="email" required placeholder="you@example.com"></div><div class="field"><label for="registerPhone">WhatsApp number <span style="color:var(--muted)">(optional)</span></label><input id="registerPhone" type="tel" autocomplete="tel" placeholder="+255 7xx xxx xxx"></div><div class="field"><label for="registerPassword">Password</label><div class="input-wrap"><input id="registerPassword" type="password" autocomplete="new-password" required minlength="8" placeholder="Angalau herufi 8"><button class="show-pass" type="button" data-target="registerPassword">Onesha</button></div></div><button class="btn" type="submit">Tengeneza account</button><div class="error" id="registerError"></div></form>
       <form class="panel" id="tokenPanel"><h2>Unganisha token</h2><p class="sub">Tumia token yako ya zamani kuingia moja kwa moja.</p><div class="field"><label for="accountToken">Account token</label><input id="accountToken" autocomplete="one-time-code" required placeholder="Mickey-123456"></div><button class="btn" type="submit">Fungua dashboard</button><div class="error" id="tokenError"></div></form>
-      <div class="hint">Baada ya kuingia, tumia <b>Connect</b> kuongeza bot mpya au weka token ya bot uliyonayo.</div><div class="success" id="successMessage"></div><div class="foot">Mickey Glitch · secure bot operations</div>
+      <div class="hint" role="note">Baada ya kuingia, tumia <b>Connect</b> kuongeza bot mpya au weka token ya bot uliyonayo.</div><div class="success" id="successMessage" role="status"></div><div class="foot">Mickey Glitch · secure bot operations</div>
     </section>
   </main>
   <script>
