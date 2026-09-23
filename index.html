@@ -327,6 +327,13 @@
   .btn-lime{background:linear-gradient(135deg,#c5df94,#8fbf9e);}
   .stat-tile,.bot-card,.setting-row,.pair-result{box-shadow:0 16px 36px rgba(0,0,0,.16);}
   .section-title h2,.workspace-head h2{letter-spacing:-.025em;}
+  .btn{letter-spacing:.01em;}.btn-ghost{background:rgba(20,39,51,.58);border-color:rgba(174,218,218,.16);}
+  .btn-ghost:hover{background:rgba(40,69,80,.72);border-color:rgba(101,216,208,.38);}
+  .hero-badge,.status-pill,.admin-badge{letter-spacing:.08em;}
+  .setting-row{min-height:78px;}.setting-info h4{letter-spacing:.01em;}.setting-info p{line-height:1.4;}
+  .switch.active{background:linear-gradient(135deg,#65d8d0,#8fbf9e);}
+  .pulse-card{border-color:rgba(101,216,208,.2);background:linear-gradient(135deg,rgba(101,216,208,.08),rgba(255,255,255,.025));}
+  .connect-card{background:linear-gradient(145deg,rgba(232,137,97,.1),rgba(101,216,208,.045));}
 </style>
 </head>
 <body class="auth-checking">
@@ -398,7 +405,7 @@
       <input type="search" id="botSearch" placeholder="Search bots..." aria-label="Search bots">
     </div>
     <div class="topbar-actions">
-      <button class="icon-btn" title="Notifications"><i class="fas fa-bell"></i><span class="dot"></span></button>
+      <button class="icon-btn" id="notificationsBtn" title="Notifications"><i class="fas fa-bell"></i><span class="dot"></span></button>
       <button class="icon-btn" title="Refresh" id="refreshBtn"><i class="fas fa-sync-alt"></i></button>
       <div class="user-chip">
         <div class="avatar" id="userAvatar">OP</div>
@@ -469,6 +476,19 @@
     </div>
     <div class="pulse-card"><div><span class="monitor-value" id="onlineRate">0%</span><span class="monitor-label">Online rate</span></div></div>
     <div class="pulse-card"><div><span class="monitor-value" id="refreshCountdown">30s</span><span class="monitor-label">Next refresh</span></div></div>
+  </section>
+
+  <section class="section tab-panel active" data-panel="dashboard" id="activity">
+    <div class="section-head">
+      <div class="section-title">
+        <h2>Live Activity</h2>
+        <p>Recent operational events from your bot workspace</p>
+      </div>
+      <button class="btn btn-ghost btn-sm" id="clearActivityBtn" type="button"><i class="fas fa-broom"></i> Clear</button>
+    </div>
+    <div class="logs-container" id="activityLog" aria-live="polite">
+      <div class="empty-state"><i class="fas fa-signal"></i>Waiting for bot activity...</div>
+    </div>
   </section>
 
   <section class="section tab-panel" id="bots" data-panel="bots">
@@ -650,6 +670,26 @@ function showToast(msg) {
   clearTimeout(window._tt);
   window._tt = setTimeout(function(){ t.classList.remove('show'); }, 2200);
 }
+function appendActivity(message, type) {
+  var log = document.getElementById('activityLog');
+  if (!log || !message) return;
+  var empty = log.querySelector('.empty-state');
+  if (empty) empty.remove();
+  var row = document.createElement('div');
+  row.className = 'log-row';
+  var time = document.createElement('span');
+  time.className = 'log-time';
+  time.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  var level = document.createElement('span');
+  level.className = 'log-lvl ' + (type || 'info');
+  level.textContent = type || 'info';
+  var text = document.createElement('span');
+  text.className = 'log-msg';
+  text.textContent = message;
+  row.append(time, level, text);
+  log.prepend(row);
+  while (log.children.length > 40) log.lastElementChild.remove();
+}
 function applyUserToUI(user) {
   if (!user) return;
   currentUser = user;
@@ -793,6 +833,7 @@ if (socket) {
       return;
     }
     showToast('Bot imesimamishwa.');
+    appendActivity('Bot imesimamishwa: ' + (payload.sessionId || 'unknown'), 'warn');
     requestBotRefresh();
   });
 
@@ -802,6 +843,7 @@ if (socket) {
       return;
     }
     showToast('Bot imeanzishwa upya.');
+    appendActivity('Bot imeanzishwa upya: ' + (payload.sessionId || 'unknown'), 'success');
     requestBotRefresh();
   });
 
@@ -809,7 +851,12 @@ if (socket) {
     var stopAllButton = document.getElementById('stopAllBotsBtn');
     if (stopAllButton) stopAllButton.disabled = false;
     showToast((payload?.stopped || 0) + ' bot zimesimamishwa.');
+    appendActivity((payload?.stopped || 0) + ' bot zimesimamishwa.', 'warn');
     requestBotRefresh();
+  });
+
+  socket.on('console', function(entry) {
+    appendActivity(entry.message || 'Bot event received.', entry.type || 'info');
   });
 
   socket.on('bot-state', function(state) {
@@ -846,14 +893,6 @@ if (socket) {
   socket.on('pairing-code', function(code) {
     var btn = document.getElementById('requestPairing');
     if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-key"></i> Request Pairing Code'; }
-    var loginButton = document.getElementById('loginPairButton');
-    if (loginButton) { loginButton.disabled = false; loginButton.innerHTML = '<i class="fas fa-link"></i> Pair WhatsApp from login'; }
-    var loginResult = document.getElementById('loginPairResult');
-    if (loginResult) loginResult.style.display = 'block';
-    var loginCode = document.getElementById('loginPairCode');
-    if (loginCode) loginCode.textContent = code || '—';
-    var loginStatus = document.getElementById('loginPairStatus');
-    if (loginStatus) loginStatus.textContent = 'Ingiza code hii kwenye WhatsApp > Linked Devices. Token itatumwa baada ya kuunganishwa.';
     var linkPairCode = document.getElementById('linkPairCode');
     if (linkPairCode) linkPairCode.textContent = code || '—';
     var linkPairStatus = document.getElementById('linkPairStatus');
@@ -868,10 +907,6 @@ if (socket) {
   socket.on('pair-error', function(msg) {
     var btn = document.getElementById('requestPairing');
     if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-key"></i> Request Pairing Code'; }
-    var loginButton = document.getElementById('loginPairButton');
-    if (loginButton) { loginButton.disabled = false; loginButton.innerHTML = '<i class="fas fa-link"></i> Pair WhatsApp from login'; }
-    var loginStatus = document.getElementById('loginPairStatus');
-    if (loginStatus) loginStatus.textContent = msg || 'Pairing imeshindikana.';
     var pairButton = document.getElementById('pairBotButton');
     if (pairButton) { pairButton.disabled = false; pairButton.innerHTML = '<i class="fas fa-mobile-screen-button"></i> Pair bot mpya'; }
     var linkPairStatus = document.getElementById('linkPairStatus');
@@ -1099,6 +1134,19 @@ if (settingsBot) settingsBot.addEventListener('change', function(){
 var refreshBtn = document.getElementById('refreshBtn');
 if (refreshBtn) refreshBtn.addEventListener('click', function(){
   requestBotRefresh('Inasasisha...');
+});
+var notificationsBtn = document.getElementById('notificationsBtn');
+if (notificationsBtn) notificationsBtn.addEventListener('click', function() {
+  var activity = document.getElementById('activity');
+  if (activity) activity.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  var dot = notificationsBtn.querySelector('.dot');
+  if (dot) dot.style.display = 'none';
+});
+var clearActivityBtn = document.getElementById('clearActivityBtn');
+if (clearActivityBtn) clearActivityBtn.addEventListener('click', function() {
+  var log = document.getElementById('activityLog');
+  if (!log) return;
+  log.innerHTML = '<div class="empty-state"><i class="fas fa-signal"></i>Waiting for bot activity...</div>';
 });
 var refreshBotsBtn = document.getElementById('refreshBotsBtn');
 if (refreshBotsBtn) refreshBotsBtn.addEventListener('click', function(){

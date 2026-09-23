@@ -4360,6 +4360,7 @@ io.on(
             socket.account = account;
             ensureAccountToken(account);
             for (const botId of account.botIds || []) {
+                userSockets[botId] = socket.id;
                 if (sessions[botId]?.sock) {
                     sessions[botId].sock.accountToken = account.token;
                 }
