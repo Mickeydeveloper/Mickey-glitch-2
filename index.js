@@ -468,6 +468,16 @@ const maxMediaBytes = Math.max(
     (Number.isFinite(configuredMediaMb) ? configuredMediaMb : (lowResourceMode ? 8 : 32)) * 1024 * 1024
 );
 
+app.use(express.json({
+    limit: lowResourceMode ? '256kb' : '1mb'
+}));
+app.use(
+    express.urlencoded({
+        extended: true,
+        limit: lowResourceMode ? '256kb' : '1mb'
+    })
+);
+
 app.set('trust proxy', 1);
 axios.defaults.maxContentLength = maxMediaBytes;
 axios.defaults.maxBodyLength = maxMediaBytes;
@@ -828,7 +838,7 @@ function verifyAccountPassword(password, storedHash) {
 }
 
 function isValidAccountEmail(email) {
-    return /^[^\s@]+@[^\s@]+$/.test(String(email || ''));
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || ''));
 }
 
 function isValidInternationalPhone(phone) {
@@ -1219,6 +1229,7 @@ app.post('/api/auth/register', requirePersistence, async (req, res) => {
     const name = String(req.body?.name || '').trim().slice(0, 60);
     const password = String(req.body?.password || '');
 
+    if (!email) return res.status(400).json({ error: 'Weka email.' });
     if (!isValidAccountEmail(email)) return res.status(400).json({ error: 'Weka email sahihi.' });
     if (phone && !isValidInternationalPhone(phone)) return res.status(400).json({ error: 'Namba ya simu si sahihi.' });
     if (password.length < 8 || password.length > 128) return res.status(400).json({ error: 'Password iwe na herufi angalau 8.' });
@@ -1986,16 +1997,6 @@ if (process.env.OPENAI_API_KEY) {
 /* =========================================================
    EXPRESS
 ========================================================= */
-
-app.use(express.json({
-    limit: lowResourceMode ? '256kb' : '1mb'
-}));
-app.use(
-    express.urlencoded({
-        extended: true,
-        limit: lowResourceMode ? '256kb' : '1mb'
-    })
-);
 
 const requestWindow = new Map();
 app.use('/api', (req, res, next) => {
