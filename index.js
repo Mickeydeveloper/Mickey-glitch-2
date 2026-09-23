@@ -460,6 +460,9 @@ const {
 
 const app = express();
 const server = http.createServer(app);
+const authSessions = new Map();
+const AUTH_SESSION_COOKIE = 'mickey_session';
+const AUTH_SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const isServerless = process.env.VERCEL === '1' || Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME);
 const lowResourceMode = process.env.LOW_RESOURCE_MODE === 'true';
 const configuredMediaMb = Number.parseInt(process.env.MAX_MEDIA_MB, 10);
@@ -795,6 +798,46 @@ function requirePersistence(req, res, next) {
     next();
 }
 
+function parseCookies(header) {
+    return String(header || '').split(';').reduce((cookies, part) => {
+        const separator = part.indexOf('=');
+        if (separator < 0) return cookies;
+        const key = part.slice(0, separator).trim();
+        const value = part.slice(separator + 1).trim();
+        if (key) cookies[key] = decodeURIComponent(value);
+        return cookies;
+    }, {});
+}
+
+function createAuthSession(account) {
+    const sessionId = crypto.randomBytes(32).toString('hex');
+    authSessions.set(sessionId, { accountId: account.id, expiresAt: Date.now() + AUTH_SESSION_TTL_MS });
+    return sessionId;
+}
+
+function setAuthSessionCookie(res, account) {
+    const sessionId = createAuthSession(account);
+    const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+    res.setHeader('Set-Cookie', `${AUTH_SESSION_COOKIE}=${encodeURIComponent(sessionId)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${AUTH_SESSION_TTL_MS / 1000}${secure}`);
+}
+
+function getAccountFromRequest(req) {
+    const sessionId = parseCookies(req.headers.cookie)[AUTH_SESSION_COOKIE];
+    const session = authSessions.get(sessionId);
+    if (!session || session.expiresAt <= Date.now()) {
+        if (sessionId) authSessions.delete(sessionId);
+        return null;
+    }
+    session.expiresAt = Date.now() + AUTH_SESSION_TTL_MS;
+    return accounts[session.accountId] || null;
+}
+
+function clearAuthSession(req, res) {
+    const sessionId = parseCookies(req.headers.cookie)[AUTH_SESSION_COOKIE];
+    if (sessionId) authSessions.delete(sessionId);
+    res.setHeader('Set-Cookie', `${AUTH_SESSION_COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`);
+}
+
 function normalizeAccountPhone(value) {
     let phone = String(value || '').trim()
         .normalize('NFKC')
@@ -943,7 +986,6 @@ function accountResponse(account) {
     ensurePairingAccessKey(account);
     return {
         id: account.id,
-        token: account.token,
         phone: account.phone,
         email: account.email,
         name: account.name,
@@ -1117,55 +1159,6 @@ app.post('/api/auth/admin-email-login', requirePersistence, async (req, res) => 
     return res.json({ token: account.token, account: accountResponse(account) });
 });
 
-app.post('/api/auth/token-login', requirePersistence, async (req, res) => {
-    const token = normalizeAccessToken(req.body?.token);
-    let account = await getAccountByTokenFromPersistence(token);
-
-    if (!account && ADMIN_TOKEN && token === ADMIN_TOKEN && ADMIN_EMAIL) {
-        const id = `admin_${Buffer.from(ADMIN_EMAIL).toString('base64url')}`;
-        account = accounts[id] || {
-            id,
-            email: ADMIN_EMAIL,
-            name: 'Admin',
-            isAdmin: true,
-            createdAt: new Date().toISOString()
-        };
-        account.email = ADMIN_EMAIL;
-        account.isAdmin = true;
-        account.token = ADMIN_TOKEN;
-        accounts[id] = account;
-    }
-
-    if (!account) return res.status(401).json({ error: 'Website token si sahihi au imekwisha.' });
-
-    ensureAccountToken(account);
-    for (const botId of account.botIds || []) {
-        if (sessions[botId]?.sock) {
-            sessions[botId].sock.accountToken = account.token;
-        }
-    }
-    account.lastLoginAt = new Date().toISOString();
-    await saveAccounts({ strict: true });
-    return res.json({ token: account.token, account: accountResponse(account) });
-});
-
-app.get('/api/account/tokens', requirePersistence, async (req, res) => {
-    const account = await getAccountByTokenFromPersistence(req.get('authorization')?.replace(/^Bearer\s+/i, ''));
-    if (!account) return res.status(401).json({ error: 'Login required.' });
-
-    ensureAccountToken(account);
-    saveAccounts();
-    return res.json({
-        tokens: [{
-            token: account.token,
-            accountId: account.id,
-            name: account.name || 'Account',
-            phone: account.phone || '',
-            bots: getAccountBotIds(account.id)
-        }]
-    });
-});
-
 // User login
 app.post('/api/auth/login', requirePersistence, async (req, res) => {
     const phone = normalizeAccountLoginId(
@@ -1220,7 +1213,8 @@ app.post('/api/auth/login', requirePersistence, async (req, res) => {
     accounts[id] = account;
     await saveAccounts({ strict: true });
 
-    return res.json({ token: account.token, account: accountResponse(account) });
+    setAuthSessionCookie(res, account);
+    return res.json({ account: accountResponse(account) });
 });
 
 app.post('/api/auth/register', requirePersistence, async (req, res) => {
@@ -1251,13 +1245,13 @@ app.post('/api/auth/register', requirePersistence, async (req, res) => {
     ensureAccountToken(account);
     accounts[id] = account;
     await saveAccounts({ strict: true });
-    return res.status(201).json({ token: account.token, account: accountResponse(account) });
+    setAuthSessionCookie(res, account);
+    return res.status(201).json({ account: accountResponse(account) });
 });
 
 app.post('/api/account/link-bot', requirePersistence, async (req, res) => {
-    const accountToken = normalizeAccessToken(req.get('authorization')?.replace(/^Bearer\s+/i, ''));
+    const account = getAccountFromRequest(req);
     const botToken = normalizeAccessToken(req.body?.botToken);
-    const account = await getAccountByTokenFromPersistence(accountToken);
     const botAccount = await getAccountByTokenFromPersistence(botToken);
 
     if (!account) return res.status(401).json({ error: 'Login required.' });
@@ -1285,7 +1279,7 @@ app.post('/api/account/link-bot', requirePersistence, async (req, res) => {
 });
 
 app.get('/api/auth/me', requirePersistence, async (req, res) => {
-    const account = await getAccountByTokenFromPersistence(req.get('authorization')?.replace(/^Bearer\s+/i, ''));
+    const account = getAccountFromRequest(req);
     if (!account) return res.status(401).json({ error: 'Login required.' });
     if (account.isAdmin && account.id === 'account_mickey_admin') {
         account.botIds = [...new Set([
@@ -1296,6 +1290,11 @@ app.get('/api/auth/me', requirePersistence, async (req, res) => {
         ])];
     }
     return res.json({ account: accountResponse(account) });
+});
+
+app.post('/api/auth/logout', (req, res) => {
+    clearAuthSession(req, res);
+    return res.json({ success: true });
 });
 
 
@@ -4352,8 +4351,12 @@ io.on(
             }
         );
 
-        socket.on('account-auth', async (token) => {
-            const account = await getAccountByTokenFromPersistence(token);
+        socket.on('account-auth', async () => {
+            const sessionId = parseCookies(socket.handshake.headers.cookie)[AUTH_SESSION_COOKIE];
+            const session = authSessions.get(sessionId);
+            const account = session && session.expiresAt > Date.now()
+                ? accounts[session.accountId]
+                : null;
             if (!account) {
                 socket.emit('account-auth-fail', 'Login session expired.');
                 return;
@@ -4578,7 +4581,6 @@ io.on(
                     null;
 
                 socket.emit('pair-account', {
-                    token: socket.account.token,
                     account: accountResponse(socket.account)
                 });
 

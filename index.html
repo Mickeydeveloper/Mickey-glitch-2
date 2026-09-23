@@ -327,31 +327,6 @@
   <div class="bg-noise"></div>
 </div>
 
-<!-- ============================================================
-     BOT ACCESS SCREEN
-     ============================================================ -->
-<section class="auth-screen" id="authScreen">
-  <div class="auth-card">
-    <div class="logo" style="margin-bottom:18px;">MG</div>
-    <div class="auth-kicker">Mickey Glitch Bot Control</div>
-    <h2>Control your bot</h2>
-    <p class="subtitle">Ingia na account token yako ili kuendelea kwenye control center.</p>
-
-    <form class="auth-panel active" id="userPanel">
-      <div class="field">
-        <label for="mickeyPassword">Account access token</label>
-        <input type="text" id="mickeyPassword" placeholder="Mickey-123456" autocomplete="one-time-code" spellcheck="false">
-      </div>
-      <button class="btn btn-primary" id="userSubmit" type="submit" style="width:100%;margin-top:14px;">
-        <i class="fas fa-key"></i> Fungua dashboard
-      </button>
-      <div class="auth-error" id="authError"></div>
-      <a href="/login" style="display:block;text-align:center;margin-top:16px;color:var(--cyan);font-size:.78rem;text-decoration:none;">Mteja? Ingia au jisajili hapa</a>
-    </form>
-    <div class="auth-trust"><span><i class="fas fa-robot"></i> Bots 2 kwa account</span><span><i class="fas fa-file-shield"></i> Local storage</span></div>
-  </div>
-</section>
-
 <div id="botLinkModal" style="display:none;position:fixed;inset:0;z-index:50;background:rgba(5,7,12,.78);align-items:center;justify-content:center;padding:20px;">
   <div class="auth-card" style="width:min(440px,100%);">
     <h2 id="botLinkTitle" style="font-size:1.35rem;">Unganisha bot yako</h2>
@@ -367,18 +342,6 @@
       <div id="linkPairStatus" style="font-size:.75rem;color:var(--text-2);margin-top:6px;">Subiri bot i-connect...</div>
     </div>
     <div class="auth-error" id="botLinkError"></div>
-  </div>
-</div>
-
-<div id="tokenVaultModal" style="display:none;position:fixed;inset:0;z-index:55;background:rgba(5,7,12,.78);align-items:center;justify-content:center;padding:20px;">
-  <div class="auth-card" style="width:min(520px,100%);">
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
-      <h2 style="font-size:1.35rem;margin:0;"><i class="fas fa-key" style="color:var(--lime);"></i> Bot tokens</h2>
-      <button class="icon-btn" id="closeTokenVaultBtn" type="button" title="Close"><i class="fas fa-xmark"></i></button>
-    </div>
-    <p class="subtitle">Tokens za account yako na bots zilizounganishwa. Bonyeza copy kuhifadhi details.</p>
-    <div id="tokenVaultList" style="display:grid;gap:10px;"></div>
-    <div class="auth-error" id="tokenVaultError"></div>
   </div>
 </div>
 
@@ -442,7 +405,6 @@
     <div class="hero-cta">
       <a href="#connect" data-tab="connect" class="btn btn-primary"><i class="fas fa-bolt"></i> Connect a Bot</a>
       <a href="#bots" data-tab="bots" class="btn btn-ghost"><i class="fas fa-eye"></i> View Bots</a>
-      <button class="btn btn-ghost btn-sm" id="tokenVaultBtn" type="button"><i class="fas fa-key"></i> View tokens</button>
     </div>
     <div class="account-overview" aria-live="polite">
       <div class="quota" id="accountQuota">0/2</div>
@@ -602,7 +564,6 @@
    GLOBAL STATE
    ============================================================ */
 var socket = null;
-var accountToken = localStorage.getItem('mickey_account_token') || '';
 var currentUser = { name: 'MICKEY Control', isAdmin: true, botLimit: 999, botCount: 0 };
 var accountReady = true;
 var botsById = {};
@@ -711,11 +672,6 @@ function requestPairAccessKey() {
   return currentUser && currentUser.pairingAccessKey ? currentUser.pairingAccessKey : null;
 }
 
-/* ============================================================
-  BOT TOKEN ACCESS
-   ============================================================ */
-var userPanel = document.getElementById('userPanel');
-var userSubmit = document.getElementById('userSubmit');
 var waitingBotId = '';
 
 function setBotLinkWaiting(message) {
@@ -739,53 +695,6 @@ function finishBotConnection(botIds) {
   showToast('Bot ime-connect. Karibu kwenye dashboard!');
 }
 
-function openBotLinkPrompt() {
-  var modal = document.getElementById('botLinkModal');
-  if (modal) modal.style.display = 'flex';
-}
-
-function finishLogin(payload, message) {
-  accountToken = payload.token;
-  localStorage.setItem('mickey_account_token', accountToken);
-  applyUserToUI(payload.account);
-  if (socket) socket.emit('account-auth', accountToken);
-  showToast(message || 'Umeingia kikamilifu!');
-  if (!payload.account || !payload.account.botCount) openBotLinkPrompt();
-}
-
-userPanel.addEventListener('submit', function(e) {
-  e.preventDefault();
-  var accessToken = document.getElementById('mickeyPassword').value.trim();
-  if (!accessToken) {
-    showError('authError', 'Weka account access token.');
-    return;
-  }
-
-  userSubmit.disabled = true;
-  userSubmit.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Inathibitisha...';
-  clearError('authError');
-
-  fetch('/api/auth/token-login', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ token: accessToken })
-  })
-  .then(readJsonResponse)
-  .then(function(res) {
-    if (!res.ok) throw new Error(res.data.error || 'Login imeshindikana.');
-    accountToken = res.data.token;
-    finishLogin(res.data);
-    userSubmit.disabled = false;
-    userSubmit.innerHTML = '<i class="fas fa-key"></i> Fungua dashboard';
-    showToast('Umeingia kikamilifu!');
-  })
-  .catch(function(err) {
-    showError('authError', err.message || 'Kuna tatizo.');
-    userSubmit.disabled = false;
-    userSubmit.innerHTML = '<i class="fas fa-key"></i> Fungua dashboard';
-  });
-});
-
 var linkBotButton = document.getElementById('linkBotButton');
 var pairBotButton = document.getElementById('pairBotButton');
 if (linkBotButton) linkBotButton.addEventListener('click', function() {
@@ -798,7 +707,7 @@ if (linkBotButton) linkBotButton.addEventListener('click', function() {
   linkBotButton.disabled = true;
   fetch('/api/account/link-bot', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + accountToken },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ botToken: botToken })
   })
   .then(readJsonResponse)
@@ -807,7 +716,7 @@ if (linkBotButton) linkBotButton.addEventListener('click', function() {
     applyUserToUI(res.data.account);
     waitingBotId = (res.data.account.botIds || []).slice(-1)[0] || '';
     setBotLinkWaiting('Token imekubaliwa. Subiri bot i-connect kabla ya kuingia dashboard.');
-    if (socket) socket.emit('account-auth', accountToken);
+    if (socket) socket.emit('account-auth');
   })
   .catch(function(err) { showError('botLinkError', err.message); })
   .finally(function() { linkBotButton.disabled = Boolean(waitingBotId); });
@@ -831,11 +740,11 @@ if (pairBotButton) pairBotButton.addEventListener('click', function() {
    LOGOUT
    ============================================================ */
 document.getElementById('logoutBtn').addEventListener('click', function() {
-  accountToken = '';
   accountReady = false;
   currentUser = null;
-  localStorage.removeItem('mickey_account_token');
-  window.location.replace('/login.html');
+  fetch('/api/auth/logout', { method: 'POST' }).finally(function() {
+    window.location.replace('/login.html');
+  });
 });
 
 /* ============================================================
@@ -852,10 +761,8 @@ if (socket) {
   });
 
   socket.on('account-auth-fail', function(msg) {
-    accountToken = '';
     accountReady = false;
     currentUser = null;
-    localStorage.removeItem('mickey_account_token');
     document.body.classList.remove('authenticated');
     window.location.replace('/login.html');
   });
@@ -885,23 +792,11 @@ if (socket) {
   });
 
   socket.on('pair-account', function(payload) {
-    if (!payload || !payload.token || !payload.account) return;
-    accountToken = payload.token;
-    localStorage.setItem('mickey_account_token', accountToken);
+    if (!payload || !payload.account) return;
     applyUserToUI(payload.account);
     waitingBotId = (payload.account.botIds || []).slice(-1)[0] || '';
-    var pairedToken = payload.token || payload.account.token || '';
-    var tokenNotice = document.getElementById('loginPairToken');
-    if (tokenNotice && pairedToken) {
-      tokenNotice.textContent = 'Token yako: ' + pairedToken;
-      tokenNotice.style.display = 'block';
-      var tokenInput = document.getElementById('accountTokenInput');
-      if (tokenInput) tokenInput.value = pairedToken;
-      var linkTokenInput = document.getElementById('linkBotToken');
-      if (linkTokenInput) linkTokenInput.value = pairedToken;
-    }
     setBotLinkWaiting('Pairing code iko hapa chini. Ikitumika, subiri bot i-connect.');
-    socket.emit('account-auth', accountToken);
+    socket.emit('account-auth');
   });
 
   socket.on('dashboard-stats', function(stats) {
@@ -1199,55 +1094,6 @@ refreshTimer = window.setInterval(function() {
   if (countdown) countdown.textContent = refreshSeconds + 's';
   if (refreshSeconds === 0) requestBotRefresh();
 }, 1000);
-function openTokenVault() {
-  var modal = document.getElementById('tokenVaultModal');
-  var list = document.getElementById('tokenVaultList');
-  if (!modal || !list) return;
-  modal.style.display = 'flex';
-  list.innerHTML = '<div style="color:var(--text-2);">Inapakia tokens...</div>';
-  fetch('/api/account/tokens', { headers: { 'Authorization': 'Bearer ' + accountToken } })
-    .then(readJsonResponse)
-    .then(function(res) {
-      if (!res.ok) throw new Error(res.data.error || 'Token hazijapatikana.');
-      list.innerHTML = '';
-      (res.data.tokens || []).forEach(function(item) {
-        var card = document.createElement('div');
-        card.style.cssText = 'padding:14px;border:1px solid var(--stroke);border-radius:10px;background:rgba(255,255,255,.03);';
-        var details = document.createElement('div');
-        details.style.cssText = 'font-size:.75rem;color:var(--text-2);margin-bottom:8px;';
-        details.textContent = (item.name || 'Account') + (item.phone ? ' · ' + item.phone : '') + ' · ' + (item.bots || []).length + ' bot(s)';
-        var row = document.createElement('div');
-        row.style.cssText = 'display:flex;gap:8px;align-items:center;';
-        var token = document.createElement('code');
-        token.style.cssText = 'flex:1;color:var(--lime);word-break:break-all;';
-        token.textContent = item.token || '—';
-        var copy = document.createElement('button');
-        copy.className = 'btn btn-ghost btn-sm';
-        copy.type = 'button';
-        copy.innerHTML = '<i class="fas fa-copy"></i> Copy';
-        copy.addEventListener('click', function() {
-          var detailsText = 'Token: ' + (item.token || '') + '\nAccount: ' + (item.name || '') + '\nPhone: ' + (item.phone || '') + '\nBots: ' + (item.bots || []).join(', ');
-          navigator.clipboard.writeText(detailsText).then(function(){ showToast('Token details copied.'); });
-        });
-        row.appendChild(token);
-        row.appendChild(copy);
-        card.appendChild(details);
-        card.appendChild(row);
-        list.appendChild(card);
-      });
-    })
-    .catch(function(error) {
-      list.innerHTML = '';
-      showError('tokenVaultError', error.message || 'Token hazijapatikana.');
-    });
-}
-var tokenVaultBtn = document.getElementById('tokenVaultBtn');
-if (tokenVaultBtn) tokenVaultBtn.addEventListener('click', openTokenVault);
-var closeTokenVaultBtn = document.getElementById('closeTokenVaultBtn');
-if (closeTokenVaultBtn) closeTokenVaultBtn.addEventListener('click', function(){
-  var modal = document.getElementById('tokenVaultModal');
-  if (modal) modal.style.display = 'none';
-});
 var saveSettingsBtn = document.getElementById('saveSettingsBtn');
 if (saveSettingsBtn) saveSettingsBtn.addEventListener('click', function(){
   var sel = document.getElementById('settingsBot');
@@ -1275,20 +1121,16 @@ var y = document.getElementById('year');
 if (y) y.textContent = new Date().getFullYear();
 
 function restoreSession() {
-  if (!accountToken) return Promise.resolve(false);
   return fetch('/api/auth/me', {
-    headers: { 'Authorization': 'Bearer ' + accountToken }
   })
   .then(readJsonResponse)
   .then(function(res) {
     if (!res.ok || !res.data.account) throw new Error(res.data.error || 'Session imeisha.');
     applyUserToUI(res.data.account);
-    if (socket) socket.emit('account-auth', accountToken);
+    if (socket) socket.emit('account-auth');
     return true;
   })
   .catch(function() {
-    accountToken = '';
-    localStorage.removeItem('mickey_account_token');
     return false;
   });
 }
