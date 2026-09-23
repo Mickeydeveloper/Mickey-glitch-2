@@ -1336,7 +1336,11 @@ function getDashboardBotState() {
             autoRecording: getCommandFeatureState('autorecording'),
             antiCall: getCommandFeatureState('anticall'),
             pmBlocker: getCommandFeatureState('pmblocker'),
-            chatbot: getCommandFeatureState('chatbot')
+            chatbot: getCommandFeatureState('chatbot'),
+            aiEnabled: Boolean(botData.statusSettings?.[userId]?.aiEnabled),
+            ghostMode: Boolean(botData.statusSettings?.[userId]?.ghostMode),
+            typingIndicator: botData.statusSettings?.[userId]?.typingIndicator !== false,
+            commandCooldown: Number(botData.statusSettings?.[userId]?.commandCooldown || 0)
         };
         const phoneNumber = session?.phoneNumber ||
             session?.sock?.user?.id?.split(':')?.[0] || '';
@@ -2146,6 +2150,11 @@ class BotSession {
         this.autoReconnect = storedSettings.autoReconnect !== false;
         this.logMessages = storedSettings.logMessages !== false;
         this.commandPrefix = String(storedSettings.prefix || '.').slice(0, 3);
+        this.aiEnabled = Boolean(storedSettings.aiEnabled);
+        this.ghostMode = Boolean(storedSettings.ghostMode);
+        this.typingIndicator = storedSettings.typingIndicator !== false;
+        this.commandCooldownMs = Math.max(0, Math.min(60, Number(storedSettings.commandCooldown || 0))) * 1000;
+        this.commandCooldowns = new Map();
 
         this.isPublic =
             storedSettings.isPublic !== undefined
@@ -2170,7 +2179,6 @@ class BotSession {
         this.lastConnectMessageTime =
             null;
         this.phoneNumber = null;
-        this.ghostMode = false;
         this.sessionRepairInProgress =
             false;
         this.lastSessionRepairAt = 0;
@@ -3211,6 +3219,7 @@ class BotSession {
                                             [];
 
                                         if (
+                                            this.typingIndicator &&
                                             isAutotypingEnabled()
                                         ) {
                                             featureTasks.push(
@@ -3636,6 +3645,13 @@ class BotSession {
 
                                     if (!text.startsWith(commandPrefix)) {
                                         return;
+                                    }
+
+                                    if (this.commandCooldownMs && !isOwner && !isSudoUser && !isMe) {
+                                        const now = Date.now();
+                                        const lastCommandAt = this.commandCooldowns.get(sender) || 0;
+                                        if (now - lastCommandAt < this.commandCooldownMs) return;
+                                        this.commandCooldowns.set(sender, now);
                                     }
 
                                     const parts =
@@ -4430,8 +4446,11 @@ io.on(
                     'antiSpam',
                     'logMessages',
                     'autoReact',
+                    'aiEnabled',
+                    'ghostMode',
                     'prefix',
-                    'isPublic'
+                    'isPublic',
+                    'commandCooldown'
                 ];
 
                 for (const key of allowedKeys) {
@@ -4439,7 +4458,9 @@ io.on(
                         botData.statusSettings[userId][key] =
                             key === 'prefix'
                                 ? String(incomingSettings[key] || '.').slice(0, 3)
-                                : Boolean(incomingSettings[key]);
+                                : key === 'commandCooldown'
+                                    ? Math.max(0, Math.min(60, Number(incomingSettings[key] || 0)))
+                                    : Boolean(incomingSettings[key]);
                     }
                 }
 
@@ -4466,6 +4487,10 @@ io.on(
                     session.logMessages = settings.logMessages !== false;
                     session.commandPrefix = String(settings.prefix || '.').slice(0, 3);
                     session.isPublic = settings.isPublic !== false;
+                    session.aiEnabled = Boolean(settings.aiEnabled);
+                    session.ghostMode = Boolean(settings.ghostMode);
+                    session.typingIndicator = settings.typingIndicator !== false;
+                    session.commandCooldownMs = Math.max(0, Math.min(60, Number(settings.commandCooldown || 0))) * 1000;
                 }
 
                 saveBotData();
