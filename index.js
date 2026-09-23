@@ -4717,9 +4717,12 @@ io.on(
                 sessionId
             }) => {
 
-                if (
-                    !socket.authenticated
-                ) {
+                if (!socket.authenticated || !socket.account || !socket.account.botIds?.includes(sessionId)) {
+                    socket.emit('bot-stopped', {
+                        sessionId,
+                        success: false,
+                        error: 'Huna ruhusa ya ku-control bot hii.'
+                    });
                     return;
                 }
 
@@ -4751,6 +4754,7 @@ io.on(
                                     true
                             }
                         );
+                        emitDashboardBotState();
 
                     } catch (e) {
 

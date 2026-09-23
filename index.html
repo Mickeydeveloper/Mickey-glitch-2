@@ -57,6 +57,7 @@
   .auth-card .auth-error.show{display:block;}
   .auth-screen{display:flex;}
   body:not(.authenticated) .sidebar,body:not(.authenticated) .main,body:not(.authenticated) .mobile-nav{visibility:hidden;pointer-events:none;}
+  body.auth-checking .auth-screen{display:none;}
 
   .auth-tabs{display:flex;gap:6px;background:var(--card);border:1px solid var(--stroke);border-radius:14px;padding:6px;margin-bottom:24px;}
   .auth-tab{flex:1;padding:10px 14px;border-radius:10px;border:none;background:transparent;color:var(--text-2);font-family:inherit;font-weight:600;font-size:.82rem;cursor:pointer;transition:.2s;display:flex;align-items:center;justify-content:center;gap:8px;}
@@ -316,7 +317,7 @@
   }
 </style>
 </head>
-<body>
+<body class="auth-checking">
 
 <div class="bg-layer">
   <div class="bg-blob b1"></div>
@@ -834,8 +835,7 @@ document.getElementById('logoutBtn').addEventListener('click', function() {
   accountReady = false;
   currentUser = null;
   localStorage.removeItem('mickey_account_token');
-  document.body.classList.remove('authenticated');
-  showToast('Umetoka kwenye account.');
+  window.location.replace('/login.html');
 });
 
 /* ============================================================
@@ -857,7 +857,16 @@ if (socket) {
     currentUser = null;
     localStorage.removeItem('mickey_account_token');
     document.body.classList.remove('authenticated');
-    showError('authError', msg || 'Session imeisha. Login tena.');
+    window.location.replace('/login.html');
+  });
+
+  socket.on('bot-stopped', function(payload) {
+    if (!payload || !payload.success) {
+      showToast(payload?.error || 'Bot haijasimamishwa.');
+      return;
+    }
+    showToast('Bot imesimamishwa.');
+    requestBotRefresh();
   });
 
   socket.on('bot-state', function(state) {
@@ -1007,6 +1016,10 @@ function renderBots(botsArray) {
         '<div class="metric"><div class="v">' + (bot.phoneNumber || '—') + '</div><div class="l">Number</div></div>' +
         '<div class="metric"><div class="v">' + (bot.paired ? 'Yes' : 'No') + '</div><div class="l">Paired</div></div>' +
         '<div class="metric"><div class="v">' + (bot.running ? 'Live' : 'Idle') + '</div><div class="l">Runtime</div></div>' +
+      '</div>' +
+      '<div class="bot-actions">' +
+        '<button class="btn btn-ghost btn-sm bot-configure" type="button" data-bot-id="' + bot.id + '"><i class="fas fa-sliders"></i> Configure</button>' +
+        '<button class="btn btn-ghost btn-sm bot-stop" type="button" data-bot-id="' + bot.id + '"' + (bot.running ? '' : ' disabled') + '><i class="fas fa-stop"></i> Stop</button>' +
       '</div>';
     grid.appendChild(card);
   });
@@ -1162,6 +1175,23 @@ if (botSearch) botSearch.addEventListener('input', function() {
   botSearch.classList.toggle('is-filtering', Boolean(botSearch.value.trim()));
   renderBots(latestBots);
 });
+var botDashboard = document.getElementById('botDashboard');
+if (botDashboard) botDashboard.addEventListener('click', function(event) {
+  var configureButton = event.target.closest('.bot-configure');
+  var stopButton = event.target.closest('.bot-stop');
+  if (configureButton) {
+    var settingsSelect = document.getElementById('settingsBot');
+    if (settingsSelect) settingsSelect.value = configureButton.dataset.botId;
+    if (botsById[configureButton.dataset.botId]) loadBotSettings(botsById[configureButton.dataset.botId]);
+    activateTab('settings');
+    return;
+  }
+  if (stopButton && !stopButton.disabled && socket) {
+    stopButton.disabled = true;
+    socket.emit('stop-bot', { sessionId: stopButton.dataset.botId });
+    showToast('Bot inasimamishwa...');
+  }
+});
 
 refreshTimer = window.setInterval(function() {
   refreshSeconds = Math.max(0, refreshSeconds - 1);
@@ -1264,7 +1294,8 @@ function restoreSession() {
 }
 
 restoreSession().then(function(restored) {
-  if (!restored) document.getElementById('mickeyPassword')?.focus();
+  document.body.classList.remove('auth-checking');
+  if (!restored) window.location.replace('/login.html');
 });
 
 fetch('/api/server-info')
