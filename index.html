@@ -181,7 +181,7 @@
   .metric{text-align:center;}
   .metric .v{font-family:'Space Grotesk',sans-serif;font-size:1.15rem;font-weight:700;}
   .metric .l{font-size:.68rem;color:var(--text-3);text-transform:uppercase;letter-spacing:.08em;font-weight:600;}
-  .bot-actions{display:flex;gap:8px;}
+  .bot-actions{display:flex;gap:8px;flex-wrap:wrap;}
 
   .logs-container{background:#0d0d14;border:1px solid var(--stroke);border-radius:var(--radius);padding:20px;max-height:420px;overflow-y:auto;font-family:'Space Grotesk',monospace;font-size:.82rem;}
   .log-row{display:grid;grid-template-columns:auto auto 1fr;gap:16px;padding:8px 12px;border-radius:8px;}
@@ -467,6 +467,7 @@
       </div>
       <div style="display:flex;gap:10px;">
         <button class="btn btn-ghost btn-sm" id="refreshBotsBtn"><i class="fas fa-sync-alt"></i> Refresh</button>
+        <button class="btn btn-ghost btn-sm" id="stopAllBotsBtn"><i class="fas fa-power-off"></i> Stop all</button>
       </div>
     </div>
     <div class="bots-grid" id="botDashboard"></div>
@@ -776,6 +777,22 @@ if (socket) {
     requestBotRefresh();
   });
 
+  socket.on('bot-restarted', function(payload) {
+    if (!payload || !payload.success) {
+      showToast(payload?.error || 'Bot haijaanzishwa upya.');
+      return;
+    }
+    showToast('Bot imeanzishwa upya.');
+    requestBotRefresh();
+  });
+
+  socket.on('all-bots-stopped', function(payload) {
+    var stopAllButton = document.getElementById('stopAllBotsBtn');
+    if (stopAllButton) stopAllButton.disabled = false;
+    showToast((payload?.stopped || 0) + ' bot zimesimamishwa.');
+    requestBotRefresh();
+  });
+
   socket.on('bot-state', function(state) {
     if (!state) return;
     var activeEl = document.getElementById('activeSockets');
@@ -914,6 +931,7 @@ function renderBots(botsArray) {
       '</div>' +
       '<div class="bot-actions">' +
         '<button class="btn btn-ghost btn-sm bot-configure" type="button" data-bot-id="' + bot.id + '"><i class="fas fa-sliders"></i> Configure</button>' +
+        '<button class="btn btn-ghost btn-sm bot-restart" type="button" data-bot-id="' + bot.id + '"><i class="fas fa-rotate"></i> Restart</button>' +
         '<button class="btn btn-ghost btn-sm bot-stop" type="button" data-bot-id="' + bot.id + '"' + (bot.running ? '' : ' disabled') + '><i class="fas fa-stop"></i> Stop</button>' +
       '</div>';
     grid.appendChild(card);
@@ -1065,6 +1083,16 @@ var refreshBotsBtn = document.getElementById('refreshBotsBtn');
 if (refreshBotsBtn) refreshBotsBtn.addEventListener('click', function(){
   requestBotRefresh('Inasasisha bots...');
 });
+var stopAllBotsBtn = document.getElementById('stopAllBotsBtn');
+if (stopAllBotsBtn) stopAllBotsBtn.addEventListener('click', function() {
+  if (!socket || !latestBots.some(function(bot) { return bot.running; })) {
+    showToast('Hakuna bot inayofanya kazi.');
+    return;
+  }
+  stopAllBotsBtn.disabled = true;
+  socket.emit('stop-all-bots');
+  showToast('Bots zinasimamishwa...');
+});
 var botSearch = document.getElementById('botSearch');
 if (botSearch) botSearch.addEventListener('input', function() {
   botSearch.classList.toggle('is-filtering', Boolean(botSearch.value.trim()));
@@ -1073,12 +1101,19 @@ if (botSearch) botSearch.addEventListener('input', function() {
 var botDashboard = document.getElementById('botDashboard');
 if (botDashboard) botDashboard.addEventListener('click', function(event) {
   var configureButton = event.target.closest('.bot-configure');
+  var restartButton = event.target.closest('.bot-restart');
   var stopButton = event.target.closest('.bot-stop');
   if (configureButton) {
     var settingsSelect = document.getElementById('settingsBot');
     if (settingsSelect) settingsSelect.value = configureButton.dataset.botId;
     if (botsById[configureButton.dataset.botId]) loadBotSettings(botsById[configureButton.dataset.botId]);
     activateTab('settings');
+    return;
+  }
+  if (restartButton && !restartButton.disabled && socket) {
+    restartButton.disabled = true;
+    socket.emit('restart-bot', { sessionId: restartButton.dataset.botId });
+    showToast('Bot inaanzishwa upya...');
     return;
   }
   if (stopButton && !stopButton.disabled && socket) {

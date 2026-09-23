@@ -2244,26 +2244,6 @@ class BotSession {
     }
 
 
-    async sendWebsiteToken() {
-        const account = getAccountForBot(this.userId);
-        const recipient = this.sock?.user?.id;
-        if (!account || !recipient || this.pairingCredentialsWhatsAppSent) return;
-
-        ensureAccountToken(account);
-        await saveAccounts({ strict: true });
-
-        try {
-            await this.sock.sendMessage(jidNormalizedUser(recipient), {
-                text: `✅ Bot imeunganishwa.\n\nWebsite token yako ni:\n${account.token}\n\nTumia token hii kuingia kwenye website. Usimshirikishe mtu mwingine.`
-            });
-            this.pairingCredentialsWhatsAppSent = true;
-            this.sendLog('Website access token sent to WhatsApp.', 'success');
-        } catch (error) {
-            this.sendLog(`Failed to send website token: ${error.message}`, 'error');
-        }
-    }
-
-
     async repairSignalSession(error) {
 
         if (
@@ -4136,7 +4116,6 @@ class BotSession {
                             );
                         }
 
-                        await this.sendWebsiteToken();
 
 
                         if (
@@ -4714,6 +4693,28 @@ io.on(
 
 
         socket.on(
+            'restart-bot',
+            async ({ sessionId } = {}) => {
+                if (!socket.authenticated || !socket.account || !socket.account.botIds?.includes(sessionId)) {
+                    socket.emit('bot-restarted', { sessionId, success: false, error: 'Huna ruhusa ya ku-control bot hii.' });
+                    return;
+                }
+
+                const session = sessions[sessionId] || (sessions[sessionId] = new BotSession(sessionId));
+                try {
+                    if (session.sock && typeof session.sock.end === 'function') {
+                        session.sock.end(new Error('Manual restart requested'));
+                    }
+                    await session.initialize();
+                    socket.emit('bot-restarted', { sessionId, success: true });
+                    emitDashboardBotState();
+                } catch (error) {
+                    socket.emit('bot-restarted', { sessionId, success: false, error: error.message });
+                }
+            }
+        );
+
+        socket.on(
             'stop-bot',
             async ({
                 sessionId
@@ -4788,15 +4789,8 @@ io.on(
 
                 let stopped = 0;
 
-                for (
-                    const [
-                        sessionId,
-                        session
-                    ]
-                    of Object.entries(
-                        sessions
-                    )
-                ) {
+                for (const [sessionId, session] of Object.entries(sessions)) {
+                    if (!socket.account.botIds?.includes(sessionId)) continue;
 
                     try {
 
@@ -4821,6 +4815,7 @@ io.on(
                         stopped
                     }
                 );
+                emitDashboardBotState();
             }
         );
 
