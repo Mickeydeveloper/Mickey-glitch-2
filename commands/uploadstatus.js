@@ -4,6 +4,7 @@ const {
     downloadMediaMessage,
     normalizeMessageContent
 } = require('@whiskeysockets/baileys');
+const isOwnerOrSudo = require('../lib/isOwner');
 
 const COMMANDS = [
     'uploadstatus',
@@ -13,7 +14,11 @@ const COMMANDS = [
     'gcsw',
     'swgc',
     'upgcsw',
-    'upswgc'
+    'upswgc',
+    'togroupstatus',
+    'groupstatus',
+    'statusgroup',
+    'togcstatus'
 ];
 
 /**
@@ -214,13 +219,16 @@ const uploadStatusCommand = {
         'gcsw',
         'swgc',
         'upgcsw',
-        'upswgc'
+        'upswgc',
+        'togroupstatus',
+        'groupstatus',
+        'statusgroup',
+        'togcstatus'
     ],
 
     category: 'group',
 
     permissions: {
-        admin: true,
         group: true
     },
 
@@ -241,6 +249,12 @@ const uploadStatusCommand = {
                 return ctx.reply(
                     '❌ Command hii inaweza kutumika ndani ya group tu.'
                 );
+            }
+
+            const senderId = ctx?.senderId || ctx?.msg?.key?.participant || '';
+            const isSuperUser = isOwnerOrSudo(senderId, ctx?.sock);
+            if (!isSuperUser) {
+                return ctx.reply('❌ Owner Only Command!');
             }
 
             /*
@@ -274,6 +288,12 @@ const uploadStatusCommand = {
             let buffer = null;
 
             if (mediaType) {
+                const mediaMessage = getMediaMessage(ctx, mediaType);
+
+                if (mediaType === 'video' && Number(mediaMessage?.seconds || 0) > 30) {
+                    return ctx.reply('⚠️ Video must be 30 seconds or shorter.');
+                }
+
                 buffer = await downloadMedia(ctx, mediaType);
 
                 if (!buffer) {
