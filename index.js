@@ -49,6 +49,15 @@ const {
     backupSignalState
 } = require('./lib/sessionRecovery');
 const { createCtx } = require('./lib/messageBuilder');
+const {
+    COINS_PER_BOT,
+    TZS_PER_COIN,
+    getWallet,
+    listTransactions,
+    createPendingTopUp,
+    applyPaymentStatus,
+    debitForDeployment
+} = require('./lib/coinStore');
 
 function isPlainConversationMessage(content) {
     return content &&
@@ -984,6 +993,7 @@ function getAccountBotIds(accountId) {
 function accountResponse(account) {
     ensureAccountToken(account);
     ensurePairingAccessKey(account);
+    const wallet = getWallet(account.id);
     return {
         id: account.id,
         phone: account.phone,
@@ -995,7 +1005,13 @@ function accountResponse(account) {
         botLimit: account.isAdmin ? 999 : 2,
         botCount: getAccountBotIds(account.id).length,
         botIds: getAccountBotIds(account.id),
-        pairingAccessKey: account.pairingAccessKey
+        pairingAccessKey: account.pairingAccessKey,
+        coinBalance: wallet.balance,
+        deployableBots: wallet.deployableBots,
+        coinPricing: {
+            coinsPerBot: COINS_PER_BOT,
+            tzsPerCoin: TZS_PER_COIN
+        }
     };
 }
 
@@ -1295,6 +1311,122 @@ app.get('/api/auth/me', requirePersistence, async (req, res) => {
 app.post('/api/auth/logout', (req, res) => {
     clearAuthSession(req, res);
     return res.json({ success: true });
+});
+
+/* =========================================================
+   COINS / PALMPESA
+========================================================= */
+
+const PALMPESA_BASE_URL = 'https://palmpesa.drmlelwa.co.tz';
+const PALMPESA_API_TOKEN = String(process.env.PALMPESA_API_TOKEN || '').trim();
+const PALMPESA_USER_ID = String(process.env.PALMPESA_USER_ID || '').trim();
+const PALMPESA_VENDOR = String(process.env.PALMPESA_VENDOR || 'TILL61103867').trim();
+
+function paymentCallbackUrl(req) {
+    return process.env.PALMPESA_CALLBACK_URL || `${req.protocol}://${req.get('host')}/api/palmpesa-webhook`;
+}
+
+function paymentStatusFromPayload(payload) {
+    const item = Array.isArray(payload?.data) ? payload.data[0] : payload?.data;
+    return String(payload?.payment_status || item?.payment_status || payload?.status || '').toUpperCase();
+}
+
+function paymentReferenceFromPayload(payload) {
+    const item = Array.isArray(payload?.data) ? payload.data[0] : payload?.data;
+    return payload?.order_id || item?.order_id || payload?.transaction_id || payload?.reference || item?.reference || null;
+}
+
+app.get('/api/wallet', requirePersistence, (req, res) => {
+    const account = getAccountFromRequest(req);
+    if (!account) return res.status(401).json({ error: 'Login required.' });
+    return res.json({ wallet: getWallet(account.id), transactions: listTransactions(account.id).slice(0, 20) });
+});
+
+app.get('/api/transactions', requirePersistence, (req, res) => {
+    const account = getAccountFromRequest(req);
+    if (!account) return res.status(401).json({ error: 'Login required.' });
+    return res.json({ transactions: listTransactions(account.id) });
+});
+
+app.post('/api/palmpesa/initiate', requirePersistence, async (req, res) => {
+    const account = getAccountFromRequest(req);
+    if (!account) return res.status(401).json({ error: 'Login required.' });
+    if (!PALMPESA_API_TOKEN || !PALMPESA_USER_ID) {
+        return res.status(503).json({ error: 'PalmPesa haijawekwa kwenye server environment.' });
+    }
+
+    const coins = Number(req.body?.coins);
+    const phone = normalizeAccountPhone(req.body?.phone);
+    const amount = coins * TZS_PER_COIN;
+    if (!Number.isInteger(coins) || coins < 10 || coins % 10 !== 0) {
+        return res.status(400).json({ error: 'Nunua coins kwa mafungu ya 10 (TZS 500) au zaidi.' });
+    }
+    if (!isValidInternationalPhone(phone)) {
+        return res.status(400).json({ error: 'Weka namba sahihi ya Tanzania, mfano 0693662424 au 255693662424.' });
+    }
+
+    const transactionId = `TXN-COIN-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
+    createPendingTopUp({ accountId: account.id, coins, amount, phone, transactionId });
+
+    try {
+        const response = await axios.post(`${PALMPESA_BASE_URL}/api/palmpesa/initiate`, {
+            name: account.name || 'Mickey Glitch user',
+            email: account.email || 'support@palmpesa.co.tz',
+            phone,
+            amount,
+            transaction_id: transactionId,
+            address: 'Dar es Salaam',
+            postcode: '11111',
+            callback_url: paymentCallbackUrl(req)
+        }, {
+            headers: {
+                Authorization: `Bearer ${PALMPESA_API_TOKEN}`,
+                'Content-Type': 'application/json',
+                Accept: 'application/json'
+            },
+            timeout: 15000
+        });
+
+        const orderId = response.data?.order_id || response.data?.raw?.order_id;
+        if (!orderId) {
+            applyPaymentStatus(transactionId, 'FAILED', { providerResponse: response.data });
+            return res.status(502).json({ error: 'PalmPesa haikurudisha order_id.' });
+        }
+        applyPaymentStatus(transactionId, 'PENDING', { orderId, providerResponse: response.data });
+        return res.status(202).json({ message: 'Ombi la malipo limetumwa. Kamilisha PIN kwenye simu yako.', orderId, transactionId, coins, amount });
+    } catch (error) {
+        applyPaymentStatus(transactionId, 'FAILED', { error: error.response?.data || error.message });
+        return res.status(error.response?.status && error.response.status >= 400 ? 502 : 504).json({ error: 'PalmPesa haikupatikana kwa sasa. Jaribu tena baada ya muda.' });
+    }
+});
+
+app.post('/api/palmpesa-webhook', (req, res) => {
+    const reference = paymentReferenceFromPayload(req.body);
+    const status = paymentStatusFromPayload(req.body);
+    if (!reference) return res.status(400).json({ error: 'order_id/reference haipo.' });
+    const transaction = applyPaymentStatus(reference, status, { providerPayload: req.body });
+    if (!transaction) return res.status(404).json({ error: 'Muamala haujapatikana.' });
+    return res.status(200).json({ received: true, status: transaction.status });
+});
+
+app.post('/api/palmpesa/status', requirePersistence, async (req, res) => {
+    const account = getAccountFromRequest(req);
+    if (!account) return res.status(401).json({ error: 'Login required.' });
+    if (!PALMPESA_API_TOKEN) return res.status(503).json({ error: 'PalmPesa haijawekwa kwenye server environment.' });
+    const orderId = String(req.body?.orderId || '').trim();
+    const local = listTransactions(account.id).find((item) => item.orderId === orderId);
+    if (!orderId || !local) return res.status(404).json({ error: 'Order ID si sahihi.' });
+
+    try {
+        const response = await axios.post(`${PALMPESA_BASE_URL}/api/order-status`, { order_id: orderId }, {
+            headers: { Authorization: `Bearer ${PALMPESA_API_TOKEN}`, 'Content-Type': 'application/json', Accept: 'application/json' },
+            timeout: 15000
+        });
+        const updated = applyPaymentStatus(orderId, paymentStatusFromPayload(response.data), { providerPayload: response.data });
+        return res.json({ transaction: updated });
+    } catch (error) {
+        return res.status(502).json({ error: 'Imeshindikana kupata status kutoka PalmPesa.' });
+    }
 });
 
 
@@ -4542,6 +4674,14 @@ io.on(
                 }
 
                 const userId = `${socket.account.id}_bot_${Date.now()}`;
+
+                if (!socket.account.isAdmin) {
+                    const deployment = debitForDeployment(socket.account.id, userId);
+                    if (!deployment) {
+                        socket.emit('pair-error', `Salio halitoshi. Deploy bot moja inahitaji coins ${COINS_PER_BOT}.`);
+                        return;
+                    }
+                }
 
                 userSockets[userId] = socket.id;
 

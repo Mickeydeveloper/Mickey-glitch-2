@@ -334,6 +334,19 @@
   .switch.active{background:linear-gradient(135deg,#65d8d0,#8fbf9e);}
   .pulse-card{border-color:rgba(101,216,208,.2);background:linear-gradient(135deg,rgba(101,216,208,.08),rgba(255,255,255,.025));}
   .connect-card{background:linear-gradient(145deg,rgba(232,137,97,.1),rgba(101,216,208,.045));}
+  .wallet-layout{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(280px,.75fr);gap:18px;margin-top:24px;}
+  .wallet-card,.pack-card,.history-card{border:1px solid rgba(101,216,208,.18);border-radius:18px;background:linear-gradient(145deg,rgba(101,216,208,.1),rgba(255,255,255,.035));padding:22px;}
+  .wallet-card{display:flex;align-items:center;gap:18px;justify-content:space-between;flex-wrap:wrap;}
+  .wallet-label{color:var(--text-3);font-size:.76rem;text-transform:uppercase;letter-spacing:.12em;font-weight:700;}
+  .wallet-balance{font:700 3rem/1 'Space Grotesk',sans-serif;color:var(--lime);letter-spacing:-.04em;}
+  .wallet-meta{color:var(--text-2);font-size:.82rem;margin-top:5px;}
+  .pack-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:14px;}
+  .pack-card{padding:16px;background:rgba(255,255,255,.035);border-color:var(--stroke);cursor:pointer;text-align:left;color:var(--text);font:inherit;transition:.2s;}
+  .pack-card:hover{border-color:var(--cyan);transform:translateY(-2px);}
+  .pack-card strong{display:block;font-size:.9rem;}.pack-card span{display:block;color:var(--text-2);font-size:.78rem;margin-top:4px;}.pack-card b{display:block;color:var(--lime);font-size:1.05rem;margin-top:10px;}
+  .history-card{margin-top:18px;background:rgba(255,255,255,.035);border-color:var(--stroke);overflow:auto;}
+  .history-table{width:100%;border-collapse:collapse;font-size:.78rem;min-width:560px;}.history-table th,.history-table td{text-align:left;padding:11px 8px;border-bottom:1px solid var(--stroke);}.history-table th{color:var(--text-3);font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;}.history-table td{color:var(--text-2);}.payment-modal{display:none;position:fixed;inset:0;z-index:500;background:rgba(3,8,12,.78);backdrop-filter:blur(10px);align-items:center;justify-content:center;padding:20px;}.payment-modal.open{display:flex;}.payment-panel{width:min(440px,100%);padding:28px;border:1px solid rgba(101,216,208,.25);border-radius:22px;background:#0d1d29;box-shadow:0 28px 90px rgba(0,0,0,.55);}.payment-panel h2{font:700 1.4rem 'Space Grotesk';}.payment-panel .payment-copy{color:var(--text-2);font-size:.84rem;margin:7px 0 22px;}.payment-progress{display:none;margin-top:16px;color:var(--cyan);font-size:.8rem;}.payment-progress.show{display:flex;align-items:center;gap:8px;}
+  @media(max-width:900px){.wallet-layout{grid-template-columns:1fr;}.pack-grid{grid-template-columns:1fr;}}
 </style>
 </head>
 <body class="auth-checking">
@@ -436,6 +449,17 @@
       <code id="pairingAccessKey" style="margin-left:auto;color:var(--lime);font-weight:800;letter-spacing:.08em;">—</code>
       <button class="icon-btn" id="copyPairingKey" type="button" title="Copy pairing access key"><i class="fas fa-copy"></i></button>
     </div>
+    <div class="wallet-layout">
+      <div class="wallet-card">
+        <div><div class="wallet-label">Coin Balance</div><div class="wallet-balance" id="coinBalance">0</div><div class="wallet-meta" id="deployableBots">Inaweza ku-deploy bots 0 · Coins 5 kwa bot</div></div>
+        <button class="btn btn-primary" id="addCoinsButton" type="button"><i class="fas fa-plus"></i> Ongeza Coin</button>
+      </div>
+    </div>
+    <div class="pack-grid">
+      <button class="pack-card buy-pack" data-coins="10" type="button"><strong>Starter Pack</strong><span>Deploy Bot 2</span><b>TZS 500</b></button>
+      <button class="pack-card buy-pack" data-coins="50" type="button"><strong>Pro Pack</strong><span>Deploy Bot 10</span><b>TZS 2,500</b></button>
+      <button class="pack-card" id="customPackButton" type="button"><strong>Custom</strong><span>Chagua coins unazohitaji</span><b>Weka kiasi</b></button>
+    </div>
   </section>
 
   <section class="stats-grid tab-panel active" data-panel="dashboard">
@@ -503,6 +527,10 @@
       </div>
     </div>
     <div class="bots-grid" id="botDashboard"></div>
+    <div class="history-card">
+      <div class="section-title"><h2>Transaction History</h2><p>PalmPesa purchases na auto-deduct ya deployment</p></div>
+      <table class="history-table"><thead><tr><th>Tarehe</th><th>Muamala</th><th>Order ID</th><th>Status</th></tr></thead><tbody id="transactionHistory"><tr><td colspan="4">Inapakia...</td></tr></tbody></table>
+    </div>
   </section>
 
   <section class="section tab-panel" id="settings" data-panel="settings">
@@ -568,7 +596,7 @@
           <input type="tel" id="phone" placeholder="e.g. +447911123456" inputmode="tel">
         </div>
         <button class="btn btn-primary" id="requestPairing" style="margin-top:16px;width:100%;">
-          <i class="fas fa-key"></i> Request Pairing Code
+          <i class="fas fa-key"></i> Deploy Bot (Inakatisha Coin 5)
         </button>
       </div>
 
@@ -595,6 +623,20 @@
   <a href="#bots" data-tab="bots"><i class="fas fa-robot"></i>Bots</a>
   <a href="#settings" data-tab="settings"><i class="fas fa-cog"></i>Settings</a>
 </nav>
+
+<div class="payment-modal" id="paymentModal" role="dialog" aria-modal="true" aria-labelledby="paymentTitle">
+  <div class="payment-panel">
+    <h2 id="paymentTitle">Lipa kwa PalmPesa</h2>
+    <p class="payment-copy" id="paymentSummary">Weka namba ya simu. Utapokea USSD prompt ya malipo.</p>
+    <div class="field"><label for="paymentPhone">Namba ya simu</label><input id="paymentPhone" type="tel" placeholder="0693662424 au 255693662424" inputmode="tel" autocomplete="tel"></div>
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-ghost" id="closePaymentButton" type="button">Funga</button>
+      <button class="btn btn-primary" id="submitPaymentButton" type="button">Lipa sasa</button>
+    </div>
+    <div class="payment-progress" id="paymentProgress"><i class="fas fa-circle-notch fa-spin"></i><span>Tuma ombi kwenye simu yako... Inasubiri PIN</span></div>
+    <div class="alert" id="paymentAlert"></div>
+  </div>
+</div>
 
 <div id="toast">Copied!</div>
 
@@ -724,8 +766,40 @@ function applyUserToUI(user) {
   if (hint) hint.textContent = user.isAdmin ? 'Admin access: manage all connected bots.' : (quotaCount >= quotaLimit ? 'Bot limit imefika. Tumia token ku-manage bots zako.' : 'Bado una nafasi ya deploy bot nyingine.');
   var pairingKey = document.getElementById('pairingAccessKey');
   if (pairingKey) pairingKey.textContent = user.pairingAccessKey || '—';
+  updateWalletUI(user);
 
   document.body.classList.add('authenticated');
+}
+
+function updateWalletUI(user) {
+  var balance = Number(user && user.coinBalance || 0);
+  var deployable = Number(user && user.deployableBots || Math.floor(balance / 5));
+  var balanceEl = document.getElementById('coinBalance');
+  var deployableEl = document.getElementById('deployableBots');
+  if (balanceEl) balanceEl.textContent = balance;
+  if (deployableEl) deployableEl.textContent = 'Inaweza ku-deploy bots ' + deployable + ' · Coins 5 kwa bot';
+}
+
+function renderTransactionHistory(items) {
+  var body = document.getElementById('transactionHistory');
+  if (!body) return;
+  if (!Array.isArray(items) || !items.length) {
+    body.innerHTML = '<tr><td colspan="4">Hakuna transaction bado.</td></tr>';
+    return;
+  }
+  body.innerHTML = items.slice(0, 20).map(function(item) {
+    var type = item.type === 'BOT_DEPLOYMENT' ? 'Auto-deduct ya Deploy' : 'Nunuzi ya Coin';
+    var status = item.status || 'PENDING';
+    return '<tr><td>' + new Date(item.createdAt).toLocaleString() + '</td><td>' + type + ' (' + (item.coins || 0) + ')</td><td>' + (item.orderId || item.transactionId || '—') + '</td><td>' + status + '</td></tr>';
+  }).join('');
+}
+
+function loadWallet() {
+  return fetch('/api/wallet').then(readJsonResponse).then(function(result) {
+    if (!result.ok) return;
+    updateWalletUI({ coinBalance: result.data.wallet.balance, deployableBots: result.data.wallet.deployableBots });
+    renderTransactionHistory(result.data.transactions);
+  }).catch(function() {});
 }
 
 function requestPairAccessKey() {
@@ -774,6 +848,7 @@ if (linkBotButton) linkBotButton.addEventListener('click', function() {
   .then(function(res) {
     if (!res.ok) throw new Error(res.data.error || 'Bot haijaunganishwa.');
     applyUserToUI(res.data.account);
+    loadWallet();
     waitingBotId = (res.data.account.botIds || []).slice(-1)[0] || '';
     setBotLinkWaiting('Token imekubaliwa. Subiri bot i-connect kabla ya kuingia dashboard.');
     if (socket) socket.emit('account-auth');
@@ -1091,6 +1166,62 @@ if (requestBtn) {
 /* ============================================================
    UI
    ============================================================ */
+var selectedCoins = 10;
+var paymentModal = document.getElementById('paymentModal');
+var paymentSummary = document.getElementById('paymentSummary');
+var paymentPhone = document.getElementById('paymentPhone');
+var paymentProgress = document.getElementById('paymentProgress');
+var paymentAlert = document.getElementById('paymentAlert');
+function openPayment(coins) {
+  selectedCoins = Number(coins) || 10;
+  if (paymentSummary) paymentSummary.textContent = 'Coin ' + selectedCoins + ' = TZS ' + (selectedCoins * 50).toLocaleString() + '. Weka namba ya simu kupokea USSD prompt.';
+  if (paymentModal) paymentModal.classList.add('open');
+  if (paymentPhone) paymentPhone.focus();
+}
+function showPaymentAlert(message, type) {
+  if (!paymentAlert) return;
+  paymentAlert.className = 'alert show ' + type;
+  paymentAlert.textContent = message;
+}
+function pollPayment(orderId, attempts) {
+  if (!orderId || attempts > 8) return;
+  fetch('/api/palmpesa/status', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ orderId: orderId }) })
+    .then(readJsonResponse).then(function(result) {
+      var status = result.data && result.data.transaction && result.data.transaction.status;
+      if (status === 'SUCCESS') {
+        showPaymentAlert('Malipo yamekamilika. Coins zimeongezwa.', 'success');
+        loadWallet();
+        return;
+      }
+      if (status === 'FAILED') { showPaymentAlert('Malipo yameshindikana. Jaribu tena.', 'error'); return; }
+      window.setTimeout(function() { pollPayment(orderId, attempts + 1); }, Math.min(30000, 1500 * Math.pow(2, attempts)));
+    }).catch(function() { window.setTimeout(function() { pollPayment(orderId, attempts + 1); }, 5000); });
+}
+document.querySelectorAll('.buy-pack').forEach(function(button) { button.addEventListener('click', function() { openPayment(button.dataset.coins); }); });
+var customPackButton = document.getElementById('customPackButton');
+if (customPackButton) customPackButton.addEventListener('click', function() {
+  var coins = Number(window.prompt('Weka idadi ya coins (multiple ya 10):', '10'));
+  if (Number.isInteger(coins) && coins >= 10 && coins % 10 === 0) openPayment(coins);
+});
+var addCoinsButton = document.getElementById('addCoinsButton');
+if (addCoinsButton) addCoinsButton.addEventListener('click', function() { openPayment(10); });
+var closePaymentButton = document.getElementById('closePaymentButton');
+if (closePaymentButton) closePaymentButton.addEventListener('click', function() { if (paymentModal) paymentModal.classList.remove('open'); });
+var submitPaymentButton = document.getElementById('submitPaymentButton');
+if (submitPaymentButton) submitPaymentButton.addEventListener('click', function() {
+  var phone = normalizePhone(paymentPhone && paymentPhone.value);
+  if (!isValidInternationalPhone(phone)) { showPaymentAlert('Weka namba halali ya Tanzania.', 'error'); return; }
+  submitPaymentButton.disabled = true;
+  if (paymentProgress) paymentProgress.classList.add('show');
+  fetch('/api/palmpesa/initiate', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ coins: selectedCoins, phone: phone }) })
+    .then(readJsonResponse).then(function(result) {
+      if (!result.ok) throw new Error(result.data.error || 'Malipo hayajaanzishwa.');
+      showPaymentAlert('USSD prompt imetumwa. Ingiza PIN kwenye simu yako.', 'warn');
+      pollPayment(result.data.orderId, 0);
+    }).catch(function(error) { showPaymentAlert(error.message, 'error'); })
+    .finally(function() { submitPaymentButton.disabled = false; if (paymentProgress) paymentProgress.classList.remove('show'); });
+});
+
 var sidebar = document.getElementById('sidebar');
 var menuBtn = document.getElementById('menuBtn');
 if (menuBtn) menuBtn.addEventListener('click', function(){ sidebar.classList.toggle('open'); });
