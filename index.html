@@ -347,6 +347,12 @@
   .history-card{margin-top:18px;background:rgba(255,255,255,.035);border-color:var(--stroke);overflow:auto;}
   .history-table{width:100%;border-collapse:collapse;font-size:.78rem;min-width:560px;}.history-table th,.history-table td{text-align:left;padding:11px 8px;border-bottom:1px solid var(--stroke);}.history-table th{color:var(--text-3);font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;}.history-table td{color:var(--text-2);}.payment-modal{display:none;position:fixed;inset:0;z-index:500;background:rgba(3,8,12,.78);backdrop-filter:blur(10px);align-items:center;justify-content:center;padding:20px;}.payment-modal.open{display:flex;}.payment-panel{width:min(440px,100%);padding:28px;border:1px solid rgba(101,216,208,.25);border-radius:22px;background:#0d1d29;box-shadow:0 28px 90px rgba(0,0,0,.55);}.payment-panel h2{font:700 1.4rem 'Space Grotesk';}.payment-panel .payment-copy{color:var(--text-2);font-size:.84rem;margin:7px 0 22px;}.payment-progress{display:none;margin-top:16px;color:var(--cyan);font-size:.8rem;}.payment-progress.show{display:flex;align-items:center;gap:8px;}
   @media(max-width:900px){.wallet-layout{grid-template-columns:1fr;}.pack-grid{grid-template-columns:1fr;}}
+  body.light-mode{--bg:#edf4f2;--bg-2:#fff;--card:rgba(255,255,255,.78);--card-hover:#fff;--text:#14252b;--text-2:#53686d;--text-3:#718287;--stroke:rgba(20,63,70,.14);--stroke-hover:rgba(20,63,70,.28);background:radial-gradient(circle at 8% 0%,rgba(101,216,208,.2),transparent 30%),linear-gradient(145deg,#edf4f2,#f8fbfa 60%,#e9f0ee);}
+  body.light-mode .sidebar,body.light-mode .topbar{background:rgba(248,252,251,.86);}body.light-mode .logs-container{background:#f4f8f7;}body.light-mode .payment-panel{background:#fff;}
+  .theme-toggle[aria-pressed="true"]{color:var(--orange);border-color:rgba(239,131,84,.45);}
+  .platform-status{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px;}.platform-status-item{display:flex;align-items:center;gap:9px;padding:12px;border:1px solid var(--stroke);border-radius:14px;background:rgba(255,255,255,.035);font-size:.78rem;}.platform-status-item i{color:var(--text-3);}.platform-status-item.online i{color:var(--success);}.platform-status-item small{display:block;color:var(--text-3);font-size:.66rem;margin-top:2px;}
+  .history-toolbar{display:flex;align-items:end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:18px 0 12px;}.history-filter{display:flex;gap:7px;flex-wrap:wrap;}.history-filter button{border:1px solid var(--stroke);background:transparent;color:var(--text-2);border-radius:10px;padding:8px 11px;font:600 .72rem 'Outfit';cursor:pointer;}.history-filter button.active,.history-filter button:hover{background:rgba(101,216,208,.12);border-color:var(--cyan);color:var(--text);}.status-badge{display:inline-flex;padding:4px 8px;border-radius:8px;font-size:.65rem;font-weight:700;letter-spacing:.05em;}.status-badge.success{background:rgba(101,216,163,.13);color:var(--success);}.status-badge.pending{background:rgba(232,189,112,.14);color:var(--warning);}.status-badge.failed{background:rgba(237,117,128,.14);color:var(--danger);}.wallet-tools{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;}.wallet-tools .btn{min-height:38px;padding:9px 13px;font-size:.75rem;}
+  @media(max-width:600px){.platform-status{grid-template-columns:1fr;}.wallet-balance{font-size:2.5rem;}.history-toolbar{align-items:stretch;}}
 </style>
 </head>
 <body class="auth-checking">
@@ -419,6 +425,7 @@
     </div>
     <div class="topbar-actions">
       <button class="icon-btn" id="notificationsBtn" title="Notifications"><i class="fas fa-bell"></i><span class="dot"></span></button>
+      <button class="icon-btn theme-toggle" id="themeToggle" type="button" title="Badili theme" aria-label="Badili theme" aria-pressed="false"><i class="fas fa-sun"></i></button>
       <button class="icon-btn" title="Refresh" id="refreshBtn"><i class="fas fa-sync-alt"></i></button>
       <div class="user-chip">
         <div class="avatar" id="userAvatar">OP</div>
@@ -453,6 +460,11 @@
       <div class="wallet-card">
         <div><div class="wallet-label">Coin Balance</div><div class="wallet-balance" id="coinBalance">0</div><div class="wallet-meta" id="deployableBots">Inaweza ku-deploy bots 0 · Coins 5 kwa bot</div></div>
         <button class="btn btn-primary" id="addCoinsButton" type="button"><i class="fas fa-plus"></i> Ongeza Coin</button>
+      </div>
+      <div class="wallet-tools" aria-label="Coin utilities">
+        <button class="btn btn-ghost coin-utility" type="button" data-utility="transfer"><i class="fas fa-right-left"></i> Transfer</button>
+        <button class="btn btn-ghost coin-utility" type="button" data-utility="stake"><i class="fas fa-lock"></i> Stake</button>
+        <button class="btn btn-ghost coin-utility" type="button" data-utility="convert"><i class="fas fa-arrow-right-arrow-left"></i> Convert</button>
       </div>
     </div>
     <div class="pack-grid">
@@ -500,6 +512,11 @@
     </div>
     <div class="pulse-card"><div><span class="monitor-value" id="onlineRate">0%</span><span class="monitor-label">Online rate</span></div></div>
     <div class="pulse-card"><div><span class="monitor-value" id="refreshCountdown">30s</span><span class="monitor-label">Next refresh</span></div></div>
+    <div class="platform-status" style="grid-column:1/-1;">
+      <div class="platform-status-item" id="whatsappStatus"><i class="fab fa-whatsapp"></i><div><strong>WhatsApp</strong><small>Inasubiri bot</small></div></div>
+      <div class="platform-status-item" id="telegramStatus"><i class="fab fa-telegram"></i><div><strong>Telegram</strong><small>Ready for integration</small></div></div>
+      <div class="platform-status-item" id="discordStatus"><i class="fab fa-discord"></i><div><strong>Discord</strong><small>Ready for integration</small></div></div>
+    </div>
   </section>
 
   <section class="section tab-panel active" data-panel="dashboard" id="activity">
@@ -528,7 +545,7 @@
     </div>
     <div class="bots-grid" id="botDashboard"></div>
     <div class="history-card">
-      <div class="section-title"><h2>Transaction History</h2><p>PalmPesa purchases na auto-deduct ya deployment</p></div>
+      <div class="history-toolbar"><div class="section-title"><h2>Transaction History</h2><p>PalmPesa purchases na auto-deduct ya deployment</p></div><div class="history-filter" role="group" aria-label="Transaction filters"><button class="active" data-transaction-filter="ALL" type="button">Zote</button><button data-transaction-filter="COIN_PURCHASE" type="button">Deposit</button><button data-transaction-filter="BOT_DEPLOYMENT" type="button">Bot rewards</button><button data-transaction-filter="FAILED" type="button">Failed</button></div></div>
       <table class="history-table"><thead><tr><th>Tarehe</th><th>Muamala</th><th>Order ID</th><th>Status</th></tr></thead><tbody id="transactionHistory"><tr><td colspan="4">Inapakia...</td></tr></tbody></table>
     </div>
   </section>
@@ -650,6 +667,8 @@ var currentUser = { name: 'MICKEY Control', isAdmin: true, botLimit: 999, botCou
 var accountReady = true;
 var botsById = {};
 var latestBots = [];
+var latestTransactions = [];
+var activeTransactionFilter = 'ALL';
 var refreshTimer = null;
 var refreshSeconds = 30;
 
@@ -776,21 +795,37 @@ function updateWalletUI(user) {
   var deployable = Number(user && user.deployableBots || Math.floor(balance / 5));
   var balanceEl = document.getElementById('coinBalance');
   var deployableEl = document.getElementById('deployableBots');
-  if (balanceEl) balanceEl.textContent = balance;
+  if (balanceEl) {
+    var previous = Number(balanceEl.dataset.value || 0);
+    var startedAt = performance.now();
+    function tick(now) {
+      var progress = Math.min(1, (now - startedAt) / 420);
+      var eased = 1 - Math.pow(1 - progress, 3);
+      balanceEl.textContent = Math.round(previous + ((balance - previous) * eased));
+      if (progress < 1) requestAnimationFrame(tick);
+    }
+    balanceEl.dataset.value = String(balance);
+    requestAnimationFrame(tick);
+  }
   if (deployableEl) deployableEl.textContent = 'Inaweza ku-deploy bots ' + deployable + ' · Coins 5 kwa bot';
 }
 
 function renderTransactionHistory(items) {
   var body = document.getElementById('transactionHistory');
   if (!body) return;
-  if (!Array.isArray(items) || !items.length) {
+  latestTransactions = Array.isArray(items) ? items : [];
+  var visibleItems = latestTransactions.filter(function(item) {
+    return activeTransactionFilter === 'ALL' || item.type === activeTransactionFilter || item.status === activeTransactionFilter;
+  });
+  if (!visibleItems.length) {
     body.innerHTML = '<tr><td colspan="4">Hakuna transaction bado.</td></tr>';
     return;
   }
-  body.innerHTML = items.slice(0, 20).map(function(item) {
+  body.innerHTML = visibleItems.slice(0, 20).map(function(item) {
     var type = item.type === 'BOT_DEPLOYMENT' ? 'Auto-deduct ya Deploy' : 'Nunuzi ya Coin';
     var status = item.status || 'PENDING';
-    return '<tr><td>' + new Date(item.createdAt).toLocaleString() + '</td><td>' + type + ' (' + (item.coins || 0) + ')</td><td>' + (item.orderId || item.transactionId || '—') + '</td><td>' + status + '</td></tr>';
+    var statusClass = status === 'SUCCESS' ? 'success' : status === 'FAILED' ? 'failed' : 'pending';
+    return '<tr><td>' + new Date(item.createdAt).toLocaleString() + '</td><td>' + type + ' (' + (item.coins || 0) + ')</td><td>' + (item.orderId || item.transactionId || '—') + '</td><td><span class="status-badge ' + statusClass + '">' + status + '</span></td></tr>';
   }).join('');
 }
 
@@ -1094,6 +1129,12 @@ function updateMonitor(botsArray) {
   if (rate) rate.textContent = total ? Math.round((online / total) * 100) + '%' : '0%';
   if (sync) sync.textContent = 'Last sync · ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   if (state) state.textContent = online ? online + ' bot' + (online === 1 ? '' : 's') + ' online' : 'No active bots';
+  var whatsapp = document.getElementById('whatsappStatus');
+  if (whatsapp) {
+    whatsapp.classList.toggle('online', online > 0);
+    var whatsappCopy = whatsapp.querySelector('small');
+    if (whatsappCopy) whatsappCopy.textContent = online > 0 ? online + ' bot online' : 'Hakuna bot online';
+  }
   refreshSeconds = 30;
 }
 
@@ -1272,6 +1313,34 @@ if (notificationsBtn) notificationsBtn.addEventListener('click', function() {
   if (activity) activity.scrollIntoView({ behavior: 'smooth', block: 'start' });
   var dot = notificationsBtn.querySelector('.dot');
   if (dot) dot.style.display = 'none';
+});
+var themeToggle = document.getElementById('themeToggle');
+function applyTheme(theme) {
+  var light = theme === 'light';
+  document.body.classList.toggle('light-mode', light);
+  if (themeToggle) {
+    themeToggle.setAttribute('aria-pressed', light ? 'true' : 'false');
+    themeToggle.innerHTML = '<i class="fas fa-' + (light ? 'moon' : 'sun') + '"></i>';
+  }
+}
+applyTheme(localStorage.getItem('mickey-theme') || 'dark');
+if (themeToggle) themeToggle.addEventListener('click', function() {
+  var nextTheme = document.body.classList.contains('light-mode') ? 'dark' : 'light';
+  localStorage.setItem('mickey-theme', nextTheme);
+  applyTheme(nextTheme);
+});
+document.querySelectorAll('[data-transaction-filter]').forEach(function(button) {
+  button.addEventListener('click', function() {
+    activeTransactionFilter = button.dataset.transactionFilter || 'ALL';
+    document.querySelectorAll('[data-transaction-filter]').forEach(function(item) { item.classList.toggle('active', item === button); });
+    renderTransactionHistory(latestTransactions);
+  });
+});
+document.querySelectorAll('.coin-utility').forEach(function(button) {
+  button.addEventListener('click', function() {
+    var labels = { transfer: 'Coin transfer', stake: 'Coin staking', convert: 'Coin conversion' };
+    showToast(labels[button.dataset.utility] + ' itahitaji wallet API mpya. Imewekwa kwenye roadmap.');
+  });
 });
 var clearActivityBtn = document.getElementById('clearActivityBtn');
 if (clearActivityBtn) clearActivityBtn.addEventListener('click', function() {

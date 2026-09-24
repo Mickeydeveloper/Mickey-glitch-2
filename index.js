@@ -196,24 +196,6 @@ function loadCommandRegistry() {
         'commands'
     );
 
-    const ignoredFiles = new Set([
-        'a2uitest',
-        'antibadword',
-        'antidelete',
-        'antisticker',
-        'buy',
-        'coin',
-        'donate',
-        'emojimix',
-        'imagine',
-        'instagram',
-        'pair',
-        'status',
-        'telebot',
-        'unpair',
-        'sudo'
-    ]);
-
     if (!fs.existsSync(commandsDir)) {
         return registry;
     }
@@ -242,7 +224,7 @@ function loadCommandRegistry() {
         const commandName = path
             .basename(entry, '.js');
 
-        if (ignoredFiles.has(commandName)) {
+        if (commandName === 'server') {
             continue;
         }
 
@@ -271,6 +253,7 @@ function loadCommandRegistry() {
                     (mod.name || '').toLowerCase();
 
                 if (
+                    !modName ||
                     modName.includes(
                         commandName.toLowerCase()
                     ) ||

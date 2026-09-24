@@ -69,7 +69,7 @@ function getSystemStats() {
     };
 }
 
-module.exports = async (sock, chatId, senderId, args, m) => {
+const statsCommand = async (sock, chatId, senderId, args, m) => {
     try {
         const stats = getBotStats();
         const sysStats = getSystemStats();
@@ -125,3 +125,5 @@ module.exports = async (sock, chatId, senderId, args, m) => {
         await sock.sendMessage(chatId, { text: `❌ Error: ${e.message}` }, { quoted: m });
     }
 };
+
+module.exports = statsCommand;
