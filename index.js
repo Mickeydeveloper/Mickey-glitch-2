@@ -4566,7 +4566,10 @@ io.on(
                     'ghostMode',
                     'prefix',
                     'isPublic',
-                    'commandCooldown'
+                    'commandCooldown',
+                    'claimFrequency',
+                    'riskTolerance',
+                    'targetCoinLimit'
                 ];
 
                 for (const key of allowedKeys) {
@@ -4576,6 +4579,12 @@ io.on(
                                 ? String(incomingSettings[key] || '.').slice(0, 3)
                                 : key === 'commandCooldown'
                                     ? Math.max(0, Math.min(60, Number(incomingSettings[key] || 0)))
+                                    : key === 'claimFrequency'
+                                        ? Math.max(5, Math.min(120, Number(incomingSettings[key] || 30)))
+                                        : key === 'riskTolerance'
+                                            ? Math.max(0, Math.min(100, Number(incomingSettings[key] || 0)))
+                                            : key === 'targetCoinLimit'
+                                                ? Math.max(10, Math.min(1000, Number(incomingSettings[key] || 100)))
                                     : Boolean(incomingSettings[key]);
                     }
                 }
@@ -4664,6 +4673,10 @@ io.on(
                         socket.emit('pair-error', `Salio halitoshi. Deploy bot moja inahitaji coins ${COINS_PER_BOT}.`);
                         return;
                     }
+                    socket.emit('wallet-updated', {
+                        wallet: deployment.wallet,
+                        transaction: deployment.transaction
+                    });
                 }
 
                 userSockets[userId] = socket.id;

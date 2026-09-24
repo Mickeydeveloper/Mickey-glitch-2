@@ -175,6 +175,7 @@
   .status-pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:50px;font-size:.68rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;flex-shrink:0;}
   .status-pill.online{background:rgba(34,224,122,.12);color:var(--success);border:1px solid rgba(34,224,122,.25);}
   .status-pill.offline{background:rgba(255,59,92,.12);color:var(--danger);border:1px solid rgba(255,59,92,.25);}
+  .status-pill.idle{background:rgba(174,218,218,.1);color:var(--text-2);border:1px solid var(--stroke);}.status-pill.maintenance{background:rgba(232,189,112,.12);color:var(--warning);border:1px solid rgba(232,189,112,.25);}
   .status-pill.connecting{background:rgba(255,176,32,.12);color:var(--warning);border:1px solid rgba(255,176,32,.25);}
   .status-pill .ind{width:6px;height:6px;border-radius:50%;background:currentColor;animation:pulse 1.5s infinite;}
   .bot-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:14px 0;border-top:1px solid var(--stroke);border-bottom:1px solid var(--stroke);margin-bottom:18px;}
@@ -232,6 +233,10 @@
   .mobile-nav a{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px;color:var(--text-3);text-decoration:none;font-size:.65rem;font-weight:600;border-radius:10px;transition:.2s;}
   .mobile-nav a i{font-size:1.1rem;}
   .mobile-nav a.active{color:var(--orange);background:rgba(255,107,26,.08);}
+  .sidebar.collapsed{width:82px;padding-inline:12px;}.sidebar.collapsed .logo-text,.sidebar.collapsed .nav-section-label,.sidebar.collapsed .nav-item span,.sidebar.collapsed .logout-label{display:none;}.sidebar.collapsed .logo-wrap{justify-content:center;padding-inline:0;}.sidebar.collapsed .nav-item{justify-content:center;padding-inline:10px;}.sidebar.collapsed .nav-item i{margin:0;}.main.sidebar-collapsed{margin-left:82px;}.sidebar-toggle{margin-left:auto;}
+  .coin-header{display:flex;align-items:center;gap:8px;padding:7px 12px;border:1px solid rgba(185,217,140,.25);border-radius:12px;background:rgba(185,217,140,.08);color:var(--lime);font:700 .78rem 'Space Grotesk';}.coin-header i{font-size:.75rem;}.quick-deposit{white-space:nowrap;}
+  .view-grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(280px,.65fr);gap:18px;}.surface{border:1px solid var(--stroke);border-radius:18px;background:rgba(255,255,255,.045);padding:22px;}.surface h3{font:700 1.05rem 'Space Grotesk';margin-bottom:5px;}.surface p{color:var(--text-3);font-size:.8rem;}.chart-bars{display:flex;align-items:end;gap:10px;height:170px;margin-top:22px;padding-top:15px;border-bottom:1px solid var(--stroke);}.chart-bar{flex:1;min-height:10px;border-radius:8px 8px 0 0;background:linear-gradient(180deg,var(--cyan),rgba(101,216,208,.16));transition:height .5s ease;}.chart-labels{display:flex;justify-content:space-between;color:var(--text-3);font-size:.68rem;margin-top:8px;}.utility-list{display:grid;gap:10px;margin-top:16px;}.utility-list .btn{justify-content:flex-start;width:100%;}.range-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:15px 0;border-bottom:1px solid var(--stroke);}.range-row:last-child{border-bottom:0;}.range-row label{font-size:.82rem;font-weight:600;}.range-row small{display:block;color:var(--text-3);font-size:.7rem;font-weight:400;}.range-row output{color:var(--cyan);font:700 .78rem 'Space Grotesk';}.range-row input[type=range]{grid-column:1/-1;width:100%;accent-color:var(--cyan);}.sync-badge{display:inline-flex;align-items:center;gap:6px;color:var(--success);font-size:.7rem;font-weight:700;}.sync-badge::before{content:'';width:7px;height:7px;border-radius:50%;background:currentColor;box-shadow:0 0 10px currentColor;}
+  @media(max-width:900px){.sidebar.collapsed{width:260px;padding:28px 20px;}.sidebar.collapsed .logo-text,.sidebar.collapsed .nav-section-label,.sidebar.collapsed .nav-item span,.sidebar.collapsed .logout-label{display:block;}.sidebar.collapsed .logo-wrap{justify-content:flex-start;padding-inline:8px;}.sidebar.collapsed .nav-item{justify-content:flex-start;padding-inline:14px;}.main.sidebar-collapsed{margin-left:0;}.view-grid{grid-template-columns:1fr;}.coin-header{display:none;}}
 
   @media(max-width:1024px){
     .sidebar{transform:translateX(-100%);}
@@ -393,21 +398,25 @@
       <h1>Mickey Glitch</h1>
       <span>Bot Platform v2</span>
     </div>
+    <button class="icon-btn sidebar-toggle" id="sidebarToggle" type="button" title="Collapse navigation" aria-label="Collapse navigation"><i class="fas fa-angle-left"></i></button>
   </div>
 
   <div class="nav-section-label">Main</div>
   <a href="#dashboard" class="nav-item active" data-tab="dashboard"><i class="fas fa-th-large"></i> Dashboard</a>
   <a href="#bots" class="nav-item" data-tab="bots">
-    <i class="fas fa-robot"></i> Bots <span class="badge" id="botsBadge">0</span>
+    <i class="fas fa-robot"></i> <span>Bot Manager</span> <span class="badge" id="botsBadge">0</span>
   </a>
+  <a href="#wallet" class="nav-item" data-tab="wallet"><i class="fas fa-wallet"></i> <span>Coin Wallet</span></a>
+  <a href="#store" class="nav-item" data-tab="store"><i class="fas fa-store"></i> <span>Marketplace</span></a>
+  <a href="#analytics" class="nav-item" data-tab="analytics"><i class="fas fa-chart-line"></i> <span>Analytics</span></a>
 
   <div class="nav-section-label">Configure</div>
-  <a href="#settings" class="nav-item" data-tab="settings"><i class="fas fa-sliders-h"></i> Settings</a>
-  <a href="#connect" class="nav-item" data-tab="connect"><i class="fas fa-link"></i> Connect</a>
+  <a href="#settings" class="nav-item" data-tab="settings"><i class="fas fa-sliders-h"></i> <span>Settings</span></a>
+  <a href="#connect" class="nav-item" data-tab="connect"><i class="fas fa-link"></i> <span>Connect</span></a>
 
   <div style="margin-top:auto;display:flex;flex-direction:column;gap:8px;">
     <button class="btn btn-ghost btn-sm" id="logoutBtn" style="width:100%;">
-      <i class="fas fa-right-from-bracket"></i> Logout
+      <i class="fas fa-right-from-bracket"></i> <span class="logout-label">Logout</span>
     </button>
   </div>
 </aside>
@@ -424,6 +433,8 @@
       <input type="search" id="botSearch" placeholder="Search bots..." aria-label="Search bots">
     </div>
     <div class="topbar-actions">
+      <div class="coin-header" aria-live="polite"><i class="fas fa-coins"></i><span id="headerCoinBalance">0</span> coins</div>
+      <button class="btn btn-primary btn-sm quick-deposit" id="headerDepositButton" type="button"><i class="fas fa-plus"></i> Deposit</button>
       <button class="icon-btn" id="notificationsBtn" title="Notifications"><i class="fas fa-bell"></i><span class="dot"></span></button>
       <button class="icon-btn theme-toggle" id="themeToggle" type="button" title="Badili theme" aria-label="Badili theme" aria-pressed="false"><i class="fas fa-sun"></i></button>
       <button class="icon-btn" title="Refresh" id="refreshBtn"><i class="fas fa-sync-alt"></i></button>
@@ -505,6 +516,25 @@
     </div>
   </section>
 
+  <section class="section tab-panel" id="wallet" data-panel="wallet">
+    <div class="section-head"><div class="section-title"><h2>Coin Wallet</h2><p>Balance, deposits, matumizi na deployment costs kwa wakati halisi.</p></div><span class="sync-badge" id="walletSyncStatus">Live sync active</span></div>
+    <div class="view-grid">
+      <div class="surface"><div class="wallet-label">Available balance</div><div class="wallet-balance" id="walletViewBalance">0</div><p id="walletViewMeta">Coins 5 kwa bot deployment</p><div class="utility-list"><button class="btn btn-primary" id="walletDepositButton" type="button"><i class="fas fa-plus"></i> Ongeza coins</button><button class="btn btn-ghost coin-utility" data-utility="transfer" type="button"><i class="fas fa-right-left"></i> Transfer coins</button></div></div>
+      <div class="surface"><h3>Wallet health</h3><p>Ufuatiliaji wa matumizi ya coin kwa workspace hii.</p><div class="bot-metrics" style="margin-top:18px;"><div class="metric"><div class="v" id="walletDeployableBots">0</div><div class="l">Deployable</div></div><div class="metric"><div class="v" id="walletTransactionCount">0</div><div class="l">Transactions</div></div><div class="metric"><div class="v" id="walletSpendRate">0</div><div class="l">Spent</div></div></div></div>
+    </div>
+    <div class="history-card"><div class="history-toolbar"><div class="section-title"><h3>Full transaction history</h3><p>Inasasishwa baada ya payment au bot deployment.</p></div></div><table class="history-table"><thead><tr><th>Tarehe</th><th>Muamala</th><th>Coins</th><th>Status</th></tr></thead><tbody id="walletTransactionHistory"><tr><td colspan="4">Inapakia...</td></tr></tbody></table></div>
+  </section>
+
+  <section class="section tab-panel" id="store" data-panel="store">
+    <div class="section-head"><div class="section-title"><h2>Marketplace</h2><p>Nunua coin packs kwa PalmPesa na uendelee ku-deploy bila kusubiri.</p></div></div>
+    <div class="pack-grid"><button class="pack-card buy-pack" data-coins="10" type="button"><strong>Starter Pack</strong><span>Coins 10 · bots 2</span><b>TZS 500 <i class="fas fa-arrow-right"></i></b></button><button class="pack-card buy-pack" data-coins="50" type="button"><strong>Pro Pack</strong><span>Coins 50 · bots 10</span><b>TZS 2,500 <i class="fas fa-arrow-right"></i></b></button><button class="pack-card" id="storeCustomPackButton" type="button"><strong>Custom Pack</strong><span>Chagua coins zako</span><b>Weka kiasi <i class="fas fa-arrow-right"></i></b></button></div>
+  </section>
+
+  <section class="section tab-panel" id="analytics" data-panel="analytics">
+    <div class="section-head"><div class="section-title"><h2>Workspace Analytics</h2><p>Signals kutoka bot state na live activity stream.</p></div></div>
+    <div class="view-grid"><div class="surface"><h3>Bot availability</h3><p>Online rate kwa bots zako.</p><div class="chart-bars" id="availabilityChart"><span class="chart-bar" style="height:35%"></span><span class="chart-bar" style="height:55%"></span><span class="chart-bar" style="height:42%"></span><span class="chart-bar" style="height:72%"></span><span class="chart-bar" style="height:64%"></span><span class="chart-bar" style="height:84%"></span><span class="chart-bar" style="height:76%"></span></div><div class="chart-labels"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Now</span></div></div><div class="surface"><h3>Live signals</h3><p>Data ya sasa kutoka Socket.IO.</p><div class="utility-list"><div class="pulse-card"><div><span class="monitor-value" id="analyticsOnlineRate">0%</span><span class="monitor-label">Online rate</span></div></div><div class="pulse-card"><div><span class="monitor-value" id="analyticsMessages">0</span><span class="monitor-label">Messages handled</span></div></div></div></div></div>
+  </section>
+
   <section class="dashboard-strip tab-panel active" data-panel="dashboard" aria-label="Live monitor">
     <div class="pulse-card">
       <div class="pulse-icon"><i class="fas fa-wave-square"></i></div>
@@ -578,6 +608,13 @@
       <div class="setting-row"><div class="setting-info"><h4>AI Auto Reply</h4><p>Let this bot answer private messages with AI</p></div><div class="switch" data-setting="aiEnabled" role="switch" tabindex="0"></div></div>
       <div class="setting-row"><div class="setting-info"><h4>Ghost Mode</h4><p>Only owner and approved users can trigger commands</p></div><div class="switch" data-setting="ghostMode" role="switch" tabindex="0"></div></div>
       <div class="setting-row"><div class="setting-info"><h4>Typing Indicator</h4><p>Show composing status before automated replies</p></div><div class="switch" data-setting="typingIndicator" role="switch" tabindex="0"></div></div>
+    </div>
+    <div class="surface" style="margin-top:20px;">
+      <div class="section-title"><h3>Bot strategy</h3><p>Fine-tune behavior ya bot hii. Changes zinasync kupitia WebSocket.</p></div>
+      <div class="range-row"><label for="claimFrequency">Auto-claim frequency<small>Frequency ya bot ku-check rewards</small></label><output id="claimFrequencyValue">30s</output><input id="claimFrequency" data-strategy="claimFrequency" type="range" min="5" max="120" step="5" value="30"></div>
+      <div class="range-row"><label for="riskTolerance">Risk tolerance<small>Balance kati ya speed na protection</small></label><output id="riskToleranceValue">40%</output><input id="riskTolerance" data-strategy="riskTolerance" type="range" min="0" max="100" step="5" value="40"></div>
+      <div class="range-row"><label for="targetCoinLimit">Target coin limit<small>Simamisha auto-claim ukifikia target</small></label><output id="targetCoinLimitValue">100</output><input id="targetCoinLimit" data-strategy="targetCoinLimit" type="range" min="10" max="1000" step="10" value="100"></div>
+      <button class="btn btn-lime" id="saveStrategyBtn" type="button" style="margin-top:16px;"><i class="fas fa-sliders"></i> Save strategy</button>
     </div>
     <div style="margin-top:24px;display:flex;gap:16px;align-items:end;flex-wrap:wrap;">
       <div class="field" style="margin:0;min-width:220px;">
@@ -808,6 +845,14 @@ function updateWalletUI(user) {
     requestAnimationFrame(tick);
   }
   if (deployableEl) deployableEl.textContent = 'Inaweza ku-deploy bots ' + deployable + ' · Coins 5 kwa bot';
+  ['headerCoinBalance', 'walletViewBalance'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.textContent = balance;
+  });
+  var deployableView = document.getElementById('walletDeployableBots');
+  if (deployableView) deployableView.textContent = deployable;
+  var walletMeta = document.getElementById('walletViewMeta');
+  if (walletMeta) walletMeta.textContent = 'Inaweza ku-deploy bots ' + deployable + ' · Coins 5 kwa bot';
 }
 
 function renderTransactionHistory(items) {
@@ -827,6 +872,19 @@ function renderTransactionHistory(items) {
     var statusClass = status === 'SUCCESS' ? 'success' : status === 'FAILED' ? 'failed' : 'pending';
     return '<tr><td>' + new Date(item.createdAt).toLocaleString() + '</td><td>' + type + ' (' + (item.coins || 0) + ')</td><td>' + (item.orderId || item.transactionId || '—') + '</td><td><span class="status-badge ' + statusClass + '">' + status + '</span></td></tr>';
   }).join('');
+  var walletBody = document.getElementById('walletTransactionHistory');
+  if (walletBody) {
+    walletBody.innerHTML = latestTransactions.length ? latestTransactions.map(function(item) {
+      var status = item.status || 'PENDING';
+      var statusClass = status === 'SUCCESS' ? 'success' : status === 'FAILED' ? 'failed' : 'pending';
+      return '<tr><td>' + new Date(item.createdAt).toLocaleString() + '</td><td>' + (item.type || 'Wallet') + '</td><td>' + (item.coins || 0) + '</td><td><span class="status-badge ' + statusClass + '">' + status + '</span></td></tr>';
+    }).join('') : '<tr><td colspan="4">Hakuna transaction bado.</td></tr>';
+  }
+  var count = document.getElementById('walletTransactionCount');
+  if (count) count.textContent = latestTransactions.length;
+  var spent = latestTransactions.reduce(function(total, item) { return total + Math.abs(Number(item.coins || 0) < 0 ? Number(item.coins || 0) : 0); }, 0);
+  var spendRate = document.getElementById('walletSpendRate');
+  if (spendRate) spendRate.textContent = spent;
 }
 
 function loadWallet() {
@@ -967,6 +1025,16 @@ if (socket) {
 
   socket.on('console', function(entry) {
     appendActivity(entry.message || 'Bot event received.', entry.type || 'info');
+    var dot = document.querySelector('#notificationsBtn .dot');
+    if (dot) dot.style.display = 'block';
+    if (entry && /coin|wallet|deploy|reward/i.test(entry.message || '')) loadWallet();
+  });
+
+  socket.on('wallet-updated', function(payload) {
+    if (!payload || !payload.wallet) return;
+    updateWalletUI({ coinBalance: payload.wallet.balance, deployableBots: payload.wallet.deployableBots });
+    loadWallet();
+    appendActivity('Wallet ime-sync: ' + payload.wallet.balance + ' coins.', 'success');
   });
 
   socket.on('bot-state', function(state) {
@@ -998,6 +1066,8 @@ if (socket) {
     var m = document.getElementById('totalMessages');
     if (u) u.textContent = stats.totalUsers || 0;
     if (m) m.textContent = stats.totalMessages || 0;
+    var analyticsMessages = document.getElementById('analyticsMessages');
+    if (analyticsMessages) analyticsMessages.textContent = stats.totalMessages || 0;
   });
 
   socket.on('pairing-code', function(code) {
@@ -1076,7 +1146,8 @@ function renderBots(botsArray) {
   visibleBots.forEach(function(bot) {
     var card = document.createElement('div');
     card.className = 'bot-card';
-    var status = bot.running ? 'online' : (bot.connecting ? 'connecting' : 'offline');
+    var status = bot.maintenance ? 'maintenance' : (bot.running ? 'online' : (bot.connecting ? 'connecting' : 'idle'));
+    var statusLabel = bot.maintenance ? 'maintenance' : (bot.running ? 'active' : (bot.connecting ? 'connecting' : 'idle'));
     var avatar = (bot.name || bot.id || 'BT').split(/\s+/).map(function(p){return p[0];}).join('').slice(0,2).toUpperCase();
 
     card.innerHTML =
@@ -1086,7 +1157,7 @@ function renderBots(botsArray) {
           '<h3>' + (bot.name || 'Bot') + '</h3>' +
           '<div class="id">' + (bot.id || '') + '</div>' +
         '</div>' +
-        '<div class="status-pill ' + status + '"><span class="ind"></span>' + (bot.paired ? (bot.running ? 'running' : status) : 'not paired') + '</div>' +
+        '<div class="status-pill ' + status + '"><span class="ind"></span>' + (bot.paired ? statusLabel : 'offline') + '</div>' +
       '</div>' +
       '<div class="bot-metrics">' +
         '<div class="metric"><div class="v">' + (bot.phoneNumber || '—') + '</div><div class="l">Number</div></div>' +
@@ -1124,9 +1195,12 @@ function updateMonitor(botsArray) {
   var total = botsArray.length;
   var online = botsArray.filter(function(bot) { return bot.running; }).length;
   var rate = document.getElementById('onlineRate');
+  var analyticsRate = document.getElementById('analyticsOnlineRate');
   var sync = document.getElementById('lastSync');
   var state = document.getElementById('monitorState');
-  if (rate) rate.textContent = total ? Math.round((online / total) * 100) + '%' : '0%';
+  var rateText = total ? Math.round((online / total) * 100) + '%' : '0%';
+  if (rate) rate.textContent = rateText;
+  if (analyticsRate) analyticsRate.textContent = rateText;
   if (sync) sync.textContent = 'Last sync · ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   if (state) state.textContent = online ? online + ' bot' + (online === 1 ? '' : 's') + ' online' : 'No active bots';
   var whatsapp = document.getElementById('whatsappStatus');
@@ -1158,6 +1232,16 @@ function loadBotSettings(bot) {
   if (prefix) prefix.value = String(settings.prefix || '.');
   var cooldown = document.getElementById('commandCooldown');
   if (cooldown) cooldown.value = String(Math.max(0, Math.min(60, Number(settings.commandCooldown || 0))));
+  var strategyDefaults = { claimFrequency: 30, riskTolerance: 40, targetCoinLimit: 100 };
+  Object.keys(strategyDefaults).forEach(function(key) {
+    var input = document.querySelector('[data-strategy="' + key + '"]');
+    var value = Number(settings[key] === undefined ? strategyDefaults[key] : settings[key]);
+    if (input) {
+      input.value = String(value);
+      var output = document.getElementById(input.id + 'Value');
+      if (output) output.textContent = String(value) + (key === 'claimFrequency' ? 's' : key === 'riskTolerance' ? '%' : '');
+    }
+  });
 }
 
 /* ============================================================
@@ -1328,6 +1412,42 @@ if (themeToggle) themeToggle.addEventListener('click', function() {
   var nextTheme = document.body.classList.contains('light-mode') ? 'dark' : 'light';
   localStorage.setItem('mickey-theme', nextTheme);
   applyTheme(nextTheme);
+});
+var sidebarToggle = document.getElementById('sidebarToggle');
+var sidebar = document.getElementById('sidebar');
+var main = document.querySelector('.main');
+if (sidebarToggle) sidebarToggle.addEventListener('click', function() {
+  var collapsed = sidebar.classList.toggle('collapsed');
+  if (main) main.classList.toggle('sidebar-collapsed', collapsed);
+  sidebarToggle.innerHTML = '<i class="fas fa-angle-' + (collapsed ? 'right' : 'left') + '"></i>';
+  localStorage.setItem('mickey-sidebar-collapsed', collapsed ? '1' : '0');
+});
+if (localStorage.getItem('mickey-sidebar-collapsed') === '1' && window.innerWidth > 1024 && sidebar) {
+  sidebar.classList.add('collapsed');
+  if (main) main.classList.add('sidebar-collapsed');
+  if (sidebarToggle) sidebarToggle.innerHTML = '<i class="fas fa-angle-right"></i>';
+}
+function openDepositView() { activateTab('store'); openPayment(10); }
+['headerDepositButton', 'walletDepositButton'].forEach(function(id) {
+  var button = document.getElementById(id);
+  if (button) button.addEventListener('click', openDepositView);
+});
+document.querySelectorAll('[data-strategy]').forEach(function(input) {
+  var output = document.getElementById(input.id + 'Value');
+  function updateStrategyValue() {
+    if (output) output.textContent = input.value + (input.id === 'claimFrequency' ? 's' : input.id === 'riskTolerance' ? '%' : '');
+  }
+  input.addEventListener('input', updateStrategyValue);
+  updateStrategyValue();
+});
+var saveStrategyBtn = document.getElementById('saveStrategyBtn');
+if (saveStrategyBtn) saveStrategyBtn.addEventListener('click', function() {
+  var botId = document.getElementById('settingsBot')?.value;
+  if (!botId || !socket) { showToast('Chagua bot kwanza.'); return; }
+  var strategy = {};
+  document.querySelectorAll('[data-strategy]').forEach(function(input) { strategy[input.dataset.strategy] = Number(input.value); });
+  socket.emit('update-bot-settings', { userId: botId, settings: strategy });
+  showToast('Bot strategy inahifadhiwa...');
 });
 document.querySelectorAll('[data-transaction-filter]').forEach(function(button) {
   button.addEventListener('click', function() {
